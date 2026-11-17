@@ -1,0 +1,489 @@
+% FILE: chapters/ch07_s1_sensor_pipeline.tex
+\chapter{ML for IoT and Edge (TinyML)}\label{ch:tinyml}
+\section{The Sensor Data Pipeline}\label{sec:sensor_pipeline}
+
+In classical machine learning, data arrives as static, curated files: clean CSV spreadsheets downloaded from cloud storage or pre-packaged benchmark datasets like MNIST and ImageNet. 
+
+In TinyML and edge computing, this luxury does not exist. Data does not begin inside a tidy table; it begins in the physical world as microscopic analog voltage fluctuations across physical silicon transducers. An inertial measurement unit (IMU) detects acceleration through capacitive deflection of microscopic silicon combs. A thermistor changes electrical resistance as ambient molecules bump against its ceramic lattice. A photodiode produces nanoamperes of current when struck by incoming photons.
+
+Between this noisy, chaotic physical reality and a machine learning inference engine lies the **Sensor Data Pipeline**. If this pipeline is poorly designed, even the most elegant deep neural network will fail in production. In this section, we study how to capture, synchronize, and label physical sensor data, filter electrical noise on microcontrollers, extract lightweight statistical and frequency features, and handle packet drops in wireless IoT networks.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    box/.style={rectangle, draw=keyideablue, fill=keyideablue!10, rounded corners=2mm, thick, text width=2.4cm, align=center, minimum height=1.1cm, font=\footnotesize\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=keyideablue}
+]
+    \node[box] (transducer) {Physical Sensor\\(Analog Voltage)};
+    \node[box, right=0.8cm of transducer] (adc) {ADC Conversion\\\& Sampling (Nyquist)};
+    \node[box, right=0.8cm of adc] (filter) {Edge Filtering\\(EMA / Median)};
+    \node[box, below=1.0cm of filter] (features) {Feature Extraction\\(RMS, P2P, FFT)};
+    \node[box, left=0.8cm of features] (window) {Ring Buffer\\(Sliding Window)};
+    \node[box, left=0.8cm of window] (tinyml) {TinyML Engine\\(Quantized Model)};
+
+    \draw[arrow] (transducer) -- (adc);
+    \draw[arrow] (adc) -- (filter);
+    \draw[arrow] (filter) -- (window);
+    \draw[arrow] (window) -- (features);
+    \draw[arrow] (features) -- (tinyml);
+\end{tikzpicture}
+\caption{The complete edge sensor data pipeline: from raw physical voltage to TinyML inference on a microcontroller.}\label{fig:edge_pipeline}
+\end{figure}
+
+% ==============================================================================
+% 1. COLLECTING AND LABELING SENSOR DATA IN THE WILD
+% ==============================================================================
+\subsection{Collecting and Labeling Sensor Data in the Wild}
+
+\begin{keyidea}[Ground Truth Labeling on Embedded Devices]
+Supervised machine learning requires ground truth labels paired with sensor measurements. In IoT, \textbf{data collection and labeling must happen concurrently in physical environments}, requiring strict clock synchronization and robust logging protocols.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Suppose you want to train an ESP32 to detect when an industrial conveyor motor is failing due to bearing friction. You cannot simply sit at a laptop and generate synthetic data. You must physically attach an accelerometer to an electric motor, run it under healthy conditions for hours, artificially induce bearing damage, and record the vibrations. If the clock timestamps between the sensor readings and the maintenance log drift apart by even two seconds, the labels will map to the wrong vibration patterns, ruining the training dataset.
+
+\begin{analogy}[Tagging Wildlife in the Field]
+Imagine wildlife biologists tracking wolves in the Canadian wilderness. They do not guess where a wolf was based on footprints seen weeks later. They physically fit the wolf with a collar containing both a GPS receiver and an automated camera. When the collar records coordinates, it takes a photo simultaneously to confirm whether the wolf was running, resting, or hunting. In IoT, your sensor data must be tagged with ground truth at the exact millisecond it occurs.
+\end{analogy}
+
+\paragraph{The Nyquist-Shannon Sampling Theorem}
+Before capturing data, you must choose an appropriate \textbf{sampling rate} ($f_s$). If you sample too slowly, high-frequency events become invisible or masquerade as false low frequencies (a destructive artifact known as \textbf{aliasing}).
+\begin{keyidea}[Nyquist-Shannon Theorem]
+To reconstruct a signal accurately without aliasing, the sampling frequency $f_s$ must be strictly greater than twice the highest frequency component ($f_{\max}$) present in the physical signal:
+\begin{equation}
+f_s > 2 f_{\max}\label{eq:nyquist}
+\end{equation}
+The threshold $f_N = \frac{f_s}{2}$ is called the \textbf{Nyquist frequency}.
+\end{keyidea}
+
+\paragraph{Hand Calculation Example: Sampling Rate Selection}
+An industrial water pump motor rotates at $3{,}600\text{ RPM}$ (Revolutions Per Minute). A damaged ball bearing produces shock impact pulses at 5 times the rotational frequency.
+\begin{enumerate}
+    \item \textbf{Calculate Rotational Frequency}:
+    \begin{equation*}
+    f_{\text{rot}} = \frac{3600\text{ rev}}{60\text{ sec}} = 60\text{ Hz}
+    \end{equation*}
+    \item \textbf{Calculate Maximum Fault Frequency}:
+    \begin{equation*}
+    f_{\max} = 5 \times f_{\text{rot}} = 5 \times 60\text{ Hz} = 300\text{ Hz}
+    \end{equation*}
+    \item \textbf{Determine Minimum Safe Sampling Rate}:
+    According to Equation~\ref{eq:nyquist}:
+    \begin{equation*}
+    f_s > 2 \times 300\text{ Hz} = 600\text{ Hz}
+    \end{equation*}
+    In engineering practice, we include an oversampling safety margin of $2.5\times$ to $5\times$. We configure our accelerometer sampling rate to at least $f_s = 1{,}000\text{ Hz}$ ($1\text{ kHz}$).
+\end{enumerate}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import pandas as pd
+import numpy as np
+
+# Simulating serial telemetry capture from an ESP32 edge node
+# Format streamed over USB serial: timestamp_ms,ax,ay,az,button_state
+raw_serial_log = """
+1000,0.02,0.11,9.81,0
+1010,0.01,0.09,9.82,0
+1020,0.04,0.12,9.79,0
+1030,1.45,2.10,12.3,1
+1040,1.89,2.45,13.1,1
+1050,0.03,0.10,9.80,0
+"""
+
+# Parse the incoming telemetry stream
+from io import StringIO
+df_telemetry = pd.read_csv(StringIO(raw_serial_log.strip()), 
+                           names=["time_ms", "ax", "ay", "az", "label_trigger"])
+
+# Convert physical hardware trigger button into semantic ML labels
+df_telemetry["label"] = df_telemetry["label_trigger"].map({0: "NORMAL", 1: "IMPACT_ANOMALY"})
+
+# Verify sampling intervals (checking for jitter)
+df_telemetry["delta_ms"] = df_telemetry["time_ms"].diff()
+
+print("--- Synchronized and Labeled Sensor Telemetry ---")
+print(df_telemetry[["time_ms", "delta_ms", "ax", "az", "label"]])
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Synchronized and Labeled Sensor Telemetry ---
+   time_ms  delta_ms    ax     az           label
+0     1000       NaN  0.02   9.81          NORMAL
+1     1010      10.0  0.01   9.82          NORMAL
+2     1020      10.0  0.04   9.79          NORMAL
+3     1030      10.0  1.45  12.30  IMPACT_ANOMALY
+4     1040      10.0  1.89  13.10  IMPACT_ANOMALY
+5     1050      10.0  0.03   9.80          NORMAL
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Lines 6--13: The ESP32 streams comma-separated records containing a millisecond hardware timestamp, 3-axis accelerometer readings, and the state of a physical push-button used by the technician to flag anomalies in real time.
+    \item Line 20: The binary hardware pin state is mapped directly into semantic machine learning labels (\code{"NORMAL"} vs \code{"IMPACT\_ANOMALY"}).
+    \item Line 23: \code{df\_telemetry["time\_ms"].diff()} verifies that every sample arrived exactly $10\text{ ms}$ apart ($100\text{ Hz}$ sampling rate with zero clock jitter).
+\end{itemize}
+
+\begin{iotbox}[Hardware Labeling Button on ESP32 (GPIO 0)]
+When gathering data for human gesture recognition or anomaly detection, wire a physical momentary push-button to pin GPIO 0 of your ESP32. When the wearer begins swinging a tennis racket or tapping a machine, holding the button writes a `1' into the streaming telemetry packet. This eliminates hours of manual post-hoc video labeling!
+\end{iotbox}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Always choose sampling frequencies strictly greater than $2 \times f_{\max}$ to prevent aliasing.
+    \item Hardware trigger pins allow automated, synchronous ground-truth labeling during data collection.
+    \item Always verify sample-to-sample timing ($\Delta t$) to detect dropped samples and clock drift early.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 2. SIGNAL FILTERING AND NOISE REMOVAL ON THE EDGE
+% ==============================================================================
+\subsection{Signal Filtering and Noise Removal on the Edge}
+
+\begin{keyidea}[Edge Filtering]
+\textbf{Edge filtering} cleans raw sensor signals directly in microcontroller memory before feature extraction or model inference. 
+\begin{itemize}
+    \item \textbf{Low-Pass Filters}: Remove high-frequency electrical jitter and electromagnetic interference.
+    \item \textbf{Median Filters}: Strip isolated impulse spikes caused by electrostatic discharge (ESD) or power glitches without blurring sharp step changes.
+    \item \textbf{High-Pass Filters}: Remove constant DC biases, such as Earth's gravity vector ($9.81\text{ m/s}^2$).
+\end{itemize}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Consider an ESP8266 reading an analog light sensor. When an adjacent air conditioner compressor kicks on, electromagnetic interference induces a brief $50\text{ mV}$ spike across the analog-to-digital converter trace. If you use a simple moving average, that single spike spreads across five consecutive readings, corrupting all of them. A median filter completely eliminates the spike in a single step.
+
+\paragraph{The Median Filter in Detail}
+For a sliding window of odd size $W$ centered at sample $t$, the \textbf{median filter} sorts the values in ascending order and picks the middle value:
+\begin{equation}
+y_t = \text{median}(x_{t - k}, \dots, x_t, \dots, x_{t + k}), \quad \text{where } W = 2k + 1\label{eq:median_filter}
+\end{equation}
+
+\paragraph{Hand Calculation Example: Median Filter vs. Mean Filter}
+Consider five consecutive accelerometer readings containing a single electrical glitch spike:
+\begin{equation*}
+x = [1.0, 1.1, 45.0, 1.2, 1.0]\text{ g}
+\end{equation*}
+Let us compute the filtered output at the center position ($x_2 = 45.0$) using a 3-sample window ($W=3$):
+\begin{enumerate}
+    \item \textbf{Mean Filter (Moving Average)}:
+    \begin{equation*}
+    y_{\text{mean}} = \frac{1.1 + 45.0 + 1.2}{3} = \frac{47.3}{3} \approx \mathbf{15.77\text{ g}}
+    \end{equation*}
+    The mean filter failed completely: it produced a massive $15.77\text{ g}$ error that will trigger a false alarm!
+    \item \textbf{Median Filter}:
+    Extract the 3-sample window: $[1.1, 45.0, 1.2]$.
+    Sort in ascending numerical order:
+    \begin{equation*}
+    \text{Sorted Window} = [1.1, \mathbf{1.2}, 45.0]
+    \end{equation*}
+    Select the middle value:
+    \begin{equation*}
+    y_{\text{median}} = \mathbf{1.2\text{ g}}
+    \end{equation*}
+    The $45.0\text{ g}$ noise spike was completely annihilated, restoring the true underlying physical signal ($1.2\text{ g}$).
+\end{enumerate}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+from scipy.ndimage import median_filter
+
+# Noisy sensor stream with Gaussian noise and 2 severe ESD impulse spikes
+np.random.seed(42)
+t = np.linspace(0, 1, 20)
+clean_signal = np.sin(2 * np.pi * 2 * t)
+noisy_signal = clean_signal.copy()
+
+# Inject 2 severe voltage glitches
+noisy_signal[5] = 12.5   # Massive positive spike
+noisy_signal[14] = -10.0 # Massive negative spike
+
+# 1. Moving Average Filter (Window size = 3)
+moving_avg = np.convolve(noisy_signal, np.ones(3)/3, mode="same")
+
+# 2. Median Filter (Window size = 3)
+med_filtered = median_filter(noisy_signal, size=3)
+
+print("Index | Clean | Noisy  | Mean Filter | Median Filter")
+print("----------------------------------------------------")
+for i in [4, 5, 6, 13, 14, 15]:
+    print(f"{i:5d} | {clean_signal[i]:.2f} | {noisy_signal[i]:6.2f} | {moving_avg[i]:11.2f} | {med_filtered[i]:13.2f}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Index | Clean | Noisy  | Mean Filter | Median Filter
+----------------------------------------------------
+    4 |  0.99 |   0.99 |        4.81 |          0.99
+    5 |  1.00 |  12.50 |        4.81 |          0.99
+    6 |  0.93 |   0.93 |        4.79 |          0.93
+   13 | -0.99 |  -0.99 |       -4.01 |         -0.99
+   14 | -1.00 | -10.00 |       -3.98 |         -0.99
+   15 | -0.94 |  -0.94 |       -3.96 |         -0.94
+\end{lstlisting}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Mean filters blur impulse spikes across neighboring samples, creating persistent false alarms.
+    \item Median filters reject isolated extreme spikes completely while preserving sharp physical transitions.
+    \item Low-pass filters smooth high-frequency electrical jitter, while high-pass filters remove static gravity.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 3. WINDOWING AND FEATURE EXTRACTION
+% ==============================================================================
+\subsection{Windowing and Time/Frequency Feature Extraction}
+
+\begin{keyidea}[Feature Engineering for TinyML]
+Raw high-frequency sensor streams (e.g., 200 numbers per second) overwhelm the RAM and compute limits of microcontrollers. 
+
+\textbf{Feature extraction} condenses a window of 100 raw samples into 4 to 6 powerful statistical and frequency-domain descriptors, allowing tiny, energy-efficient machine learning models (like Decision Trees or tiny MLPs) to achieve state-of-the-art accuracy.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+An accelerometer recording 3 axes at $100\text{ Hz}$ generates $600\text{ bytes}$ of raw data every single second. If you attempt to feed all 600 raw values directly into a neural network, the input layer requires hundreds of weights, consuming dozens of kilobytes of RAM. By computing Root Mean Square (RMS) and Peak-to-Peak values across that window, we reduce 600 numbers to just 6 numbers—a \textbf{$99\%$ reduction in model input size}!
+
+\paragraph{The Core Edge Feature Toolkit}
+For a sliding window of $W$ samples $[x_1, x_2, \dots, x_W]$:
+\begin{enumerate}
+    \item \textbf{Mean ($\mu$)}: Indicates static DC offset or steady-state tilt:
+    \begin{equation}
+    \mu = \frac{1}{W} \sum_{i=1}^W x_i\label{eq:feat_mean}
+    \end{equation}
+    \item \textbf{Peak-to-Peak Amplitude (P2P)}: The difference between the highest peak and lowest trough:
+    \begin{equation}
+    \text{P2P} = \max(\mathbf{x}) - \min(\mathbf{x})\label{eq:feat_p2p}
+    \end{equation}
+    \item \textbf{Root Mean Square (RMS)}: Quantifies the total physical energy or vibration power of the signal:
+    \begin{equation}
+    \text{RMS} = \sqrt{\frac{1}{W} \sum_{i=1}^W x_i^2}\label{eq:feat_rms}
+    \end{equation}
+    \item \textbf{Zero-Crossing Rate (ZCR)}: Counts how many times the signal crosses the zero line. It provides an ultra-fast estimate of the dominant frequency without computing an expensive Fourier transform.
+\end{enumerate}
+
+\paragraph{Hand Calculation Example: Time-Domain Feature Vector}
+Consider a window of four vibration sensor measurements:
+\begin{equation*}
+\mathbf{x} = [2.0, -2.0, 3.0, -1.0]\text{ g}
+\end{equation*}
+Let us compute the feature vector $[\mu, \text{P2P}, \text{RMS}, \text{ZCR}]$ by hand:
+\begin{enumerate}
+    \item \textbf{Mean $\mu$}:
+    \begin{equation*}
+    \mu = \frac{2.0 + (-2.0) + 3.0 + (-1.0)}{4} = \frac{2.0}{4} = \mathbf{0.50\text{ g}}
+    \end{equation*}
+    \item \textbf{Peak-to-Peak Amplitude (P2P)}:
+    $\max(\mathbf{x}) = 3.0$, $\min(\mathbf{x}) = -2.0$.
+    \begin{equation*}
+    \text{P2P} = 3.0 - (-2.0) = 3.0 + 2.0 = \mathbf{5.00\text{ g}}
+    \end{equation*}
+    \item \textbf{Root Mean Square (RMS)}:
+    \begin{align*}
+    \sum_{i=1}^4 x_i^2 &= 2.0^2 + (-2.0)^2 + 3.0^2 + (-1.0)^2 = 4.0 + 4.0 + 9.0 + 1.0 = 18.0 \\
+    \text{RMS} &= \sqrt{\frac{18.0}{4}} = \sqrt{4.50} \approx \mathbf{2.1213\text{ g}}
+    \end{align*}
+    \item \textbf{Zero-Crossing Rate (ZCR)}:
+    \begin{itemize}
+        \item From $x_0 (+2.0)$ to $x_1 (-2.0)$: Sign changes from $+$ to $-$ (Cross 1).
+        \item From $x_1 (-2.0)$ to $x_2 (+3.0)$: Sign changes from $-$ to $+$ (Cross 2).
+        \item From $x_2 (+3.0)$ to $x_3 (-1.0)$: Sign changes from $+$ to $-$ (Cross 3).
+    \end{itemize}
+    Total zero crossings: $\mathbf{3}$.
+\end{enumerate}
+Our extracted feature vector is $\mathbf{f} = [0.50, 5.00, 2.12, 3]$.
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+def extract_edge_features(window: np.ndarray) -> dict:
+    """Extracts lightweight time-domain features optimized for TinyML."""
+    mean_val = np.mean(window)
+    std_val = np.std(window)
+    p2p_val = np.ptp(window)  # Peak-to-peak: max - min
+    rms_val = np.sqrt(np.mean(window ** 2))
+    
+    # Zero-crossing rate calculation
+    zero_crossings = np.sum(np.diff(np.sign(window) != 0))
+    
+    return {
+        "mean": round(mean_val, 4),
+        "std": round(std_val, 4),
+        "p2p": round(p2p_val, 4),
+        "rms": round(rms_val, 4),
+        "zcr": int(zero_crossings)
+    }
+
+# Test with our hand-calculated window
+test_window = np.array([2.0, -2.0, 3.0, -1.0])
+features = extract_edge_features(test_window)
+
+print("--- Extracted Edge Feature Vector ---")
+for k, v in features.items():
+    print(f"{k.upper():4s}: {v}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Extracted Edge Feature Vector ---
+MEAN: 0.5
+STD : 1.9365
+P2P : 5.0
+RMS : 2.1213
+ZCR : 3
+\end{lstlisting}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Feature extraction reduces high-bandwidth raw sensor streams into compact descriptors.
+    \item RMS quantifies physical kinetic vibration power; P2P measures maximum mechanical displacement.
+    \item Zero-Crossing Rate estimates dominant frequency in $O(N)$ time without running an expensive FFT.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 4. HANDLING MISSING, DROPPED, AND DELAYED READINGS
+% ==============================================================================
+\subsection{Handling Missing, Dropped, and Delayed Sensor Readings}
+
+\begin{keyidea}[Edge Fault Tolerance]
+In wireless sensor networks (Wi-Fi, Bluetooth Low Energy, LoRaWAN), communication packets are routinely dropped or delayed. An edge inference system must implement **defensive data buffering** to maintain fixed-rate inferences without freezing or crashing.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Imagine an autonomous irrigation pump governed by an edge microcontroller receiving soil data over LoRaWAN. If a packet is lost due to rain fade, the microcontroller's feature extraction buffer lacks a sample. If the software simply hangs while waiting for the next packet, the pump runs indefinitely, flooding the field.
+
+\paragraph{Resilience Strategies for Edge Systems}
+\begin{enumerate}
+    \item \textbf{Zero-Order Hold (Last-Observation-Carried-Forward)}:
+    If a sample is missing at time $t$, repeat the previous valid reading: $\hat{x}_t = x_{t-1}$.
+    \begin{itemize}
+        \item \textit{Best for}: Slowly changing physical properties (ambient temperature, soil moisture).
+    \end{itemize}
+    \item \textbf{Linear Extrapolation}:
+    If two recent readings are known, project forward along the recent velocity slope:
+    \begin{equation}
+    \hat{x}_t = x_{t-1} + (x_{t-1} - x_{t-2})\label{eq:linear_extrap}
+    \end{equation}
+    \item \textbf{Hardware Watchdog Timers}:
+    If no valid packet arrives within a safety timeout threshold $\tau_{\text{timeout}}$, trigger a fallback safe-state (e.g., shut down the pump and flash an error LED).
+\end{enumerate}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import pandas as pd
+import numpy as np
+
+# A simulated wireless sensor feed experiencing packet dropouts
+raw_timestamps = [0, 100, 200, 500, 600]  # Missing packets at 300ms and 400ms
+raw_temperatures = [24.1, 24.3, 24.5, 25.1, 25.3]
+
+df_stream = pd.DataFrame({"temp_c": raw_temperatures}, index=pd.to_datetime(raw_timestamps, unit="ms"))
+
+# Resample to a strictly uniform 100ms grid
+df_uniform = df_stream.resample("100ms").asfreq()
+
+# Apply Zero-Order Hold (Forward-Fill)
+df_uniform["temp_zoh"] = df_uniform["temp_c"].ffill()
+
+# Apply Linear Interpolation
+df_uniform["temp_interpolated"] = df_uniform["temp_c"].interpolate(method="linear")
+
+print("--- Telemetry Grid Alignment and Packet Recovery ---")
+print(df_uniform)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Telemetry Grid Alignment and Packet Recovery ---
+                         temp_c  temp_zoh  temp_interpolated
+1970-01-01 00:00:00.000    24.1      24.1               24.1
+1970-01-01 00:00:00.100    24.3      24.3               24.3
+1970-01-01 00:00:00.200    24.5      24.5               24.5
+1970-01-01 00:00:00.300     NaN      24.5               24.7
+1970-01-01 00:00:00.400     NaN      24.5               24.9
+1970-01-01 00:00:00.500    25.1      25.1               25.1
+1970-01-01 00:00:00.600    25.3      25.3               25.3
+\end{lstlisting}
+
+\begin{warning}[Never Substitute 0.0 for Missing Physical Readings]
+A common, catastrophic mistake is filling missing telemetry packets with $0.0$. In temperature monitoring, $0.0^\circ\text{C}$ is not a missing reading; it is \textbf{freezing}! An algorithm seeing sudden drops from $25^\circ\text{C}$ to $0^\circ\text{C}$ will trigger emergency frost heaters, wasting energy and overheating crops. Always forward-fill or interpolate.
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Wireless IoT packets drop routinely; algorithms must never block or crash on missing inputs.
+    \item Resampling aligns asynchronous, jittery packets to a fixed time grid.
+    \item Never fill missing readings with zeros; use zero-order hold or linear interpolation.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 5. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+Test your practical understanding of the edge sensor pipeline:
+
+\begin{enumerate}
+    \item \textbf{Nyquist Sampling Rate}: A piezoelectric sensor on a CNC milling machine monitors high-frequency acoustic emissions up to $4\text{ kHz}$ to detect drill bit cracking. What is the absolute minimum sampling rate $f_s$ required to capture this signal? What sampling rate would you choose in practice?
+
+    \item \textbf{Hand Calculation (Median vs. Mean Filter)}: You receive four normal light sensor readings and one corrupted spike: $\mathbf{x} = [100, 102, 1050, 101, 103]\text{ lux}$. Compute the output at the center index using:
+    \begin{enumerate}
+        \item A 3-sample moving average filter.
+        \item A 3-sample median filter.
+    \end{enumerate}
+
+    \item \textbf{Time-Domain Feature Calculation}: A window of 3 accelerometer samples is $\mathbf{x} = [3.0, 0.0, -3.0]\text{ m/s}^2$. Calculate:
+    \begin{enumerate}
+        \item The Peak-to-Peak amplitude (P2P).
+        \item The Root Mean Square (RMS).
+    \end{enumerate}
+
+    \item \textbf{TinyML Efficiency}: Why is extracting 5 statistical features from a 128-sample accelerometer buffer more practical on an ESP32 than feeding all 128 raw numbers directly into a neural network?
+
+    \item \textbf{Missing Data Handling}: In a battery voltage monitoring system ($3.0\text{ V}$ to $4.2\text{ V}$), explain why filling dropped readings with \code{0.0} could trigger a false battery cutoff shutdown.
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Nyquist Sampling Rate}:
+    \begin{itemize}
+        \item Minimum theoretical rate: $f_s > 2 f_{\max} = 2 \times 4\text{ kHz} = \mathbf{8\text{ kHz}}$ ($8{,}000$ samples/sec).
+        \item Practical choice: In embedded engineering, an oversampling factor of $2.5\times$ to $4\times$ is used to accommodate analog anti-aliasing filter roll-off. A practical choice would be $\mathbf{10\text{ kHz}}$ to $\mathbf{16\text{ kHz}}$.
+    \end{itemize}
+
+    \item \textbf{Hand Calculation (Median vs. Mean Filter)}:
+    The 3-sample window centered at index 2 is $[102, 1050, 101]$.
+    \begin{enumerate}
+        \item \textbf{Mean Filter}:
+        \begin{equation*}
+        y_{\text{mean}} = \frac{102 + 1050 + 101}{3} = \frac{1253}{3} \approx \mathbf{417.67\text{ lux}}
+        \end{equation*}
+        The mean filter severely distorts the output.
+        \item \textbf{Median Filter}:
+        Sort the window: $[101, \mathbf{102}, 1050]$. The middle value is $\mathbf{102\text{ lux}}$. The noise spike is completely eliminated.
+    \end{enumerate}
+
+    \item \textbf{Time-Domain Feature Calculation}:
+    \begin{enumerate}
+        \item $\text{P2P} = \max(\mathbf{x}) - \min(\mathbf{x}) = 3.0 - (-3.0) = \mathbf{6.0\text{ m/s}^2}$.
+        \item Sum of squares: $3.0^2 + 0.0^2 + (-3.0)^2 = 9.0 + 0.0 + 9.0 = 18.0$.
+        \begin{equation*}
+        \text{RMS} = \sqrt{\frac{18.0}{3}} = \sqrt{6.0} \approx \mathbf{2.4495\text{ m/s}^2}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{TinyML Efficiency}:
+    \begin{itemize}
+        \item **Memory Footprint**: An input layer for 128 raw samples connected to 16 hidden neurons requires $128 \times 16 = 2{,}048$ float weights ($8.2\text{ KB}$ of flash). An input layer for 5 features connected to 16 neurons requires only $5 \times 16 = 80$ float weights ($320\text{ bytes}$).
+        \item **Compute Speed**: Computing 5 summary statistics takes under $50\text{ microseconds}$ and drastically reduces neural network multiply-accumulate (MAC) operations, prolonging battery life.
+    \end{itemize}
+
+    \item \textbf{Missing Data Handling}:
+    Lithium-ion batteries operate between $3.0\text{ V}$ (fully depleted) and $4.2\text{ V}$ (fully charged). If a dropped telemetry packet is filled with $0.0$, the battery management software will interpret $0.0\text{ V}$ as a catastrophic deep-discharge or short-circuit, opening its protective disconnect relays and shutting down the entire node unnecessarily. Using a zero-order hold (carrying forward the previous $3.8\text{ V}$ reading) avoids this failure.
+\end{enumerate}

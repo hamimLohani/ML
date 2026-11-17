@@ -1,0 +1,200 @@
+% ==============================================================================
+% File: main.tex
+% Textbook: Machine Learning from Zero: A Plain-Language Guide with IoT and TinyML
+% Master Document
+% ==============================================================================
+
+\input{preamble.tex}
+
+\begin{document}
+
+% ------------------------------------------------------------------------------
+% Front Matter
+% ------------------------------------------------------------------------------
+\frontmatter
+\makecustomtitle
+
+\tableofcontents
+
+% ------------------------------------------------------------------------------
+% Main Matter
+% ------------------------------------------------------------------------------
+\mainmatter
+
+% ==============================================================================
+% PART I: FOUNDATIONS
+% ==============================================================================
+\part{Foundations}
+
+% --- CHAPTER 1: Programming and Tools ---
+\IfFileExists{chapters/ch01_s1_python_fundamentals.tex}{
+    \input{chapters/ch01_s1_python_fundamentals.tex}
+}{
+    \chapter{Programming and Tools}\label{ch:programming_tools}
+}
+
+\IfFileExists{chapters/ch01_s2_dev_environment.tex}{
+    \input{chapters/ch01_s2_dev_environment.tex}
+}{}
+
+\IfFileExists{chapters/ch01_s3_numpy.tex}{
+    \input{chapters/ch01_s3_numpy.tex}
+}{}
+
+\IfFileExists{chapters/ch01_s4_pandas.tex}{
+    \input{chapters/ch01_s4_pandas.tex}
+}{}
+
+\IfFileExists{chapters/ch01_s5_visualization.tex}{
+    \input{chapters/ch01_s5_visualization.tex}
+}{}
+
+\IfFileExists{chapters/ch01_s6_git_sql.tex}{
+    \input{chapters/ch01_s6_git_sql.tex}
+}{}
+
+% --- CHAPTER 2: Math Foundations ---
+\IfFileExists{chapters/ch02_s1_linear_algebra.tex}{
+    \input{chapters/ch02_s1_linear_algebra.tex}
+}{
+    \chapter{Math Foundations}\label{ch:math_foundations}
+}
+
+\IfFileExists{chapters/ch02_s2_calculus.tex}{
+    \input{chapters/ch02_s2_calculus.tex}
+}{}
+
+\IfFileExists{chapters/ch02_s3_probability.tex}{
+    \input{chapters/ch02_s3_probability.tex}
+}{}
+
+\IfFileExists{chapters/ch02_s4_statistics.tex}{
+    \input{chapters/ch02_s4_statistics.tex}
+}{}
+
+\IfFileExists{chapters/ch02_s5_optimization_information.tex}{
+    \input{chapters/ch02_s5_optimization_information.tex}
+}{}
+
+% --- CHAPTER 3: Data Handling and Preparation ---
+\IfFileExists{chapters/ch03_s1_exploring_cleaning.tex}{
+    \input{chapters/ch03_s1_exploring_cleaning.tex}
+}{
+    \chapter{Data Handling and Preparation}\label{ch:data_handling}
+}
+
+\IfFileExists{chapters/ch03_s2_feature_work.tex}{
+    \input{chapters/ch03_s2_feature_work.tex}
+}{}
+
+\IfFileExists{chapters/ch03_s3_splitting_pitfalls.tex}{
+    \input{chapters/ch03_s3_splitting_pitfalls.tex}
+}{}
+
+% ==============================================================================
+% PART II: MACHINE LEARNING
+% ==============================================================================
+\part{Machine Learning}
+
+% --- CHAPTER 4: Classical Machine Learning ---
+\IfFileExists{chapters/ch04_s1_regression.tex}{
+    \input{chapters/ch04_s1_regression.tex}
+}{
+    \chapter{Classical Machine Learning}\label{ch:classical_ml}
+}
+
+\IfFileExists{chapters/ch04_s2_classification.tex}{
+    \input{chapters/ch04_s2_classification.tex}
+}{}
+
+\IfFileExists{chapters/ch04_s3_ensembles.tex}{
+    \input{chapters/ch04_s3_ensembles.tex}
+}{}
+
+\IfFileExists{chapters/ch04_s4_unsupervised.tex}{
+    \input{chapters/ch04_s4_unsupervised.tex}
+}{}
+
+\IfFileExists{chapters/ch04_s5_anomaly_detection.tex}{
+    \input{chapters/ch04_s5_anomaly_detection.tex}
+}{}
+
+\IfFileExists{chapters/ch04_s6_model_quality.tex}{
+    \input{chapters/ch04_s6_model_quality.tex}
+}{}
+
+% --- CHAPTER 5: Deep Learning ---
+\IfFileExists{chapters/ch05_s1_neural_network_basics.tex}{
+    \input{chapters/ch05_s1_neural_network_basics.tex}
+}{
+    \chapter{Deep Learning}\label{ch:deep_learning}
+}
+
+\IfFileExists{chapters/ch05_s2_pytorch.tex}{
+    \input{chapters/ch05_s2_pytorch.tex}
+}{}
+
+\IfFileExists{chapters/ch05_s3_training_techniques.tex}{
+    \input{chapters/ch05_s3_training_techniques.tex}
+}{}
+
+% --- CHAPTER 6: Specialized Areas ---
+\IfFileExists{chapters/ch06_s1_time_series.tex}{
+    \input{chapters/ch06_s1_time_series.tex}
+}{
+    \chapter{Specialized Areas}\label{ch:specialized_areas}
+}
+
+% ==============================================================================
+% PART III: ML FOR IOT
+% ==============================================================================
+\part{ML for IoT}
+
+% --- CHAPTER 7: ML for IoT and Edge (TinyML) ---
+\IfFileExists{chapters/ch07_s1_sensor_pipeline.tex}{
+    \input{chapters/ch07_s1_sensor_pipeline.tex}
+}{
+    \chapter{ML for IoT and Edge (TinyML)}\label{ch:tinyml}
+}
+
+% --- CHAPTER 8: MLOps and Deployment ---
+\IfFileExists{chapters/ch08_s1_experiment_management.tex}{
+    \input{chapters/ch08_s1_experiment_management.tex}
+}{
+    \chapter{MLOps and Deployment}\label{ch:mlops_deployment}
+}
+
+% ==============================================================================
+% PART IV: PRACTICE AND RESEARCH
+% ==============================================================================
+\part{Practice and Research}
+
+% --- CHAPTER 9: Projects (Walkthroughs) ---
+\IfFileExists{chapters/ch09_s1_project1_classical.tex}{
+    \input{chapters/ch09_s1_project1_classical.tex}
+}{
+    \chapter{Projects}\label{ch:projects}
+}
+
+% --- CHAPTER 10: Research Skills ---
+\IfFileExists{chapters/ch10_s1_reading_reproducing.tex}{
+    \input{chapters/ch10_s1_reading_reproducing.tex}
+}{
+    \chapter{Research Skills}\label{ch:research_skills}
+}
+
+% ------------------------------------------------------------------------------
+% Back Matter & Appendices
+% ------------------------------------------------------------------------------
+\backmatter
+\appendix
+
+\chapter{Glossary of Machine Learning Terms}\label{app:glossary}
+
+\chapter{Syntax and Command Cheat Sheets}\label{app:cheatsheets}
+
+\chapter{Answers to Check Yourself Exercises}\label{app:answers}
+
+\chapter{Further Reading and Resources}\label{app:reading}
+
+\end{document}

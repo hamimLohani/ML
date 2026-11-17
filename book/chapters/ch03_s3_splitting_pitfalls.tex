@@ -1,0 +1,850 @@
+% FILE: chapters/ch03_s3_splitting_pitfalls.tex
+\section{Splitting Data and Common Pitfalls}\label{sec:splitting_pitfalls}
+
+In the preceding sections, we learned how to inspect, clean, scale, and engineer features from raw physical telemetry. Our data may now appear pristine, structured, and ready for modeling. Yet, it is precisely at this stage that many real-world machine learning initiatives fail. 
+
+A model can achieve an astonishing $99.8\%$ accuracy in an experimental Python notebook, only to crash catastrophically upon deployment to a physical microcontroller or cloud telemetry backend. Why does this happen? The failure rarely stems from a flaw in the machine learning algorithm itself. Rather, it almost always originates from how the data was partitioned during development:
+\begin{itemize}
+    \item Future telemetry was accidentally shuffled into the training set, allowing the model to peek ahead in time.
+    \item Information from the test set subtly contaminated the preprocessing transformations (data leakage).
+    \item Random sampling starved the test split of rare, critical failure events.
+    \item Telemetry from the same physical machine appeared in both training and test partitions, tricking the model into memorizing individual device quirks rather than learning general physical failure patterns.
+\end{itemize}
+
+In this section, we study the science of data partitioning and examine the subtle methodological pitfalls that compromise production machine learning. We will establish rigorous protocols for creating train, validation, and test sets; explore stratified and time-based splitting; systematically identify and eliminate data leakage; and master practical strategies for handling severely imbalanced datasets.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    train_box/.style={rectangle, draw=keyideablue!90, fill=keyideablue!20, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
+    val_box/.style={rectangle, draw=analogygreen!90, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
+    test_box/.style={rectangle, draw=warningred!90, fill=warningred!20, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
+]
+    % Overall Dataset
+    \node[box, minimum width=12.2cm, fill=gray!10, draw=gray!60] (total) at (0, 2.2) {\textbf{Full Experimental Dataset} ($100\%$ Telemetry)};
+
+    % Splits
+    \node[train_box, minimum width=6.6cm] (train) at (-2.8, 0.7) {\textbf{Training Set} ($\sim 70\%$)\\Learn Parameters $\mathbf{w}, b$};
+    \node[val_box, minimum width=2.6cm] (val) at (2.0, 0.7) {\textbf{Validation Set} ($\sim 15\%$)\\Tune Hyperparameters};
+    \node[test_box, minimum width=2.6cm] (test) at (4.8, 0.7) {\textbf{Test Set} ($\sim 15\%$)\\Final Vault Score};
+
+    % Split arrows
+    \draw[arrow] (-2.8, 1.6) -- (train.north);
+    \draw[arrow] (2.0, 1.6) -- (val.north);
+    \draw[arrow] (4.8, 1.6) -- (test.north);
+
+    % Feedback Loop
+    \draw[-{Stealth[length=2.5mm]}, thick, dashed, analogygreen!80!black] (val.south) -- ++(0, -0.6) -| node[below, pos=0.25, font=\footnotesize\sffamily] {Iterative feedback: select model, adjust depth, prune features} (train.south);
+
+    % Test isolated
+    \draw[-{Stealth[length=2.5mm]}, very thick, warningred!80!black] (test.south) -- ++(0, -0.6) node[below, font=\footnotesize\sffamily\bfseries] {Evaluated ONCE at deployment!};
+\end{tikzpicture}
+\caption{The canonical three-way data partitioning architecture. The training set updates model weights; the validation set guides hyperparameter tuning; the test set remains locked in a vault until the model architecture is frozen.}\label{fig:three_way_split}
+\end{figure}
+
+% ==============================================================================
+% 1. THE GENERALIZATION IMPERATIVE
+% ==============================================================================
+\subsection{The Generalization Imperative: Memorization versus Learning}\label{subsec:generalization_imperative}
+
+The fundamental goal of machine learning is not to achieve a low error rate on data we already possess. Any lookup table or sufficiently complex polynomial can memorize existing observations with $100\%$ fidelity. The true objective is **generalization**: the capacity of a trained model to make accurate predictions on entirely new, previously unobserved samples drawn from the underlying physical process.
+
+\begin{analogy}[The Student and the Practice Exam]
+Imagine a student preparing for a national engineering licensing examination:
+\begin{itemize}
+    \item \textbf{Homework Exercises (Training Set)}: The student works through hundreds of textbook problems, checking the solutions to understand governing principles and formulas.
+    \item \textbf{Mock Practice Exam (Validation Set)}: A week before the real test, the student sits for an unseen practice exam under timed conditions. If the score is low in thermodynamics, the student revises that chapter, adjusts study strategies, and tries another practice exam.
+    \item \textbf{Final Official Exam (Test Set)}: On exam day, the proctor distributes the official exam in a sealed envelope. The student sees these questions exactly once. The resulting score represents an honest, unbiased measure of their true competence.
+\end{itemize}
+If the teacher had mistakenly included the official exam questions in the homework packet, the student could score $100\%$ simply by memorizing the answer key. When faced with genuine engineering challenges in the real world, that student would fail completely.
+\end{analogy}
+
+\subsubsection{The Three-Way Partition: Roles and Lifecycle}
+To prevent artificial memorization, we divide our available data into three strictly segregated subsets:
+
+\paragraph{1. The Training Set (Typically $60\%$ to $80\%$)}
+The training set is the mathematical laboratory where model parameters are optimized. During training, optimization algorithms (such as gradient descent or ordinary least squares) iteratively adjust the internal weights $\mathbf{w}$ and biases $b$ to minimize empirical loss:
+\begin{equation}
+\mathbf{w}^* = \arg\min_{\mathbf{w}} \frac{1}{N_{\text{train}}} \sum_{i=1}^{N_{\text{train}}} L\left( f(\mathbf{x}_i; \mathbf{w}), y_i \right)\label{eq:train_empirical_loss}
+\end{equation}
+
+\paragraph{2. The Validation Set (Typically $10\%$ to $20\%$)}
+The validation set acts as an independent proxy for future data during the development phase. It is never used to update model weights $\mathbf{w}$ directly. Instead, engineers inspect validation error to:
+\begin{itemize}
+    \item Compare fundamentally different model families (e.g., Logistic Regression vs.\ Random Forest vs.\ Multi-Layer Perceptron).
+    \item Select optimal **hyperparameters** that cannot be learned through gradient descent (e.g., regularization strength $\lambda$, tree depth $d$, number of neighbors $k$, learning rate $\eta$).
+    \item Implement **early stopping** during neural network training to halt gradient descent before the network begins memorizing noise.
+\end{itemize}
+
+\paragraph{3. The Test Set (Typically $10\%$ to $20\%$)}
+The test set serves as the final, unbiased auditor of model performance. 
+\begin{warning}[The Peeking Trap]
+A test set must remain untouched throughout the design, feature selection, and hyperparameter tuning phases. If you evaluate model performance on the test set, observe a subpar score, adjust your hyperparameters, and re-evaluate on the test set, **the test set is no longer independent!** 
+
+Information from the test set has leaked into your design decisions through your own manual actions. The test set has effectively been demoted to a secondary validation set, and its reported score will be over-optimistic.
+\end{warning}
+
+\subsubsection{$k$-Fold Cross-Validation}
+When working with modest datasets (e.g., under $10{,}000$ telemetry samples), setting aside a fixed $20\%$ validation partition can waste valuable training data. Furthermore, a single validation split may introduce sampling variance: the model might score artificially high or low simply due to the luck of the split.
+
+To maximize data utility and obtain robust performance estimates, we employ **$k$-Fold Cross-Validation**:
+\begin{enumerate}
+    \item First, reserve a clean test set ($15\%$ to $20\%$) and lock it away.
+    \item Divide the remaining development data into $k$ equal-sized subsets (folds), typically $k = 5$ or $k = 10$.
+    \item Train $k$ separate models. In the $j$-th iteration, train on all folds except fold $j$, and evaluate validation performance exclusively on fold $j$.
+    \item Average the validation metrics across all $k$ iterations to obtain a stable mean estimate and variance:
+    \begin{equation}
+    \text{Score}_{\text{CV}} = \frac{1}{k} \sum_{j=1}^{k} \text{Score}_j, \quad \sigma_{\text{CV}} = \sqrt{\frac{1}{k-1} \sum_{j=1}^{k} (\text{Score}_j - \text{Score}_{\text{CV}})^2}\label{eq:kfold_cv_mean}
+    \end{equation}
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    fold/.style={rectangle, draw=gray!70, thick, minimum height=0.7cm, minimum width=1.7cm, text centered, font=\scriptsize\sffamily},
+    train_fill/.style={fill=keyideablue!25},
+    val_fill/.style={fill=analogygreen!40}
+]
+    % Headers
+    \node[font=\footnotesize\sffamily\bfseries] at (-1.5, 2.8) {Iteration};
+    \node[font=\footnotesize\sffamily\bfseries] at (1.0, 2.8) {Fold 1};
+    \node[font=\footnotesize\sffamily\bfseries] at (2.9, 2.8) {Fold 2};
+    \node[font=\footnotesize\sffamily\bfseries] at (4.8, 2.8) {Fold 3};
+    \node[font=\footnotesize\sffamily\bfseries] at (6.7, 2.8) {Fold 4};
+    \node[font=\footnotesize\sffamily\bfseries] at (8.6, 2.8) {Fold 5};
+    \node[font=\footnotesize\sffamily\bfseries] at (11.0, 2.8) {Validation Score};
+
+    % Iteration 1
+    \node[font=\scriptsize\sffamily] at (-1.5, 2.1) {Iter 1:};
+    \node[fold, val_fill] at (1.0, 2.1) {Validation};
+    \node[fold, train_fill] at (2.9, 2.1) {Train};
+    \node[fold, train_fill] at (4.8, 2.1) {Train};
+    \node[fold, train_fill] at (6.7, 2.1) {Train};
+    \node[fold, train_fill] at (8.6, 2.1) {Train};
+    \node[font=\scriptsize\sffamily] at (11.0, 2.1) {$\text{Score}_1$};
+
+    % Iteration 2
+    \node[font=\scriptsize\sffamily] at (-1.5, 1.4) {Iter 2:};
+    \node[fold, train_fill] at (1.0, 1.4) {Train};
+    \node[fold, val_fill] at (2.9, 1.4) {Validation};
+    \node[fold, train_fill] at (4.8, 1.4) {Train};
+    \node[fold, train_fill] at (6.7, 1.4) {Train};
+    \node[fold, train_fill] at (8.6, 1.4) {Train};
+    \node[font=\scriptsize\sffamily] at (11.0, 1.4) {$\text{Score}_2$};
+
+    % Iteration 3
+    \node[font=\scriptsize\sffamily] at (-1.5, 0.7) {Iter 3:};
+    \node[fold, train_fill] at (1.0, 0.7) {Train};
+    \node[fold, train_fill] at (2.9, 0.7) {Train};
+    \node[fold, val_fill] at (4.8, 0.7) {Validation};
+    \node[fold, train_fill] at (6.7, 0.7) {Train};
+    \node[fold, train_fill] at (8.6, 0.7) {Train};
+    \node[font=\scriptsize\sffamily] at (11.0, 0.7) {$\text{Score}_3$};
+
+    % Iteration 4
+    \node[font=\scriptsize\sffamily] at (-1.5, 0.0) {Iter 4:};
+    \node[fold, train_fill] at (1.0, 0.0) {Train};
+    \node[fold, train_fill] at (2.9, 0.0) {Train};
+    \node[fold, train_fill] at (4.8, 0.0) {Train};
+    \node[fold, val_fill] at (6.7, 0.0) {Validation};
+    \node[fold, train_fill] at (8.6, 0.0) {Train};
+    \node[font=\scriptsize\sffamily] at (11.0, 0.0) {$\text{Score}_4$};
+
+    % Iteration 5
+    \node[font=\scriptsize\sffamily] at (-1.5, -0.7) {Iter 5:};
+    \node[fold, train_fill] at (1.0, -0.7) {Train};
+    \node[fold, train_fill] at (2.9, -0.7) {Train};
+    \node[fold, train_fill] at (4.8, -0.7) {Train};
+    \node[fold, train_fill] at (6.7, -0.7) {Train};
+    \node[fold, val_fill] at (8.6, -0.7) {Validation};
+    \node[font=\scriptsize\sffamily] at (11.0, -0.7) {$\text{Score}_5$};
+
+    % Summary
+    \draw[thick, gray!60] (-2.2, -1.2) -- (12.2, -1.2);
+    \node[font=\small\sffamily\bfseries, text=keyideablue!90!black] at (5.0, -1.6) {Final Validation Estimate: $\text{Score}_{\text{CV}} = \frac{1}{5}\sum_{j=1}^5 \text{Score}_j \ \pm \ \sigma_{\text{CV}}$};
+\end{tikzpicture}
+\caption{Structure of 5-Fold Cross-Validation. Every sample appears in the validation partition exactly once, ensuring that model selection does not depend on an arbitrary lucky or unlucky split.}\label{fig:kfold_diagram}
+\end{figure}
+
+% ==============================================================================
+% 2. STRATIFIED AND GROUP-BASED SPLITTING
+% ==============================================================================
+\subsection{Stratified and Group-Based Splitting}\label{subsec:stratified_group_splitting}
+
+When partitioning data, standard practice often begins with a uniform pseudo-random shuffle (e.g., calling \texttt{train\_test\_split(..., shuffle=True)}). While uniform random shuffling works well on massive, evenly balanced datasets, it fails systematically in two critical engineering scenarios: **imbalanced target classes** and **clustered group structures**.
+
+\subsubsection{Stratified Splitting: Preserving Distribution Proportions}
+Consider an industrial condition monitoring dataset containing $10{,}000$ machine cycles. Normal operations comprise $9{,}800$ cycles ($98\%$), while bearing cage cracking comprises only $200$ cycles ($2\%$). 
+
+If you apply a naive random $80/20$ train-test split without stratification:
+\begin{itemize}
+    \item By random chance, the $200$ failure samples might land overwhelmingly in the training set (e.g., $190$ in train, $10$ in test). The test set now contains an unrepresentative $0.5\%$ failure rate, rendering test metrics statistically unreliable.
+    \item In extreme cases with rare classes (e.g., multi-class fault classification with $10$ fault types), a naive split can result in a fold with **zero instances** of a rare fault. The model is asked to predict a class it was never trained on, or evaluated on a class that does not exist in the test fold!
+\end{itemize}
+
+\paragraph{Formal Definition: Stratified Sampling}
+Stratified sampling enforces the mathematical constraint that the relative proportion of each class $c \in \{1, \dots, C\}$ in every partition matches the global class proportion of the full dataset:
+\begin{equation}
+\frac{N_{c, \text{train}}}{N_{\text{train}}} = \frac{N_{c, \text{val}}}{N_{\text{val}}} = \frac{N_{c, \text{test}}}{N_{\text{test}}} = \frac{N_c}{N_{\text{total}}} \quad \forall c \in \{1, \dots, C\}\label{eq:stratified_proportion}
+\end{equation}
+In Scikit-Learn, this behavior is enabled simply by passing \texttt{stratify=y} to \texttt{train\_test\_split}, or by using \texttt{StratifiedKFold}.
+
+\subsubsection{Group-Based Splitting: Preventing Device Fingerprint Leakage}
+In physical IoT deployments, data is rarely independent and identically distributed (i.i.d.). Instead, measurements naturally cluster around specific physical entities: individual machines, sensor modules, patient monitors, or geographic nodes.
+
+\begin{example}[The Factory Machine Identity Trap]
+Suppose a predictive maintenance team collects $50{,}000$ vibration records from $5$ identical CNC milling machines ($10{,}000$ records per machine). Each machine has subtle manufacturing tolerances, slight mounting misalignments, and distinct ambient acoustic reflections:
+\begin{itemize}
+    \item CNC Machine \#1 has a slightly looser mounting bolt (baseline vibration shifted $+0.05\text{ g}$).
+    \item CNC Machine \#3 operates in an uninsulated corner (ambient temperature reads $+3^\circ\text{C}$ higher).
+\end{itemize}
+
+If you randomly shuffle and split the records:
+\begin{center}
+$8{,}000$ samples from Machine \#1 land in \textbf{Train} $\longleftrightarrow$ $2{,}000$ samples from Machine \#1 land in \textbf{Test}
+\end{center}
+The classifier does not learn the general physics of bearing spalling. Instead, it memorizes that *``any vibration with baseline $+0.05\text{ g}$ is Machine \#1.'* When evaluated on the test set, it achieves $99.4\%$ accuracy because it recognizes Machine \#1's unique acoustic signature!
+
+When the system is deployed to CNC Machine \#6 at a new customer facility, the model fails immediately. It has never seen Machine \#6's mounting characteristics.
+\end{example}
+
+\paragraph{The Solution: GroupKFold}
+To assess true physical generalization across distinct hardware units, we must partition by **Group Entity** (e.g., Machine ID or Device MAC address). All records originating from a specific physical unit must reside exclusively in the training set or exclusively in the evaluation set:
+\begin{equation}
+\text{Devices}_{\text{train}} \cap \text{Devices}_{\text{test}} = \emptyset\label{eq:group_disjoint}
+\end{equation}
+Scikit-Learn implements this via \texttt{GroupKFold} and \texttt{GroupShuffleSplit}. If you have 5 machines, you train on Machines 1, 2, 3, and 4, and test strictly on Machine 5. Only then will your validation metrics reflect real-world performance on new hardware.
+
+% ==============================================================================
+% 3. TIME-BASED SPLITS FOR SENSOR AND TEMPORAL DATA
+% ==============================================================================
+\subsection{Time-Based Splits for Sensor and Temporal Data}\label{subsec:time_based_splits}
+
+Physical sensor telemetry evolves along the non-negotiable arrow of time. A barometric reading at 12:00 PM is physically dependent on the reading at 11:59 AM. Shuffling time-series observations breaks temporal causality and introduces catastrophic **lookahead bias**.
+
+\subsubsection{Why Random Shuffling Fails on Time Series}
+When you apply a random shuffle to temporal data, two forms of leakage occur simultaneously:
+\begin{enumerate}
+    \item \textbf{Autocorrelation Interpolation}: High-frequency sensor streams exhibit high temporal autocorrelation ($\text{Corr}(x_t, x_{t+1}) \approx 0.98$). If sample $t$ is placed in the test set while samples $t-1$ and $t+1$ are placed in the training set, the model does not forecast the future; it simply interpolates between two known adjacent points.
+    \item \textbf{Non-Stationary Trend Leakage}: Physical processes drift over time due to seasonal weather, tool wear, and battery depletion. If you randomly sample across the entire timeline, the training set contains samples from the future, giving the model advance knowledge of future drift levels.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    bar/.style={rectangle, draw=gray!70, thick, minimum height=0.65cm, text centered, font=\scriptsize\sffamily},
+    train_fill/.style={fill=keyideablue!25},
+    val_fill/.style={fill=analogygreen!40},
+    test_fill/.style={fill=warningred!30},
+    gap_fill/.style={fill=gray!20, draw=gray!40, dashed}
+]
+    % Timeline Arrow
+    \draw[-{Stealth[length=3mm]}, very thick, gray!80] (0, 3.6) -- (12.5, 3.6) node[right, font=\footnotesize\sffamily\bfseries] {Time $t$};
+    \foreach \x/\txt in {0/Day 1, 3/Day 10, 6/Day 20, 9/Day 30, 12/Day 40} {
+        \draw[thick, gray!60] (\x, 3.5) -- (\x, 3.7) node[above, font=\scriptsize\sffamily] {\txt};
+    }
+
+    % Strategy 1: Contiguous Block Split
+    \node[font=\footnotesize\sffamily\bfseries, anchor=west] at (0, 2.9) {1. Contiguous Block Split (Static Train / Val / Test)};
+    \node[bar, train_fill, minimum width=7.2cm] at (3.6, 2.3) {Training Split (Past: Days 1--24)};
+    \node[bar, val_fill, minimum width=2.4cm] at (8.4, 2.3) {Val (Days 25--32)};
+    \node[bar, test_fill, minimum width=2.4cm] at (10.8, 2.3) {Test (Future: Days 33--40)};
+
+    % Strategy 2: Expanding Window (TimeSeriesSplit)
+    \node[font=\footnotesize\sffamily\bfseries, anchor=west] at (0, 1.4) {2. Rolling-Origin / Expanding Window Cross-Validation};
+    
+    % Split 1
+    \node[bar, train_fill, minimum width=3.6cm] at (1.8, 0.8) {Train (Fold 1)};
+    \node[bar, val_fill, minimum width=1.8cm] at (4.5, 0.8) {Val 1};
+    
+    % Split 2
+    \node[bar, train_fill, minimum width=5.4cm] at (2.7, 0.1) {Train (Fold 1 + 2)};
+    \node[bar, val_fill, minimum width=1.8cm] at (6.3, 0.1) {Val 2};
+
+    % Split 3 with Purge Gap
+    \node[bar, train_fill, minimum width=7.2cm] at (3.6, -0.6) {Train (Fold 1 + 2 + 3)};
+    \node[bar, gap_fill, minimum width=0.6cm] at (7.5, -0.6) {Gap};
+    \node[bar, val_fill, minimum width=1.8cm] at (8.7, -0.6) {Val 3};
+
+    \node[font=\tiny\sffamily, text=gray!80] at (7.5, -1.05) {Purge window overlap};
+\end{tikzpicture}
+\caption{Temporal partitioning architectures. Training must strictly precede evaluation in time. The bottom row highlights a purge gap, which discards samples near the boundary to prevent window overlap leakage.}\label{fig:time_series_splits}
+\end{figure}
+
+\subsubsection{Temporal Partitioning Strategies}
+To simulate genuine real-time deployment, evaluate temporal models using chronological strategies:
+\begin{itemize}
+    \item \textbf{Contiguous Block Split}: Divide the timeline into chronological segments. For instance, the first $70\%$ of historical time forms the training set, the subsequent $15\%$ forms the validation set, and the final $15\%$ forms the test set:
+    \begin{equation}
+    t_{\text{train}} < t_{\text{val}} < t_{\text{test}}\label{eq:time_chronological}
+    \end{equation}
+    \item \textbf{Expanding Window Cross-Validation (\texttt{TimeSeriesSplit})}: Iteratively expands the training horizon while testing on the immediate subsequent window. In iteration 1, train on Days 1--10 and validate on Days 11--15. In iteration 2, train on Days 1--15 and validate on Days 16--20. This reflects how production models are periodically retrained as new historical data accumulates.
+    \item \textbf{Purging and Embargoing}: When calculating sliding window features (e.g., a $60$-sample rolling RMS window), samples near the train-test boundary share raw sensor data points. A **purge gap** equal to the window length must be inserted between training and evaluation blocks to eliminate overlap.
+\end{itemize}
+
+% ==============================================================================
+% 4. DATA LEAKAGE: THE SILENT KILLER
+% ==============================================================================
+\subsection{Data Leakage: The Silent Killer of Machine Learning}\label{subsec:data_leakage}
+
+\paragraph{Formal Definition: Data Leakage}
+Data leakage occurs when information from outside the training dataset is inadvertently utilized to build the model. This spurious information is unavailable when the model is queried in production, leading to severe performance degradation.
+
+\subsubsection{The Five Architectural Vectors of Leakage}
+Data leakage is rarely obvious; it enters pipelines through subtle engineering errors:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    leak_box/.style={rectangle, draw=warningred!80, fill=warningred!10, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    safe_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!10, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily}
+]
+    % Bad side
+    \node[leak_box, minimum width=6.0cm] (b1) at (-3.4, 1.2) {\textbf{FLAWED: Global Preprocessing}\\Fit scaler/imputer on ALL data $\to$ leak $\mu, \sigma$};
+    \node[leak_box, minimum width=6.0cm] (b2) at (-3.4, -0.4) {\textbf{FLAWED: Target Leakage}\\Feature includes future maintenance ticket flag};
+    \node[leak_box, minimum width=6.0cm] (b3) at (-3.4, -2.0) {\textbf{FLAWED: Pre-Split Resampling}\\SMOTE synthetic copies generated in test set};
+
+    % Good side
+    \node[safe_box, minimum width=6.0cm] (g1) at (3.8, 1.2) {\textbf{CORRECT: Pipeline Encapsulation}\\\texttt{Pipeline([('scaler', StandardScaler()), ...])}};
+    \node[safe_box, minimum width=6.0cm] (g2) at (3.8, -0.4) {\textbf{CORRECT: Causal Feature Auditing}\\Verify features exist strictly prior to prediction time};
+    \node[safe_box, minimum width=6.0cm] (g3) at (3.8, -2.0) {\textbf{CORRECT: Isolated Resampling}\\Apply SMOTE / undersampling strictly within train fold};
+
+    % Central barrier
+    \draw[very thick, dashed, gray!60] (0.2, 2.0) -- (0.2, -2.8);
+    \node[font=\footnotesize\sffamily\bfseries, text=warningred!80!black] at (-3.4, 2.0) {Leaky Practice (Fails in Field)};
+    \node[font=\footnotesize\sffamily\bfseries, text=analogygreen!80!black] at (3.8, 2.0) {Robust Architecture (Production Ready)};
+\end{tikzpicture}
+\caption{Contrasting leaky preprocessing habits against leak-free engineering workflows.}\label{fig:leakage_comparison}
+\end{figure}
+
+\begin{enumerate}
+    \item \textbf{Preprocessing / Transform Leakage}: Computing transformation parameters ($\mu, \sigma, x_{\min}, x_{\max}$, PCA eigenvectors, or imputation medians) across the full dataset before splitting. When the scaler subtracts $\mu$, it introduces knowledge of the test set's mean into the training inputs.
+    
+    \item \textbf{Target Leakage}: Constructing a feature that directly or indirectly incorporates the target variable. 
+    
+    \textit{IoT Example}: An engineer building a model to predict motor bearing failures includes the binary telemetry flag \texttt{fault\_relay\_tripped}. The physical safety relay only trips *after* the bearing has seized! The model learns to rely entirely on this flag, achieving $100\%$ accuracy during validation, but providing zero advance warning in production.
+    
+    \item \textbf{Temporal Leakage (Lookahead Bias)}: Shuffling sequential time-series data, or computing rolling features using centered moving averages that encompass future timestamps ($t+1, t+2$).
+    
+    \item \textbf{Entity / Group Leakage}: Splitting sensor telemetry at the row level rather than the device level, allowing the model to memorize physical hardware quirks.
+    
+    \item \textbf{Overlapping Window Leakage}: In TinyML feature extraction, raw sensor buffers are extracted using sliding windows with $50\%$ to $75\%$ overlap. If overlapping windows are shuffled randomly into train and test sets, the two sets share identical raw sensor values, inflating validation metrics.
+\end{enumerate}
+
+\subsubsection{Architectural Defense: Scikit-Learn Pipelines}
+The most robust defense against preprocessing leakage is encapsulating all transformers and estimators into a Scikit-Learn \texttt{Pipeline}:
+\begin{lstlisting}[style=pythonstyle]
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+# The pipeline guarantees that StandardScaler is fit ONLY on training folds!
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', LogisticRegression())
+])
+
+# Cross-validation fits the scaler strictly on the train folds of each split
+scores = cross_val_score(pipeline, X_train, y_train, cv=5)
+\end{lstlisting}
+When \texttt{pipeline.fit(X\_train, y\_train)} is invoked, the pipeline calls \texttt{scaler.fit\_transform()} strictly on \texttt{X\_train}. When evaluating on validation or test sets via \texttt{pipeline.predict(X\_test)}, the pipeline calls \texttt{scaler.transform(X\_test)} using the scaling parameters ($\mu, \sigma$) learned exclusively from training data. Mathematical leakage between partitions becomes impossible.
+
+% ==============================================================================
+% 5. HANDLING CLASS IMBALANCE
+% ==============================================================================
+\subsection{Handling Imbalanced Datasets}\label{subsec:handling_class_imbalance}
+
+In standard academic benchmarks, classification datasets often exhibit equal class distributions ($50\%$ dogs, $50\%$ cats). In industrial IoT and edge analytics, balance is the rare exception.
+
+\subsubsection{The Ubiquity of Imbalance and the Accuracy Paradox}
+Consider a seismic vibration sensor monitoring structural integrity on a suspension bridge:
+\begin{itemize}
+    \item $99.9\%$ of recorded hours reflect safe, normal ambient traffic.
+    \item $0.1\%$ of recorded hours reflect structural cable snapping or anchor micro-fractures.
+\end{itemize}
+
+Suppose an engineer trains a classifier and reports $99.9\%$ accuracy. That sounds exceptional---until you inspect the predictions and discover that the model simply outputs \texttt{"Normal"} for every single input!
+\begin{equation}
+\text{Accuracy} = \frac{\text{Correct Predictions}}{\text{Total Predictions}} = \frac{9{,}990 + 0}{10{,}000} = 99.9\%
+\end{equation}
+This phenomenon is known as the **Accuracy Paradox**. The model is $99.9\%$ accurate, yet it is completely useless because it fails to detect a single structural failure. For imbalanced datasets, standard accuracy is a misleading metric and should never be used alone.
+
+\subsubsection{Evaluation Metrics for Imbalanced Classification}
+To properly assess imbalanced models, we inspect the **Confusion Matrix**:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{cc|cc}
+\multicolumn{2}{c}{} & \multicolumn{2}{c}{\textbf{Predicted Class}} \\
+& & \textbf{Predicted Negative (0)} & \textbf{Predicted Positive (1)} \\
+\hline
+\multirow{2}{*}{\textbf{Actual Class}} 
+& \textbf{Actual Negative (0)} & True Negative (TN) & False Positive (FP) [False Alarm] \\
+& \textbf{Actual Positive (1)} & False Negative (FN) [Missed Fault] & True Positive (TP) [Caught Fault] \\
+\end{tabular}
+\end{center}
+
+From these four values, we derive targeted operational metrics:
+\begin{itemize}
+    \item \textbf{Precision (Positive Predictive Value)}: When the system sounds an alarm, what fraction of alarms are genuine?
+    \begin{equation}
+    \text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}\label{eq:precision_def}
+    \end{equation}
+    Low precision causes *operator alarm fatigue*: maintenance crews waste time responding to false alerts and eventually disable the monitoring system.
+
+    \item \textbf{Recall (Sensitivity / True Positive Rate)}: What fraction of actual physical failures did the model successfully detect?
+    \begin{equation}
+    \text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}\label{eq:recall_def}
+    \end{equation}
+    Low recall is dangerous: it means machines break down without warning. In predictive maintenance, high recall is typically prioritized over precision.
+
+    \item \textbf{$F_1$-Score}: The harmonic mean of precision and recall, balancing both concerns:
+    \begin{equation}
+    F_1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}} = \frac{2\text{TP}}{2\text{TP} + \text{FP} + \text{FN}}\label{eq:f1_score_def}
+    \end{equation}
+    The harmonic mean heavily penalizes models that sacrifice one metric to inflate the other.
+\end{itemize}
+
+\subsubsection{Mitigation Strategy 1: Cost-Sensitive Learning (Class Weights)}
+Rather than altering the raw dataset, cost-sensitive learning modifies the objective function during optimization. We assign a higher penalty weight $w_1$ to errors on the minority class:
+\begin{equation}
+L_{\text{weighted}}(\mathbf{w}) = - \sum_{i=1}^{N} \left[ w_1 y_i \log(\hat{y}_i) + w_0 (1 - y_i) \log(1 - \hat{y}_i) \right]\label{eq:weighted_log_loss}
+\end{equation}
+Scikit-Learn automatically computes inversely proportional balanced weights via \texttt{class\_weight='balanced'}:
+\begin{equation}
+w_c = \frac{N_{\text{total}}}{K \cdot N_c}\label{eq:balanced_class_weight}
+\end{equation}
+where $N_{\text{total}}$ is the total number of samples, $K$ is the number of classes, and $N_c$ is the number of samples in class $c$.
+
+For a dataset of $1{,}000$ samples with $970$ normal instances ($N_0 = 970$) and $30$ faults ($N_1 = 30$):
+\begin{align*}
+w_0 &= \frac{1000}{2 \cdot 970} = \frac{1000}{1940} \approx \mathbf{0.5155} \\
+w_1 &= \frac{1000}{2 \cdot 30} = \frac{1000}{60} \approx \mathbf{16.6667}
+\end{align*}
+The optimizer treats missing a single fault as equivalent to generating over $32$ false alarms! This forces gradient descent to prioritize finding a decision boundary that captures the minority fault instances.
+
+\subsubsection{Mitigation Strategy 2: Data Resampling}
+An alternative approach rebalances class proportions before training:
+\begin{itemize}
+    \item \textbf{Random Undersampling}: Randomly discards samples from the majority class until proportions match.
+    
+    \textit{Trade-off}: Fast and simple, but throws away potentially valuable operational data.
+    
+    \item \textbf{Random Oversampling}: Duplicates random samples from the minority class.
+    
+    \textit{Trade-off}: Retains all data, but exact duplication increases the risk of overfitting narrow regions around existing minority points.
+    
+    \item \textbf{Synthetic Minority Over-sampling Technique (SMOTE)}: Generates plausible synthetic data points along line segments connecting existing minority samples and their $k$-nearest minority neighbors:
+    \begin{equation}
+    \mathbf{x}_{\text{synthetic}} = \mathbf{x}_i + \lambda (\mathbf{x}_{zi} - \mathbf{x}_i), \quad \lambda \sim \text{Uniform}(0, 1)\label{eq:smote_interpolation}
+    \end{equation}
+    where $\mathbf{x}_i$ is a minority sample and $\mathbf{x}_{zi}$ is one of its $k$-nearest minority neighbors in feature space.
+\end{itemize}
+
+\begin{warning}[The Cardinal Rule of Resampling]
+\textbf{Never resample the test set!} 
+
+Oversampling or applying SMOTE to the test set creates synthetic evaluation samples that do not exist in the physical world. Your test set must remain an untouched, pristine representation of true operational conditions. 
+
+All resampling must be applied **strictly inside the training partition**.
+\end{warning}
+
+% ==============================================================================
+% 6. HANDS-ON PYTHON DEMONSTRATION
+% ==============================================================================
+\subsection{Hands-On Python: Leak-Free Pipeline on Imbalanced Telemetry}\label{subsec:splitting_python}
+
+Let us build an end-to-end Python script that processes an imbalanced industrial telemetry stream ($97\%$ normal, $3\%$ fault). We will demonstrate stratified splitting, encapsulate transformations inside a leak-free \texttt{Pipeline}, and compare an unweighted baseline against a cost-sensitive model.
+
+\begin{lstlisting}[style=pythonstyle]
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
+from sklearn.pipeline import Pipeline
+
+# 1. Ensure deterministic reproducibility
+np.random.seed(42)
+
+# 2. Synthesize 1000 industrial sensor samples (970 Normal, 30 Faults)
+n_normal = 970
+n_faults = 30
+n_samples = n_normal + n_faults
+
+# Normal operations: centered at 25 C and 0.20 g vibration
+temp_normal = np.random.normal(loc=25.0, scale=3.0, size=n_normal)
+vibe_normal = np.random.normal(loc=0.20, scale=0.08, size=n_normal)
+y_normal = np.zeros(n_normal, dtype=int)
+
+# Fault operations: elevated temperature (28.5 C) and higher vibration (0.38 g)
+temp_fault = np.random.normal(loc=28.5, scale=3.5, size=n_faults)
+vibe_fault = np.random.normal(loc=0.38, scale=0.12, size=n_faults)
+y_fault = np.ones(n_faults, dtype=int)
+
+# Combine and shuffle
+X = np.vstack([
+    np.column_stack([temp_normal, vibe_normal]),
+    np.column_stack([temp_fault, vibe_fault])
+])
+y = np.concatenate([y_normal, y_fault])
+
+# 3. Stratified Train-Test Split (80% Train, 20% Test)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=42, stratify=y
+)
+
+print("--- 1. Stratified Partition Summary ---")
+print(f"Train total: {len(y_train)} | Faults: {np.sum(y_train)} ({np.mean(y_train)*100:.1f}%)")
+print(f"Test total:  {len(y_test)}  | Faults: {np.sum(y_test)}  ({np.mean(y_test)*100:.1f}%)")
+
+# 4. Pipeline A: Baseline Unweighted Logistic Regression (Leak-Free)
+pipe_base = Pipeline([
+    ('scaler', StandardScaler()),
+    ('clf', LogisticRegression(random_state=42))
+])
+pipe_base.fit(X_train, y_train)
+y_pred_base = pipe_base.predict(X_test)
+cm_base = confusion_matrix(y_test, y_pred_base)
+
+# 5. Pipeline B: Cost-Sensitive Balanced Class Weights
+pipe_balanced = Pipeline([
+    ('scaler', StandardScaler()),
+    ('clf', LogisticRegression(class_weight='balanced', random_state=42))
+])
+pipe_balanced.fit(X_train, y_train)
+y_pred_balanced = pipe_balanced.predict(X_test)
+cm_balanced = confusion_matrix(y_test, y_pred_balanced)
+
+# 6. Comparative Evaluation
+print("\n--- 2. Baseline Model (Unweighted) ---")
+print(f"Confusion Matrix:\n{cm_base}")
+print(f"Accuracy:  {pipe_base.score(X_test, y_test)*100:.1f}%")
+print(f"Recall:    {recall_score(y_test, y_pred_base):.2f}")
+print(f"Precision: {precision_score(y_test, y_pred_base):.2f}")
+print(f"F1-Score:  {f1_score(y_test, y_pred_base):.2f}")
+
+print("\n--- 3. Cost-Sensitive Model (class_weight='balanced') ---")
+print(f"Confusion Matrix:\n{cm_balanced}")
+print(f"Accuracy:  {pipe_balanced.score(X_test, y_test)*100:.1f}%")
+print(f"Recall:    {recall_score(y_test, y_pred_balanced):.2f}")
+print(f"Precision: {precision_score(y_test, y_pred_balanced):.2f}")
+print(f"F1-Score:  {f1_score(y_test, y_pred_balanced):.2f}")
+\end{lstlisting}
+
+Executing this script produces the exact output below:
+\begin{lstlisting}[style=outputstyle]
+--- 1. Stratified Partition Summary ---
+Train total: 800 | Faults: 24 (3.0%)
+Test total:  200  | Faults: 6  (3.0%)
+
+--- 2. Baseline Model (Unweighted) ---
+Confusion Matrix:
+[[194   0]
+ [  4   2]]
+Accuracy:  98.0%
+Recall:    0.33
+Precision: 1.00
+F1-Score:  0.50
+
+--- 3. Cost-Sensitive Model (class_weight='balanced') ---
+Confusion Matrix:
+[[183  11]
+ [  1   5]]
+Accuracy:  94.0%
+Recall:    0.83
+Precision: 0.31
+F1-Score:  0.45
+\end{lstlisting}
+
+\paragraph{Detailed Performance Analysis:}
+\begin{itemize}
+    \item \textbf{Stratification Integrity}: Both the training partition ($800$ samples) and the test partition ($200$ samples) maintain an identical $3.0\%$ fault distribution. A naive unstratified split could have left the test set with zero or one fault instance.
+    \item \textbf{The Baseline Trap}: The unweighted baseline achieves an impressive-sounding $98.0\%$ accuracy. However, inspecting the confusion matrix reveals a dangerous flaw:
+    \begin{equation*}
+    \text{FN} = 4, \quad \text{TP} = 2 \implies \text{Recall} = \frac{2}{2 + 4} = 33\%
+    \end{equation*}
+    The baseline model misses $4$ out of $6$ bearing failures ($67\%$ missed breakdowns). In an industrial plant, this would lead to catastrophic equipment damage.
+    \item \textbf{The Cost-Sensitive Solution}: By activating \texttt{class\_weight='balanced'}, overall accuracy drops from $98.0\%$ to $94.0\%$. However, **Recall jumps from $33\%$ to $83\%$** (catching $5$ out of $6$ faults). The model trades $11$ false alarms for the ability to catch critical failures in advance.
+\end{itemize}
+
+% ==============================================================================
+% 7. IOT AND TINYML CONNECTION
+% ==============================================================================
+\subsection{IoT and TinyML: Splitting and Deployment in the Physical World}\label{subsec:splitting_iot}
+
+\begin{iotbox}[Deploying Imbalanced Anomaly Detectors on Microcontrollers]
+Developing a machine learning model on a desktop computer provides access to flexible floating-point evaluations and high-level libraries. Translating those algorithms to a constrained edge microcontroller (such as an ARM Cortex-M4 or ESP32) introduces strict practical challenges around data splitting and decision thresholds:
+
+\paragraph{1. The ``Quiet Sensor'' Problem in Field Data Collection}
+When collecting training data for TinyML vibration detectors, engineers often record hours of continuous sensor data in clean laboratory environments. The resulting dataset contains $100{,}000$ normal cycles and zero real-world physical failure cycles. 
+\begin{itemize}
+    \item If you evaluate an anomaly detector only on bench data, you are testing in a clean room.
+    \item In the field, environmental temperature shifts from $-10^\circ\text{C}$ to $+45^\circ\text{C}$, supply voltage ripples introduce ADC noise, and structural foundations vibrate from nearby vehicle traffic.
+    \item Always hold out an entire physical test run collected under extreme ambient conditions (thermal stress, low battery voltage) to verify the model does not generate continuous false alarms in real environments.
+\end{itemize}
+
+\paragraph{2. Edge Threshold Tuning and Alarm Hysteresis}
+In standard machine learning, binary classification uses a default probability threshold of $\tau = 0.5$:
+\begin{equation}
+\hat{y} = \begin{cases} 1 & \text{if } P(y=1 \mid \mathbf{x}) \ge 0.5 \\ 0 & \text{otherwise} \end{cases}
+\end{equation}
+On an edge microcontroller, floating-point probability calculations are often eliminated to conserve battery power. Furthermore, an edge device cannot tolerate intermittent false alarms that trigger costly wireless transmissions.
+
+Instead, embedded firmware uses an **Alarm Hysteresis Counter** (debouncing). A single high-vibration sample does not trigger an alarm. The alarm only sounds if $M$ out of the last $N$ sliding windows exceed the threshold:
+
+\begin{lstlisting}[style=pythonstyle]
+// Embedded C: Fault Alarm Debouncing with Hysteresis
+#include <stdint.h>
+#include <stdbool.h>
+
+#define HYSTERESIS_WINDOW  5   // Check last 5 inferences
+#define ALARM_THRESHOLD    3   // Require 3 positive detections
+
+static uint8_t anomaly_history = 0; // Bitmask of recent detections
+
+bool evaluate_alarm_hysteresis(float model_raw_output, float decision_threshold) {
+    // 1. Evaluate current inference
+    uint8_t current_detection = (model_raw_output >= decision_threshold) ? 1 : 0;
+
+    // 2. Shift history bitmask and append current detection
+    anomaly_history = ((anomaly_history << 1) | current_detection) & ((1 << HYSTERESIS_WINDOW) - 1);
+
+    // 3. Count active detections in history window
+    uint8_t active_detections = 0;
+    for (uint8_t i = 0; i < HYSTERESIS_WINDOW; i++) {
+        if ((anomaly_history >> i) & 1) active_detections++;
+    }
+
+    // 4. Trigger physical alert pin only if persistence threshold is met
+    return (active_detections >= ALARM_THRESHOLD);
+}
+\end{lstlisting}
+This lightweight C routine filters out transient electrical glitches and physical knocks on the machine casing, while reliably catching sustained mechanical spalling.
+\end{iotbox}
+
+% ==============================================================================
+% 8. COMMON PITFALLS SUMMARY
+% ==============================================================================
+\subsection{Common Pitfalls in Data Partitioning}\label{subsec:splitting_pitfalls_summary}
+
+\begin{warning}[Five Fatal Partitioning Mistakes to Avoid]
+\begin{enumerate}
+    \item \textbf{Relying Exclusively on Accuracy for Imbalanced Tasks}:
+    Evaluating a fault detector with $1\%$ anomalies using raw classification accuracy. Always inspect the confusion matrix, Recall, and Precision.
+
+    \item \textbf{Shuffling Temporal Time-Series Streams}:
+    Applying random row-level shuffling to sequential sensor streams. This creates lookahead bias, allowing the model to peek into future timestamps. Always use chronological block splits or \texttt{TimeSeriesSplit}.
+
+    \item \textbf{Fitting Transformations Before the Train-Test Split}:
+    Calling \texttt{fit\_transform()} on the entire dataset with scalers, encoders, or PCA. This leaks the mean, variance, and categories of the test set into the training phase. Encapsulate all steps inside a Scikit-Learn \texttt{Pipeline}.
+
+    \item \textbf{Applying Resampling (SMOTE) to the Evaluation Set}:
+    Over-sampling or synthesizing points across the entire dataset before splitting. This creates synthetic copies in the test set, producing invalid and over-optimistic evaluation scores. Resample strictly within the training set.
+
+    \item \textbf{Ignoring Clustered Group Structure}:
+    Splitting multi-device sensor records randomly. The model memorizes individual device fingerprints rather than learning general physical failure patterns. Always use \texttt{GroupKFold} when data originates from multiple distinct physical entities.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 9. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:splitting_takeaways}
+
+\begin{takeaways}[Core Principles of Data Partitioning and Imbalance]
+\begin{itemize}
+    \item \textbf{The Three-Way Split}: The training set updates model parameters; the validation set guides model selection and hyperparameter tuning; the test set remains locked until deployment as an unbiased final benchmark.
+    \item \textbf{Cross-Validation for Robustness}: $k$-Fold cross-validation provides stable mean performance estimates and variance bounds, protecting model selection from the arbitrariness of a single split.
+    \item \textbf{Stratified Sampling}: Enforces identical class proportions across train, validation, and test partitions, preventing rare classes from being starved of samples.
+    \item \textbf{Group-Based Partitioning}: When data is collected across multiple physical machines or patients, hold out entire entities using \texttt{GroupKFold} to verify that the model learns physical phenomena rather than individual hardware quirks.
+    \item \textbf{Time-Series Causality}: Never shuffle sequential telemetry. Train strictly on historical data and evaluate on future data to avoid lookahead bias.
+    \item \textbf{Zero-Leakage Architecture}: Encapsulate preprocessing transformations and models inside Scikit-Learn \texttt{Pipeline} objects so scalers are fit strictly on training folds.
+    \item \textbf{Cost-Sensitive Balancing}: In imbalanced domains, use \texttt{class\_weight='balanced'} or SMOTE (on training data only) to prioritize minority class Recall over raw accuracy.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 10. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:splitting_check_yourself}
+
+Test your understanding of data partitioning, leakage prevention, and class imbalance mitigation with the following practice problems. Complete step-by-step solutions are provided at the end of this chapter.
+
+\begin{checkyourself}[Practice Problems]
+\begin{enumerate}
+    \item \textbf{Partition Sizing and Stratification Arithmetic}:
+    An agricultural IoT monitoring network records $4{,}000$ soil moisture observations. The target variable is soil irrigation status: $3{,}600$ observations are \texttt{"Sufficient"} ($90\%$) and $400$ are \texttt{"Critically Dry"} ($10\%$).
+    \begin{enumerate}[label=(\alph*)]
+        \item If you perform a stratified $70/15/15$ train/validation/test split, exactly how many total samples, sufficient samples, and dry samples will reside in each of the three partitions?
+        \item If a colleague uses an unstratified random split and by chance only $30$ dry samples end up in the test set, what is the resulting test-set class proportion? Why is this problematic?
+    \end{enumerate}
+
+    \item \textbf{Manual Calculation of Balanced Class Weights}:
+    You are training a logistic regression model on an imbalanced telemetry dataset of $N = 2{,}000$ total industrial cycles. Normal operation contains $N_0 = 1{,}900$ samples, while bearing overheating contains $N_1 = 100$ samples.
+    \begin{enumerate}[label=(\alph*)]
+        \item Using the formula $w_c = \frac{N}{K \cdot N_c}$ (where $K=2$), calculate the exact numerical weights $w_0$ and $w_1$.
+        \item Verify that the weighted sample sum equals the total sample size: $N_0 w_0 + N_1 w_1 = N$.
+        \item What is the ratio of $w_1$ to $w_0$? Explain what this ratio communicates to the loss optimizer.
+    \end{enumerate}
+
+    \item \textbf{Overlapping Sliding Window Leakage}:
+    A high-frequency vibration sensor records continuous acceleration data at $100\text{ Hz}$. An engineer extracts sliding windows of length $W = 64$ samples, advancing the window by a step size of $S = 16$ samples between consecutive windows.
+    \begin{enumerate}[label=(\alph*)]
+        \item How many raw physical sensor samples are shared between window $k$ and window $k+1$? What percentage overlap does this represent?
+        \item If the engineer randomly shuffles these windowed feature vectors and splits them into train and test sets, explain the mechanism of data leakage that occurs. How should this pipeline be corrected?
+    \end{enumerate}
+
+    \item \textbf{Operational Cost Matrix Evaluation}:
+    A wind turbine monitoring system evaluates $200$ test days containing $194$ normal days and $6$ turbine gearbox fault days. An offshore maintenance team faces the following business costs:
+    \begin{itemize}
+        \item False Negative (Missed Fault): $\$5{,}000$ (catastrophic offshore gear failure requiring emergency crane ship).
+        \item False Positive (False Alarm): $\$50$ (technician remotely reviews telemetry log).
+        \item Correct Predictions (TP and TN): $\$0$.
+    \end{itemize}
+    Evaluate the two models from Section~\ref{subsec:splitting_python}:
+    \begin{itemize}
+        \item \textbf{Model A (Unweighted Baseline)}: $\text{TP} = 2, \ \text{FN} = 4, \ \text{TN} = 194, \ \text{FP} = 0$.
+        \item \textbf{Model B (Cost-Sensitive)}: $\text{TP} = 5, \ \text{FN} = 1, \ \text{TN} = 183, \ \text{FP} = 11$.
+    \end{itemize}
+    \begin{enumerate}[label=(\alph*)]
+        \item Calculate the Precision, Recall, and overall financial cost for Model A.
+        \item Calculate the Precision, Recall, and overall financial cost for Model B.
+        \item Which model is superior for the wind farm operator, and how much money does it save?
+    \end{enumerate}
+
+    \item \textbf{SMOTE Synthetic Interpolation Vector Arithmetic}:
+    In a 2D sensor feature space (Temperature in $^\circ\text{C}$, Vibration in g), an imbalanced minority fault class has a sample $\mathbf{x}_1 = [2.0, \ 5.0]$. Its nearest minority neighbor is $\mathbf{x}_2 = [2.4, \ 6.0]$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the difference vector $\mathbf{d} = \mathbf{x}_2 - \mathbf{x}_1$.
+        \item If the random interpolation parameter is drawn as $\lambda = 0.35$, calculate the exact coordinates of the newly generated synthetic feature vector $\mathbf{x}_{\text{synthetic}}$.
+        \item Does $\mathbf{x}_{\text{synthetic}}$ lie on the line segment connecting $\mathbf{x}_1$ and $\mathbf{x}_2$? Explain why this interpolation is physically plausible compared to random oversampling.
+    \end{enumerate}
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 11. ANSWERS TO CHECK YOURSELF
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Partition Sizing and Stratification Arithmetic}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Partition Counts}:
+        Total samples $N = 4{,}000$ ($3{,}600$ Sufficient, $400$ Dry).
+        \begin{itemize}
+            \item \textbf{Training Set ($70\%$)}:
+            Total: $4{,}000 \times 0.70 = \mathbf{2{,}800}$ samples. \\
+            Sufficient: $3{,}600 \times 0.70 = \mathbf{2{,}520}$ samples. \\
+            Critically Dry: $400 \times 0.70 = \mathbf{280}$ samples.
+            \item \textbf{Validation Set ($15\%$)}:
+            Total: $4{,}000 \times 0.15 = \mathbf{600}$ samples. \\
+            Sufficient: $3{,}600 \times 0.15 = \mathbf{540}$ samples. \\
+            Critically Dry: $400 \times 0.15 = \mathbf{60}$ samples.
+            \item \textbf{Test Set ($15\%$)}:
+            Total: $4{,}000 \times 0.15 = \mathbf{600}$ samples. \\
+            Sufficient: $3{,}600 \times 0.15 = \mathbf{540}$ samples. \\
+            Critically Dry: $400 \times 0.15 = \mathbf{60}$ samples.
+        \end{itemize}
+        Each partition contains exactly $90\%$ Sufficient and $10\%$ Dry.
+
+        \item \textbf{Unstratified Flaw}:
+        If only $30$ dry samples land in the test set of $600$ samples, the test-set proportion becomes:
+        \begin{equation*}
+        \frac{30}{600} = 0.05 \quad (5.0\%)
+        \end{equation*}
+        The test set now contains only half the true proportion of failure cases ($5\%$ vs $10\%$). Any evaluation metric computed on this set will have higher statistical variance and will underestimate the model's false alarm rate under normal operational conditions.
+    \end{enumerate}
+
+    \item \textbf{Manual Calculation of Balanced Class Weights}:
+    \begin{enumerate}[label=(\alph*)]
+        \item Using $w_c = \frac{N}{K \cdot N_c}$ with $N = 2{,}000$ and $K = 2$:
+        \begin{align*}
+        w_0 &= \frac{2000}{2 \cdot 1900} = \frac{2000}{3800} = \frac{10}{19} \approx \mathbf{0.5263} \\
+        w_1 &= \frac{2000}{2 \cdot 100} = \frac{2000}{200} = \mathbf{10.0000}
+        \end{align*}
+
+        \item \textbf{Weighted Sum Verification}:
+        \begin{equation*}
+        N_0 w_0 + N_1 w_1 = 1900 \left(\frac{10}{19}\right) + 100(10.0) = 1000 + 1000 = \mathbf{2000} = N
+        \end{equation*}
+
+        \item \textbf{Ratio Interpretation}:
+        \begin{equation*}
+        \frac{w_1}{w_0} = \frac{10.0}{10/19} = 19.0
+        \end{equation*}
+        The minority fault class receives a weight exactly $19$ times larger than the majority class (which matches the class count ratio $\frac{1900}{100} = 19$). This instructs the loss optimizer that failing to predict a single bearing fault incurs the exact same loss penalty as generating $19$ false alarms on normal cycles.
+    \end{enumerate}
+
+    \item \textbf{Overlapping Sliding Window Leakage}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Shared Samples}:
+        Window length $W = 64$, step size $S = 16$.
+        The number of shared raw sensor samples between consecutive windows is:
+        \begin{equation*}
+        \text{Shared Samples} = W - S = 64 - 16 = \mathbf{48} \text{ samples}
+        \end{equation*}
+        The overlap percentage is:
+        \begin{equation*}
+        \frac{48}{64} = 0.75 \quad (\mathbf{75\% \text{ overlap}})
+        \end{equation*}
+
+        \item \textbf{Leakage Mechanism & Correction}:
+        When windowed feature vectors are shuffled randomly, window $k$ may be placed in the training set while adjacent window $k+1$ is placed in the test set. Because they share $75\%$ of the exact same raw physical sensor readings, the test set is no longer independent; the model is evaluated on data it has already seen during training.
+        
+        \textit{Correction}: Partition the continuous raw sensor stream chronologically into distinct contiguous blocks *before* extracting windows, or insert a purge gap of at least $W = 64$ samples between training and evaluation blocks.
+    \end{enumerate}
+
+    \item \textbf{Operational Cost Matrix Evaluation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Model A (Unweighted Baseline)}:
+        \begin{align*}
+        \text{Precision} &= \frac{\text{TP}}{\text{TP} + \text{FP}} = \frac{2}{2 + 0} = \mathbf{1.00} \quad (100\%) \\
+        \text{Recall} &= \frac{\text{TP}}{\text{TP} + \text{FN}} = \frac{2}{2 + 4} = \frac{2}{6} \approx \mathbf{0.3333} \quad (33.3\%) \\
+        \text{Cost} &= (\text{FN} \times \$5{,}000) + (\text{FP} \times \$50) \\
+        &= (4 \times \$5{,}000) + (0 \times \$50) = \mathbf{\$20{,}000}
+        \end{align*}
+
+        \item \textbf{Model B (Cost-Sensitive)}:
+        \begin{align*}
+        \text{Precision} &= \frac{\text{TP}}{\text{TP} + \text{FP}} = \frac{5}{5 + 11} = \frac{5}{16} = \mathbf{0.3125} \quad (31.3\%) \\
+        \text{Recall} &= \frac{\text{TP}}{\text{TP} + \text{FN}} = \frac{5}{5 + 1} = \frac{5}{6} \approx \mathbf{0.8333} \quad (83.3\%) \\
+        \text{Cost} &= (\text{FN} \times \$5{,}000) + (\text{FP} \times \$50) \\
+        &= (1 \times \$5{,}000) + (11 \times \$50) = \$5{,}000 + \$550 = \mathbf{\$5{,}550}
+        \end{align*}
+
+        \item \textbf{Business Decision}:
+        \textbf{Model B is vastly superior}. Despite lower accuracy ($94\%$ vs $98\%$) and lower precision ($31\%$ vs $100\%$), Model B catches $5$ out of $6$ catastrophic failures, reducing operational failure costs from $\$20{,}000$ down to $\$5{,}550$. It saves the wind farm operator:
+        \begin{equation*}
+        \text{Savings} = \$20{,}000 - \$5{,}550 = \mathbf{\$14{,}450}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{SMOTE Synthetic Interpolation Vector Arithmetic}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Difference Vector}:
+        \begin{equation*}
+        \mathbf{d} = \mathbf{x}_2 - \mathbf{x}_1 = [2.4 - 2.0, \ 6.0 - 5.0] = [\mathbf{0.4}, \ \mathbf{1.0}]
+        \end{equation*}
+
+        \item \textbf{Synthetic Feature Vector}:
+        Using $\mathbf{x}_{\text{synthetic}} = \mathbf{x}_1 + \lambda \mathbf{d}$ with $\lambda = 0.35$:
+        \begin{align*}
+        \mathbf{x}_{\text{synthetic}} &= [2.0, \ 5.0] + 0.35 \times [0.4, \ 1.0] \\
+        &= [2.0 + 0.14, \ 5.0 + 0.35] = [\mathbf{2.14}, \ \mathbf{5.35}]
+        \end{align*}
+
+        \item \textbf{Physical Plausibility}:
+        Yes, $\mathbf{x}_{\text{synthetic}}$ lies precisely on the line segment connecting $\mathbf{x}_1$ and $\mathbf{x}_2$ because $\lambda \in [0, 1]$ represents a convex combination $(1 - \lambda)\mathbf{x}_1 + \lambda \mathbf{x}_2$. 
+        
+        Unlike simple random oversampling (which creates exact duplicate points and causes the decision boundary to overfit narrow point clouds), SMOTE synthesizes intermediate operating states along the manifold between known fault conditions. This encourages the classifier to learn a smoother, more general convex decision boundary across the fault region.
+    \end{enumerate}
+\end{enumerate}

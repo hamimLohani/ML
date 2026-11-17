@@ -1,0 +1,860 @@
+% FILE: chapters/ch05_s2_pytorch.tex
+\section{PyTorch}\label{sec:pytorch}
+
+In Section~\ref{sec:neural_network_basics}, we constructed a multilayer perceptron from mathematical first principles, calculating forward activations and propagating error gradients backwards using manual calculus. While coding backpropagation by hand in NumPy is essential for pedagogical understanding, building and deploying production-grade deep learning systems requires an industrial framework.
+
+Writing deep neural networks from scratch in raw matrix libraries presents three severe bottlenecks:
+\begin{enumerate}
+    \item \textbf{Manual Gradient Derivation}: Stacking dozens of convolutional, recurrent, or attention layers makes manual gradient derivation prohibitively complex, error-prone, and fragile to architectural changes.
+    \item \textbf{Hardware Acceleration}: Modern deep learning demands massive parallel floating-point throughput. NumPy executes strictly on the CPU, unable to leverage the thousands of parallel arithmetic cores inside modern graphics processing units (GPUs) or dedicated neural accelerators.
+    \item \textbf{Embedded Deployment}: Deploying trained models to embedded microcontrollers (ARM Cortex-M, ESP32) requires exporting mathematical graphs into language-independent, memory-optimized formats that run without a heavy Python runtime.
+\end{enumerate}
+
+To bridge this gap, modern machine learning relies on \textbf{PyTorch}, an open-source deep learning framework developed by Meta AI and governed by the Linux Foundation. PyTorch combines an intuitive, Pythonic interface with reverse-mode automatic differentiation (\texttt{autograd}), dynamic computation graphs, seamless hardware acceleration (CUDA and Apple Silicon MPS), and a modular ecosystem for training and deploying neural networks from cloud clusters down to edge microcontrollers.
+
+% ------------------------------------------------------------------------------
+\subsection{Tensors: The Foundational Data Structure}\label{subsec:tensors}
+% ------------------------------------------------------------------------------
+
+The fundamental mathematical building block in PyTorch is the \textbf{Tensor}. A tensor is a mathematical generalization of scalars, vectors, and matrices to an arbitrary number of dimensions (often termed \textit{axes} or \textit{rank}):
+\begin{itemize}
+    \item \textbf{0D Tensor (Scalar)}: A single numerical value, such as a calculated loss scalar $\mathcal{L} \in \mathbb{R}$.
+    \item \textbf{1D Tensor (Vector)}: An array of values, such as an instantaneous snapshot from $D$ physical sensor channels $\mathbf{x} \in \mathbb{R}^D$.
+    \item \textbf{2D Tensor (Matrix)}: A table of values, such as a mini-batch of $B$ sensor vectors $\mathbf{X} \in \mathbb{R}^{B \times D}$.
+    \item \textbf{3D Tensor}: A sequence of matrices, representing a temporal window of sensor telemetry across batch size $B$, sequence length $T$, and feature dimension $D$, denoted $\mathbf{X} \in \mathbb{R}^{B \times T \times D}$.
+    \item \textbf{4D Tensor}: A batch of multi-channel spatial grids, such as thermal imaging arrays or short-time Fourier transform (STFT) vibration spectrograms with batch size $B$, color/frequency channels $C$, height $H$, and width $W$, denoted $\mathbf{X} \in \mathbb{R}^{B \times C \times H \times W}$.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % 0D Scalar
+    \begin{scope}[shift={(0, 2.8)}]
+        \node[draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=1mm, minimum size=0.9cm, font=\small\bfseries\sffamily] (s) at (0, 0) {$4.5$};
+        \node[font=\footnotesize\bfseries\sffamily, text=keyideablue] at (0, -0.9) {0D: Scalar};
+        \node[font=\tiny\sffamily, text=gray!80] at (0, -1.25) {Shape: \texttt{[]}};
+    \end{scope}
+
+    % 1D Vector
+    \begin{scope}[shift={(3.0, 2.8)}]
+        \foreach \i/\val in {0/1.2, 1/0.4, 2/-0.8, 3/3.1} {
+            \draw[draw=keyideablue!80, fill=keyideablue!15, thick] (\i*0.6, 0) rectangle (\i*0.6+0.6, 0.6);
+            \node[font=\tiny\sffamily] at (\i*0.6+0.3, 0.3) {\val};
+        }
+        \node[font=\footnotesize\bfseries\sffamily, text=keyideablue] at (1.2, -0.9) {1D: Vector};
+        \node[font=\tiny\sffamily, text=gray!80] at (1.2, -1.25) {Shape: \texttt{[4]}};
+    \end{scope}
+
+    % 2D Matrix
+    \begin{scope}[shift={(7.2, 2.8)}]
+        \foreach \r in {0,1,2} {
+            \foreach \c in {0,1,2,3} {
+                \draw[draw=keyideablue!80, fill=keyideablue!15, thick] (\c*0.5, -\r*0.5) rectangle (\c*0.5+0.5, -\r*0.5+0.5);
+            }
+        }
+        \node[font=\footnotesize\bfseries\sffamily, text=keyideablue] at (1.0, -1.7) {2D: Batch Matrix};
+        \node[font=\tiny\sffamily, text=gray!80] at (1.0, -2.05) {Shape: \texttt{[3, 4]}};
+    \end{scope}
+
+    % 3D Time Series Tensor
+    \begin{scope}[shift={(1.5, -2.2)}]
+        \foreach \d in {2,1,0} {
+            \begin{scope}[shift={(\d*0.35, \d*0.35)}]
+                \foreach \r in {0,1} {
+                    \foreach \c in {0,1,2} {
+                        \draw[draw=analogygreen!80, fill=analogygreen!15, thick] (\c*0.55, -\r*0.55) rectangle (\c*0.55+0.55, -\r*0.55+0.55);
+                    }
+                }
+            \end{scope}
+        }
+        \node[font=\footnotesize\bfseries\sffamily, text=analogygreen!90!black] at (1.2, -1.4) {3D: Sensor Sequence Window};
+        \node[font=\tiny\sffamily, text=gray!80] at (1.2, -1.75) {Shape: \texttt{[Batch, Time, Sensors]}};
+    \end{scope}
+
+    % 4D Spectrogram / Vision Tensor
+    \begin{scope}[shift={(7.5, -2.2)}]
+        \foreach \b in {1,0} {
+            \begin{scope}[shift={(\b*0.8, \b*0.6)}]
+                \foreach \c in {2,1,0} {
+                    \begin{scope}[shift={(\c*0.3, \c*0.3)}]
+                        \draw[draw=exampleorange!80, fill=exampleorange!15, thick] (0, 0) rectangle (1.4, 1.1);
+                    \end{scope}
+                }
+            \end{scope}
+        }
+        \node[font=\footnotesize\bfseries\sffamily, text=exampleorange!90!black] at (1.4, -1.4) {4D: Vision / Spectrogram Batch};
+        \node[font=\tiny\sffamily, text=gray!80] at (1.4, -1.75) {Shape: \texttt{[Batch, Channel, Height, Width]}};
+    \end{scope}
+\end{tikzpicture}
+\caption{Geometric hierarchy of PyTorch tensors from 0D scalars to 4D sensor spectrogram batches.}\label{fig:tensor_hierarchy}
+\end{figure}
+
+\subsubsection{Tensor Properties and Memory Management}
+
+Every PyTorch tensor is governed by three primary structural properties:
+\begin{enumerate}
+    \item \textbf{Shape (\texttt{torch.Size})}: The tuple defining the length of each dimension (e.g., \texttt{torch.Size([64, 100, 3])} for 64 samples of 100-step 3-axis accelerometer signals).
+    \item \textbf{Data Type (\texttt{dtype})}: The numerical format of each element:
+    \begin{itemize}
+        \item \texttt{torch.float32} (single-precision float, standard for deep learning training).
+        \item \texttt{torch.float64} (double-precision float, used in high-precision scientific simulations).
+        \item \texttt{torch.int64} (64-bit integer, standard for classification target labels and embedding indices).
+        \item \texttt{torch.int8} / \texttt{torch.qint8} (8-bit integer, utilized in TinyML post-training quantization).
+    \end{itemize}
+    \item \textbf{Device (\texttt{device})}: The physical compute unit hosting the tensor's memory buffer: \texttt{cpu}, \texttt{cuda} (NVIDIA GPUs), or \texttt{mps} (Apple Silicon Metal Performance Shaders).
+\end{enumerate}
+
+\paragraph{Zero-Copy Memory Sharing with NumPy}
+PyTorch tensors and NumPy arrays can share the exact same underlying memory buffer on the CPU. Converting between them involves zero memory allocation overhead:
+\begin{lstlisting}[style=pythonstyle]
+import numpy as np
+import torch
+
+# Create a NumPy sensor array
+np_arr = np.array([24.5, 25.1, 24.8], dtype=np.float32)
+
+# Zero-copy conversion: both objects point to the same memory address!
+tensor = torch.from_numpy(np_arr)
+
+# Mutating the tensor instantly alters the NumPy array
+tensor[0] = 99.9
+print(np_arr[0]) # Outputs 99.9
+\end{lstlisting}
+This zero-copy mechanism allows seamless interfacing between low-level C/C++ sensor drivers, SciPy signal processing routines, and PyTorch models without data duplication.
+
+\subsubsection{Essential Tensor Manipulation Operations}
+
+Manipulating multidimensional sensor data requires mastering tensor reshaping and broadcasting:
+\begin{itemize}
+    \item \textbf{\texttt{view()} versus \texttt{reshape()}}: \texttt{view()} alters the tensor's dimensions without moving memory, requiring the tensor to be stored in contiguous memory. \texttt{reshape()} returns a contiguous copy if the memory layout is non-contiguous.
+    \item \textbf{\texttt{squeeze()} and \texttt{unsqueeze()}}: \texttt{unsqueeze(dim)} inserts a singleton dimension (e.g., converting a 1D vector of shape \texttt{[128]} to a 2D batch of shape \texttt{[1, 128]}); \texttt{squeeze()} removes all dimensions of size 1.
+    \item \textbf{\texttt{permute()}}: Reorders arbitrary tensor axes (e.g., transforming audio spectrograms from channels-first \texttt{[B, C, H, W]} to sequence-first \texttt{[B, W, H, C]}).
+    \item \textbf{Broadcasting}: When performing element-wise operations between tensors of different shapes, PyTorch automatically expands dimensions of size 1 to match the larger tensor without copying memory, following standard NumPy broadcasting rules.
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+\subsection{Autograd: The Automatic Differentiation Engine}\label{subsec:autograd}
+% ------------------------------------------------------------------------------
+
+The defining engine powering PyTorch is \textbf{Autograd}: an automatic differentiation system that tracks every numerical operation executed on tensors to build a dynamic computation graph.
+
+\begin{analogy}[The Electronic Breadcrumb Trail]
+Imagine an automated assembly line in an electronics factory. As raw components travel down the conveyor belt, robotic arms weld capacitors, attach resistors, and test voltages. Every robotic arm records a detailed log: ``I took inputs $A$ and $B$, applied formula $C = A \cdot B$, and passed $C$ forward.''
+
+When a defective circuit board reaches the final quality inspection station (the loss function), the quality engineer does not need to deduce by hand which machine caused the defect. Instead, the factory software replays the log \textbf{in reverse}: each robotic arm uses its logged formula to calculate exactly how much its specific screw torque or soldering temperature contributed to the final defect.
+
+Autograd is that electronic log: during the forward pass, it records operational breadcrumbs (\texttt{grad\_fn}); during the backward pass, it follows the trail backwards, computing exact derivative contributions.
+\end{analogy}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    var_node/.style={circle, draw=keyideablue!80, fill=keyideablue!15, thick, minimum size=8mm, font=\small\sffamily},
+    op_node/.style={rectangle, draw=exampleorange!80, fill=exampleorange!20, thick, rounded corners=1.5mm, minimum size=8mm, font=\small\bfseries\sffamily},
+    loss_node/.style={rectangle, draw=warningred!80, fill=warningred!20, thick, rounded corners=1.5mm, minimum size=9mm, font=\small\bfseries\sffamily},
+    fwd_arrow/.style={-{Stealth[length=2.5mm]}, thick, gray!80},
+    bwd_arrow/.style={-{Stealth[length=2.5mm]}, very thick, dashed, warningred}
+]
+    % Forward Nodes
+    \node[var_node] (w) at (0, 2.4) {$w$};
+    \node[var_node] (x) at (0, 0.8) {$x$};
+    \node[var_node] (b) at (2.4, -0.6) {$b$};
+
+    \node[op_node] (mul) at (2.4, 1.6) {$\times$};
+    \node[op_node] (add) at (4.8, 1.0) {$+$};
+    \node[loss_node] (loss) at (7.8, 1.0) {$\mathcal{L}$};
+
+    % Target Node
+    \node[var_node, draw=gray!70, fill=gray!10] (y) at (7.8, -0.6) {$y$};
+
+    % Forward Connections
+    \draw[fwd_arrow] (w) -- (mul);
+    \draw[fwd_arrow] (x) -- (mul);
+    \draw[fwd_arrow] (mul) -- node[above, font=\scriptsize\sffamily] {$p = w \cdot x$} (add);
+    \draw[fwd_arrow] (b) -- (add);
+    \draw[fwd_arrow] (add) -- node[above, font=\scriptsize\sffamily] {$z = p + b$} (loss);
+    \draw[fwd_arrow] (y) -- (loss);
+
+    % Backward Flow
+    \draw[bwd_arrow] (loss) to[bend left=25] node[above, font=\scriptsize\bfseries\sffamily, warningred] {$\frac{\partial \mathcal{L}}{\partial z} = z - y$} (add);
+    \draw[bwd_arrow] (add) to[bend left=25] node[above, font=\scriptsize\bfseries\sffamily, warningred] {$\frac{\partial \mathcal{L}}{\partial p} = \frac{\partial \mathcal{L}}{\partial z} \cdot 1$} (mul);
+    \draw[bwd_arrow] (add) to[bend right=25] node[right, font=\scriptsize\bfseries\sffamily, warningred] {$\frac{\partial \mathcal{L}}{\partial b} = \frac{\partial \mathcal{L}}{\partial z} \cdot 1$} (b);
+    \draw[bwd_arrow] (mul) to[bend left=25] node[above left, font=\scriptsize\bfseries\sffamily, warningred] {$\frac{\partial \mathcal{L}}{\partial w} = \frac{\partial \mathcal{L}}{\partial p} \cdot x$} (w);
+    \draw[bwd_arrow] (mul) to[bend right=25] node[below left, font=\scriptsize\bfseries\sffamily, warningred] {$\frac{\partial \mathcal{L}}{\partial x} = \frac{\partial \mathcal{L}}{\partial p} \cdot w$} (x);
+
+    % Legend
+    \draw[fwd_arrow] (0.5, -1.8) -- (2.0, -1.8) node[right, font=\scriptsize\sffamily] {Forward Pass (Activations)};
+    \draw[bwd_arrow] (5.2, -1.8) -- (6.7, -1.8) node[right, font=\scriptsize\sffamily, warningred] {Backward Pass (\texttt{.backward()})};
+\end{tikzpicture}
+\caption{Dynamic computation graph generated by Autograd for a single linear neuron. Forward operations record backward gradient functions (\texttt{grad\_fn}). Calling \texttt{loss.backward()} executes reverse topological traversal, accumulating gradients into \texttt{.grad}.}\label{fig:autograd_graph}
+\end{figure}
+
+\subsubsection{How Autograd Functions: The Dynamic Computational Graph}
+
+When a tensor is declared with \texttt{requires\_grad=True}, PyTorch tracks every operation performed upon it:
+\begin{enumerate}
+    \item \textbf{Graph Construction}: Every mathematical operation creates a new node in a dynamic Directed Acyclic Graph (DAG). The resulting tensor possesses a \texttt{grad\_fn} attribute referencing the backward differentiation function (e.g., \texttt{MulBackward0}, \texttt{AddBackward0}).
+    \item \textbf{Backward Traversal}: Calling \texttt{loss.backward()} on a scalar loss triggers reverse-mode automatic differentiation. Autograd applies the multivariable chain rule from the root node back to all leaf tensors, computing the partial derivatives:
+    \begin{equation}
+    \nabla_{\mathbf{w}} \mathcal{L} = \left[ \frac{\partial \mathcal{L}}{\partial w_1}, \frac{\partial \mathcal{L}}{\partial w_2}, \dots, \frac{\partial \mathcal{L}}{\partial w_D} \right]^T\label{eq:gradient_vector}
+    \end{equation}
+    \item \textbf{Gradient Storage}: Computed gradients are populated into the tensor's \texttt{.grad} attribute.
+\end{enumerate}
+
+\begin{example}[Traced Autograd Computation]
+Consider the linear prediction $z = w \cdot x + b$ followed by squared error loss $\mathcal{L} = \frac{1}{2}(z - y)^2$. Let inputs be $x = 2.0$, target $y = 4.0$, weight $w = 3.0$, and bias $b = 1.0$:
+\begin{enumerate}
+    \item \textbf{Forward Pass}:
+    \begin{align*}
+    z &= w \cdot x + b = (3.0)(2.0) + 1.0 = 7.0 \\
+    \mathcal{L} &= \frac{1}{2}(z - y)^2 = \frac{1}{2}(7.0 - 4.0)^2 = \frac{1}{2}(3.0)^2 = \mathbf{4.5}
+    \end{align*}
+    \item \textbf{Backward Pass} (\texttt{loss.backward()}):
+    \begin{align*}
+    \frac{\partial \mathcal{L}}{\partial z} &= z - y = 7.0 - 4.0 = 3.0 \\
+    \frac{\partial \mathcal{L}}{\partial w} &= \frac{\partial \mathcal{L}}{\partial z} \cdot \frac{\partial z}{\partial w} = (3.0) \cdot x = (3.0)(2.0) = \mathbf{6.0} \\
+    \frac{\partial \mathcal{L}}{\partial b} &= \frac{\partial \mathcal{L}}{\partial z} \cdot \frac{\partial z}{\partial b} = (3.0) \cdot 1.0 = \mathbf{3.0} \\
+    \frac{\partial \mathcal{L}}{\partial x} &= \frac{\partial \mathcal{L}}{\partial z} \cdot \frac{\partial z}{\partial x} = (3.0) \cdot w = (3.0)(3.0) = \mathbf{9.0}
+    \end{align*}
+\end{enumerate}
+Autograd computes these analytical chain rule products without numerical approximation error.
+\end{example}
+
+\begin{warning}[The Gradient Accumulation Trap]
+By default, PyTorch \textbf{accumulates} (sums) gradients into \texttt{.grad} whenever \texttt{.backward()} is called. It does not overwrite previous gradients!
+\begin{lstlisting}[style=pythonstyle]
+# CATASTROPHIC BUG: Forgetting to zero gradients!
+for batch_x, batch_y in dataloader:
+    pred = model(batch_x)
+    loss = criterion(pred, batch_y)
+    loss.backward() # Gradients from this batch ADD to all previous batches!
+    optimizer.step()
+\end{lstlisting}
+If \texttt{optimizer.zero\_grad()} is omitted, gradients continually inflate over successive iterations, causing catastrophic numerical overflow (NaNs) and training divergence.
+\end{warning}
+
+\subsubsection{Controlling Gradient Tracking}
+
+During model validation, testing, and edge deployment, gradient computation is unnecessary and wastes substantial memory:
+\begin{itemize}
+    \item \textbf{\texttt{torch.no\_grad()}}: Disables autograd tracking across a code block. Reduces memory consumption by $50\text{--}80\%$ and speeds up forward evaluation:
+    \begin{lstlisting}[style=pythonstyle]
+    with torch.no_grad():
+        val_predictions = model(val_features)
+    \end{lstlisting}
+    \item \textbf{\texttt{torch.inference\_mode()}}: A modern, faster alternative to \texttt{torch.no\_grad()} that disables view tracking and version counters entirely for maximum inference speed.
+    \item \textbf{\texttt{.detach()}}: Creates a new tensor detached from the current computational graph. Used when passing model predictions to external metrics (such as scikit-learn's \texttt{roc\_auc\_score}).
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+\subsection{Data Pipelines: \texttt{Dataset} and \texttt{DataLoader}}\label{subsec:dataset_dataloader}
+% ------------------------------------------------------------------------------
+
+In applied IoT machine learning, telemetry rarely arrives as clean in-memory tensors. Real-world physical data resides as raw CSV log files, binary flash dumps, SQLite databases, or streaming network sockets.
+
+PyTorch decouples data loading from model architecture using two complementary abstractions:
+\begin{enumerate}
+    \item \textbf{\texttt{torch.utils.data.Dataset}}: Encapsulates a collection of samples and defines how to fetch an individual sample at index $i$.
+    \item \textbf{\texttt{torch.utils.data.DataLoader}}: Wraps a \texttt{Dataset} to provide automatic mini-batching, shuffling, multi-process parallel pre-fetching, and memory pinning.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    disk_box/.style={cylinder, shape border rotate=90, draw=gray!80, fill=gray!15, thick, minimum height=1.2cm, minimum width=1.4cm, aspect=0.25, font=\small\sffamily},
+    dataset_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!12, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    loader_box/.style={rectangle, draw=exampleorange!80, fill=exampleorange!15, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    batch_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!15, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Pipeline Nodes
+    \node[disk_box] (disk) at (0, 0) {Raw Logs\\(CSV / Flash)};
+    \node[dataset_box, minimum width=2.8cm] (ds) at (3.5, 0) {\textbf{Custom Dataset}\\$\bullet$ Indexing\\$\bullet$ Normalization\\$\bullet$ \texttt{\_\_getitem\_\_}};
+    \node[loader_box, minimum width=3.0cm] (dl) at (7.6, 0) {\textbf{DataLoader}\\$\bullet$ Shuffling\\$\bullet$ Multi-Worker (CPU)\\$\bullet$ Batching (\texttt{collate\_fn})};
+    \node[batch_box, minimum width=2.4cm] (batch) at (11.5, 0) {\textbf{Mini-Batch}\\Shape: \texttt{[B, D]}\\To Accelerator};
+
+    % Arrows
+    \draw[arrow] (disk) -- (ds);
+    \draw[arrow] (ds) -- node[above, font=\scriptsize\sffamily] {Single Sample} (dl);
+    \draw[arrow] (dl) -- node[above, font=\scriptsize\sffamily] {Batched $[B, D]$} (batch);
+\end{tikzpicture}
+\caption{The PyTorch data ingestion pipeline. Decoupling sample indexing (\texttt{Dataset}) from parallel batch orchestration (\texttt{DataLoader}) guarantees clean, high-throughput pipeline execution.}\label{fig:data_pipeline}
+\end{figure}
+
+\subsubsection{Authoring a Custom IoT \texttt{Dataset}}
+
+To create a custom dataset, we subclass \texttt{torch.utils.data.Dataset} and implement three mandatory methods:
+\begin{enumerate}
+    \item \texttt{\_\_init\_\_(self, ...)}: Initializes dataset parameters, loads file indices, and configures normalization statistics. Heavy memory loading should be avoided here if datasets are large; store file paths and load lazily.
+    \item \texttt{\_\_len\_\_(self)}: Returns the total number of samples $N$ in the dataset.
+    \item \texttt{\_\_getitem\_\_(self, idx)}: Retrieves the $i$-th sample from storage, applies preprocessing transformations, and returns a tuple of PyTorch tensors \texttt{(features, label)}.
+\end{enumerate}
+
+Listing~\ref{lst:custom_dataset} implements an industrial vibration telemetry dataset that reads raw multi-sensor accelerometer logs and extracts sliding analysis windows.
+
+\begin{lstlisting}[style=pythonstyle, caption={Custom PyTorch Dataset for multi-channel sensor telemetry.}, label={lst:custom_dataset}]
+import torch
+from torch.utils.data import Dataset, DataLoader
+import numpy as np
+
+class SensorTelemetryDataset(Dataset):
+    # Custom Dataset for multi-channel vibration and temperature telemetry
+    def __init__(self, features: np.ndarray, labels: np.ndarray, transform=None):
+        # Store features as float32 tensors and labels as int64 (for CrossEntropy)
+        self.X = torch.tensor(features, dtype=torch.float32)
+        self.y = torch.tensor(labels, dtype=torch.int64)
+        self.transform = transform
+
+    def __len__(self) -> int:
+        return len(self.X)
+
+    def __getitem__(self, idx: int):
+        sample_x = self.X[idx]
+        sample_y = self.y[idx]
+
+        # Apply optional real-time sensor augmentations (e.g., jitter, scaling)
+        if self.transform:
+            sample_x = self.transform(sample_x)
+
+        return sample_x, sample_y
+\end{lstlisting}
+
+\subsubsection{Configuring the \texttt{DataLoader}}
+
+Once defined, the \texttt{Dataset} is wrapped in a \texttt{DataLoader}:
+\begin{lstlisting}[style=pythonstyle]
+# Instantiate Dataset
+train_dataset = SensorTelemetryDataset(X_train, y_train)
+
+# Wrap in DataLoader for batching and shuffling
+train_loader = DataLoader(
+    dataset=train_dataset,
+    batch_size=64,         # Samples per training step
+    shuffle=True,          # Shuffle order each epoch to break correlation
+    num_workers=2,         # Multi-process background worker threads
+    pin_memory=True,       # Page-locked memory for fast accelerator transfer
+    drop_last=False        # Retain residual batch at end of epoch
+)
+\end{lstlisting}
+
+\begin{keyidea}[DataLoader Math: Batches and Iterations]
+Let $N$ denote the total number of dataset samples and $B$ denote the batch size:
+\begin{itemize}
+    \item If \texttt{drop\_last=False}, the number of iterations (batches) per epoch is:
+    \begin{equation}
+    N_{\text{batches}} = \left\lceil \frac{N}{B} \right\rceil\label{eq:batches_ceil}
+    \end{equation}
+    The final batch will contain $N \pmod B$ residual samples.
+    \item If \texttt{drop\_last=True}, incomplete residual batches are discarded:
+    \begin{equation}
+    N_{\text{batches}} = \left\lfloor \frac{N}{B} \right\rfloor\label{eq:batches_floor}
+    \end{equation}
+    Discarding residual batches is common when using \texttt{BatchNorm1d}, where a singleton final batch ($B=1$) causes division-by-zero runtime crashes.
+\end{itemize}
+\end{keyidea}
+
+% ------------------------------------------------------------------------------
+\subsection{Building Models with \texttt{torch.nn.Module}}\label{subsec:nn_module}
+% ------------------------------------------------------------------------------
+
+All neural network architectures in PyTorch subclass the base class \textbf{\texttt{torch.nn.Module}}. Subclassing \texttt{nn.Module} provides automatic parameter registration, recursive weight initialization, sub-module tracking, and clean hardware device transfers.
+
+An \texttt{nn.Module} architecture consists of two structural blocks:
+\begin{enumerate}
+    \item \textbf{\texttt{\_\_init\_\_(self)}}: Declares the architectural layers as member variables (e.g., \texttt{nn.Linear}, \texttt{nn.BatchNorm1d}, \texttt{nn.Dropout}). Always call \texttt{super().\_\_init\_\_()} on the first line.
+    \item \textbf{\texttt{forward(self, x)}}: Specifies the computational flow, connecting layers and non-linear activation functions.
+\end{enumerate}
+
+Listing~\ref{lst:mlp_module} defines a multi-layer perceptron for industrial predictive maintenance, mapping $D=8$ sensor channels to $K=3$ diagnostic health states (Healthy, Warning, Failure).
+
+\begin{lstlisting}[style=pythonstyle, caption={Multilayer Perceptron architecture using \texttt{torch.nn.Module}.}, label={lst:mlp_module}]
+import torch
+import torch.nn as nn
+
+class PumpFaultClassifier(nn.Module):
+    def __init__(self, input_dim: int = 8, hidden_dim: int = 64, num_classes: int = 3):
+        super().__init__()
+        
+        # Layer definitions
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(p=0.25),
+            
+            nn.Linear(hidden_dim, 32),
+            nn.BatchNorm1d(32),
+            nn.ReLU(),
+            nn.Dropout(p=0.15),
+            
+            nn.Linear(32, num_classes) # Raw unnormalized logits
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.network(x)
+\end{lstlisting}
+
+\begin{warning}[Do Not Apply Softmax Inside \texttt{forward()} with \texttt{nn.CrossEntropyLoss}]
+A ubiquitous beginner error is placing an explicit \texttt{nn.Softmax()} layer at the end of the network. PyTorch's \texttt{nn.CrossEntropyLoss} mathematically combines \texttt{nn.LogSoftmax()} and \texttt{nn.NLLLoss()} in a single fused, numerically stable kernel using the Log-Sum-Exp trick.
+
+Passing probability outputs (post-softmax) into \texttt{nn.CrossEntropyLoss} results in double-softmax compression, severely dampening gradient magnitudes and paralyzing training! Always output raw, unnormalized \textbf{logits} from \texttt{forward()}.
+\end{warning}
+
+% ------------------------------------------------------------------------------
+\subsection{Hardware Acceleration: Apple Silicon (MPS) and CUDA}\label{subsec:hardware_acceleration}
+% ------------------------------------------------------------------------------
+
+Training neural networks on a CPU is acceptable for tiny proof-of-concept models, but quickly becomes a crippling bottleneck as dataset size and network depth expand. PyTorch supports two primary hardware acceleration backends:
+\begin{itemize}
+    \item \textbf{NVIDIA CUDA (\texttt{cuda})}: The enterprise standard for cloud and server GPU computing.
+    \item \textbf{Apple Silicon Metal Performance Shaders (\texttt{mps})}: Hardware acceleration for Apple M-series chips (M1, M2, M3, M4) available natively on macOS.
+\end{itemize}
+
+\subsubsection{The Apple Silicon Unified Memory Architecture (UMA)}
+
+Traditional workstation architectures feature discrete GPUs connected to the host CPU via a PCI Express (PCIe) bus. Tensors must be explicitly serialized and transferred across the bus, creating significant latency bottlenecks for streaming IoT workloads.
+
+Apple Silicon departs radically from this paradigm by implementing a \textbf{Unified Memory Architecture (UMA)}:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Left side: Discrete GPU Architecture (PC)
+    \begin{scope}[shift={(0, 0)}]
+        % Host System
+        \draw[thick, draw=gray!80, fill=gray!8, rounded corners=2mm] (0, 0) rectangle (5.0, 3.8);
+        \node[font=\footnotesize\bfseries\sffamily, text=gray!80] at (2.5, 3.5) {Traditional Discrete Architecture};
+
+        \node[draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=1.5mm, minimum width=1.8cm, minimum height=0.9cm, font=\scriptsize\bfseries\sffamily] (cpu) at (1.2, 2.5) {Host CPU};
+        \node[draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=1.5mm, minimum width=1.8cm, minimum height=0.9cm, font=\scriptsize\bfseries\sffamily] (cram) at (1.2, 1.0) {System RAM};
+        \draw[thick, gray!80] (cpu) -- (cram);
+
+        \node[draw=warningred!80, fill=warningred!15, thick, rounded corners=1.5mm, minimum width=1.8cm, minimum height=0.9cm, font=\scriptsize\bfseries\sffamily] (gpu) at (3.8, 2.5) {PCIe GPU};
+        \node[draw=warningred!80, fill=warningred!15, thick, rounded corners=1.5mm, minimum width=1.8cm, minimum height=0.9cm, font=\scriptsize\bfseries\sffamily] (vram) at (3.8, 1.0) {VRAM};
+        \draw[thick, gray!80] (gpu) -- (vram);
+
+        % PCIe Bottleneck Arrow
+        \draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, very thick, warningred] (cram) -- node[below, font=\tiny\bfseries\sffamily, align=center] {PCIe Bus\\$16\text{--}64\text{ GB/s}$} (vram);
+    \end{scope}
+
+    % Right side: Apple Silicon UMA
+    \begin{scope}[shift={(6.8, 0)}]
+        \draw[thick, draw=gray!80, fill=gray!8, rounded corners=2mm] (0, 0) rectangle (5.4, 3.8);
+        \node[font=\footnotesize\bfseries\sffamily, text=gray!80] at (2.7, 3.5) {Apple Silicon Unified Memory (UMA)};
+
+        % Shared High Bandwidth Memory Pool
+        \draw[draw=analogygreen!80, fill=analogygreen!20, thick, rounded corners=2mm] (0.4, 0.4) rectangle (5.0, 1.4);
+        \node[font=\small\bfseries\sffamily, analogygreen!90!black] at (2.7, 0.9) {Unified Memory Pool ($100\text{--}800\text{ GB/s}$)};
+
+        % Compute Cores
+        \node[draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=1.5mm, minimum width=1.3cm, minimum height=0.8cm, font=\scriptsize\bfseries\sffamily] (mcpu) at (1.2, 2.5) {CPU};
+        \node[draw=analogygreen!80, fill=analogygreen!15, thick, rounded corners=1.5mm, minimum width=1.3cm, minimum height=0.8cm, font=\scriptsize\bfseries\sffamily] (mgpu) at (2.7, 2.5) {GPU (MPS)};
+        \node[draw=exampleorange!80, fill=exampleorange!15, thick, rounded corners=1.5mm, minimum width=1.3cm, minimum height=0.8cm, font=\scriptsize\bfseries\sffamily] (mane) at (4.2, 2.5) {ANE};
+
+        % Direct High Speed Buses
+        \draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, very thick, analogygreen!80] (mcpu) -- (1.2, 1.4);
+        \draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, very thick, analogygreen!80] (mgpu) -- (2.7, 1.4);
+        \draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, very thick, analogygreen!80] (mane) -- (4.2, 1.4);
+    \end{scope}
+\end{tikzpicture}
+\caption{Memory architecture comparison: Discrete PC GPU versus Apple Silicon Unified Memory Architecture (UMA). In UMA, CPU, GPU, and Neural Engine share a singular high-bandwidth memory pool, eliminating PCIe serialization overhead.}\label{fig:apple_silicon_uma}
+\end{figure}
+
+In Apple Silicon, the CPU, Metal GPU, and Apple Neural Engine (ANE) share a \textbf{single, unified physical memory pool} with memory bandwidth reaching $100\text{ to }800\text{ GB/s}$. When a tensor is transferred via \texttt{tensor.to("mps")}, the underlying physical RAM address is retained; the Metal driver simply exposes the buffer directly to the GPU execution pipeline. This makes Apple Silicon laptops ideal for local training of sensor models without needing loud, power-hungry desktop GPUs.
+
+\subsubsection{Writing Device-Agnostic Code}
+
+Production PyTorch code must run seamlessly across any deployment target: NVIDIA clusters, Apple Silicon MacBooks, or low-cost CPU edge gateways. We implement this using the canonical \textbf{device-agnostic pattern}:
+
+\begin{lstlisting}[style=pythonstyle, caption={Device-agnostic hardware selection pattern.}]
+def get_compute_device() -> torch.device:
+    # Automatically selects CUDA, Apple Silicon MPS, or CPU
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+    return device
+
+device = get_compute_device()
+print(f"Accelerating training on: {device}")
+
+# Move model and data to the active device
+model = PumpFaultClassifier().to(device)
+\end{lstlisting}
+
+% ------------------------------------------------------------------------------
+\subsection{Writing a Production-Grade Training Loop}\label{subsec:training_loop}
+% ------------------------------------------------------------------------------
+
+Unlike high-level wrapper frameworks that hide training mechanics behind opaque \texttt{.fit()} calls, PyTorch exposes the training loop explicitly. This transparency gives engineers total control over batch sequencing, gradient clipping, custom loss weighting, and telemetry logging.
+
+\subsubsection{The Canonical Training Step}
+
+A standard PyTorch training loop iterates through epochs. Each epoch contains two distinct operational phases:
+\begin{enumerate}
+    \item \textbf{Training Phase (\texttt{model.train()})}:
+    \begin{itemize}
+        \item Step 1: \texttt{optimizer.zero\_grad(set\_to\_none=True)}: Wipes existing accumulated gradients. Setting to \texttt{None} is computationally faster than zeroing memory buffers.
+        \item Step 2: Forward pass: \texttt{outputs = model(batch\_x)}.
+        \item Step 3: Compute scalar loss: \texttt{loss = criterion(outputs, batch\_y)}.
+        \item Step 4: Backward pass: \texttt{loss.backward()} propagates gradients through the DAG.
+        \item Step 5: Gradient clipping (optional but recommended): \texttt{torch.nn.utils.clip\_grad\_norm\_(model.parameters(), max\_norm=1.0)} prevents exploding gradients.
+        \item Step 6: Parameter update: \texttt{optimizer.step()} applies the optimizer update rule ($\mathbf{w} \leftarrow \mathbf{w} - \eta \mathbf{g}$).
+    \end{itemize}
+    \item \textbf{Validation Phase (\texttt{model.eval()})}:
+    \begin{itemize}
+        \item Executes inside \texttt{with torch.no\_grad():}.
+        \item Computes out-of-sample loss and operational metrics (accuracy, F1-score) without updating weights.
+    \end{itemize}
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    step_node/.style={rectangle, draw=keyideablue!80, fill=keyideablue!12, thick, rounded corners=2mm, minimum width=3.4cm, minimum height=0.9cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Loop Steps
+    \node[step_node] (s1) at (0, 3.6) {1. \texttt{optimizer.zero\_grad()}};
+    \node[step_node] (s2) at (4.5, 3.6) {2. Forward: $\hat{\mathbf{y}} = f(\mathbf{x})$};
+    \node[step_node] (s3) at (9.0, 3.6) {3. Loss: $\mathcal{L}(\hat{\mathbf{y}}, \mathbf{y})$};
+
+    \node[step_node, fill=warningred!15, draw=warningred!80] (s4) at (9.0, 1.4) {4. \texttt{loss.backward()}};
+    \node[step_node, fill=exampleorange!15, draw=exampleorange!80] (s5) at (4.5, 1.4) {5. Clip Gradients};
+    \node[step_node, fill=analogygreen!15, draw=analogygreen!80] (s6) at (0, 1.4) {6. \texttt{optimizer.step()}};
+
+    % Connect Flow
+    \draw[arrow] (s1) -- (s2);
+    \draw[arrow] (s2) -- (s3);
+    \draw[arrow] (s3) -- (s4);
+    \draw[arrow] (s4) -- (s5);
+    \draw[arrow] (s5) -- (s6);
+    \draw[arrow] (s6.north) to[bend left=35] node[left, font=\scriptsize\sffamily] {Next Mini-Batch} (s1.south);
+\end{tikzpicture}
+\caption{The six sequential steps comprising a canonical PyTorch training batch iteration.}\label{fig:training_loop_steps}
+\end{figure}
+
+Listing~\ref{lst:full_training_loop} provides an end-to-end implementation with validation tracking and early stopping.
+
+\begin{lstlisting}[style=pythonstyle, caption={Complete production-grade PyTorch training and validation loop.}, label={lst:full_training_loop}]
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+
+def train_model(model: nn.Module, 
+                train_loader: DataLoader, 
+                val_loader: DataLoader, 
+                criterion: nn.Module, 
+                optimizer: torch.optim.Optimizer, 
+                device: torch.device, 
+                epochs: int = 50, 
+                patience: int = 7) -> dict:
+    # Executes model training with early stopping and validation tracking
+    model.to(device)
+    history = {'train_loss': [], 'val_loss': [], 'val_acc': []}
+    best_val_loss = float('inf')
+    patience_counter = 0
+
+    for epoch in range(1, epochs + 1):
+        # 1. Training Phase
+        model.train()
+        running_train_loss = 0.0
+
+        for batch_x, batch_y in train_loader:
+            batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+
+            # Six canonical steps
+            optimizer.zero_grad(set_to_none=True)
+            outputs = model(batch_x)
+            loss = criterion(outputs, batch_y)
+            loss.backward()
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()
+
+            running_train_loss += loss.item() * batch_x.size(0)
+
+        epoch_train_loss = running_train_loss / len(train_loader.dataset)
+
+        # 2. Validation Phase
+        model.eval()
+        running_val_loss = 0.0
+        correct_predictions = 0
+
+        with torch.no_grad():
+            for batch_x, batch_y in val_loader:
+                batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+                outputs = model(batch_x)
+                loss = criterion(outputs, batch_y)
+
+                running_val_loss += loss.item() * batch_x.size(0)
+                preds = torch.argmax(outputs, dim=1)
+                correct_predictions += torch.sum(preds == batch_y).item()
+
+        epoch_val_loss = running_val_loss / len(val_loader.dataset)
+        epoch_val_acc = correct_predictions / len(val_loader.dataset)
+
+        history['train_loss'].append(epoch_train_loss)
+        history['val_loss'].append(epoch_val_loss)
+        history['val_acc'].append(epoch_val_acc)
+
+        print(f"Epoch {epoch:02d}/{epochs:02d} | Train Loss: {epoch_train_loss:.4f} | Val Loss: {epoch_val_loss:.4f} | Val Acc: {epoch_val_acc*100:.2f}%")
+
+        # 3. Early Stopping and Checkpointing
+        if epoch_val_loss < best_val_loss:
+            best_val_loss = epoch_val_loss
+            patience_counter = 0
+            # Save the optimal model weights
+            torch.save(model.state_dict(), "best_pump_model.pth")
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"[!] Early stopping triggered at epoch {epoch}. Restoring optimal weights.")
+                break
+
+    # Reload the best performing checkpoint
+    model.load_state_dict(torch.load("best_pump_model.pth", weights_only=True))
+    return history
+\end{lstlisting}
+
+% ------------------------------------------------------------------------------
+\subsection{Model Persistence: Saving, Loading, and Edge Export}\label{subsec:saving_loading}
+% ------------------------------------------------------------------------------
+
+Training a high-accuracy neural network is computationally intensive. Once training concludes, the learned parameters must be serialized reliably for inference and deployment.
+
+\subsubsection{Why You Should Always Save the \texttt{state\_dict}}
+
+In PyTorch, two approaches exist for saving models:
+\begin{enumerate}
+    \item \textbf{Saving the Complete Python Object} (\texttt{torch.save(model, "full\_model.pth")}): Serializes the entire model instance using Python's \texttt{pickle} module.
+    \item \textbf{Saving the State Dictionary} (\texttt{torch.save(model.state\_dict(), "weights.pth")}): Serializes strictly the learned parameter tensors (weights and biases) mapped by layer name.
+\end{enumerate}
+
+\begin{warning}[Never Save the Entire Model Object in Production]
+Saving the whole model object via \texttt{torch.save(model, ...)} binds the saved file to the exact Python class path, directory structure, and PyTorch version. If you rename your model script or change package versions, \texttt{torch.load()} will crash with an unrecoverable \texttt{AttributeError}.
+
+Always save the \textbf{\texttt{state\_dict}}. The state dictionary is a lightweight, version-agnostic dictionary mapping parameter names to raw tensors:
+\begin{lstlisting}[style=pythonstyle]
+# Universal Production Standard: Save state_dict only
+torch.save(model.state_dict(), "pump_model_weights.pth")
+
+# To restore: Instantiate architecture, then load weights
+restored_model = PumpFaultClassifier()
+restored_model.load_state_dict(torch.load("pump_model_weights.pth", weights_only=True))
+restored_model.eval() # Always set to eval mode after loading!
+\end{lstlisting}
+\end{warning}
+
+\subsubsection{Comprehensive Training Checkpoints}
+
+For long-running training jobs that may be interrupted, save a full \textbf{training checkpoint} containing the model weights, optimizer state (momentum buffers), current epoch, and best validation score:
+\begin{lstlisting}[style=pythonstyle]
+# Save comprehensive checkpoint
+checkpoint = {
+    'epoch': current_epoch,
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    'best_val_loss': best_val_loss
+}
+torch.save(checkpoint, "training_checkpoint.pth")
+
+# Resuming training from checkpoint
+checkpoint = torch.load("training_checkpoint.pth", weights_only=True)
+model.load_state_dict(checkpoint['model_state_dict'])
+optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+start_epoch = checkpoint['epoch'] + 1
+\end{lstlisting}
+
+\begin{iotbox}[Deploying PyTorch Models to Microcontrollers (TinyML)]
+How does a PyTorch model running on a MacBook transition to a low-power microcontroller (ESP32 or ARM Cortex-M) with only $320\text{ KB}$ of SRAM?
+\begin{enumerate}
+    \item \textbf{TorchScript Tracing}: PyTorch models rely on a live Python runtime. \texttt{torch.jit.trace()} passes a dummy tensor through the network, recording all tensor operations into an optimized, serialized computation graph:
+    \begin{lstlisting}[style=pythonstyle]
+    dummy_input = torch.randn(1, 8, device=device)
+    traced_model = torch.jit.trace(model, dummy_input)
+    traced_model.save("model_traced.pt")
+    \end{lstlisting}
+    This file can execute directly in standalone C++ environments without Python.
+    \item \textbf{ONNX Export}: The Open Neural Network Exchange (ONNX) format serves as the universal lingua franca for edge deployment:
+    \begin{lstlisting}[style=pythonstyle]
+    torch.onnx.export(model.to("cpu"), torch.randn(1, 8), "model.onnx",
+                      input_names=['sensor_input'], output_names=['fault_prob'])
+    \end{lstlisting}
+    \item \textbf{Quantization for Microcontrollers}: Using TensorFlow Lite Converter or Edge Impulse, the ONNX graph is quantized from 32-bit floating point down to 8-bit integers (\texttt{int8}). A model requiring $11.6\text{ KB}$ of memory shrinks down to under $2.9\text{ KB}$, executing in sub-millisecond time on a \$3 microcontroller!
+\end{enumerate}
+\end{iotbox}
+
+% ------------------------------------------------------------------------------
+\subsection{Summary and Practical Checklist}\label{subsec:pytorch_summary}
+% ------------------------------------------------------------------------------
+
+\begin{takeaways}[Eight Rules of Production PyTorch Development]
+\begin{itemize}
+    \item \textbf{Tensors are Multidimensional Arrays}: Understand tensor dimensions from 0D loss scalars to 4D spectrogram batches. Use \texttt{torch.from\_numpy()} for zero-copy memory efficiency.
+    \item \textbf{Autograd Builds Dynamic Graphs}: Tracking operations via \texttt{requires\_grad=True} constructs a dynamic DAG. Calling \texttt{loss.backward()} evaluates reverse-mode chain rule products automatically.
+    \item \textbf{Always Zero Gradients}: Gradients accumulate into \texttt{.grad} on every backward pass. Always execute \texttt{optimizer.zero\_grad(set\_to\_none=True)} at the beginning of every batch.
+    \item \textbf{Disable Tracking During Inference}: Wrap evaluation code in \texttt{with torch.no\_grad():} or \texttt{with torch.inference\_mode():} to eliminate graph storage and accelerate throughput.
+    \item \textbf{Decouple Data with \texttt{Dataset} and \texttt{DataLoader}}: Subclass \texttt{Dataset} to implement \texttt{\_\_len\_\_} and \texttt{\_\_getitem\_\_}. Use \texttt{DataLoader} for batching, shuffling, and multi-process pre-fetching.
+    \item \textbf{Logits Go to Cross-Entropy}: Never place a \texttt{Softmax} layer at the end of an architecture paired with \texttt{nn.CrossEntropyLoss}. Output raw, unnormalized logits.
+    \item \textbf{Leverage Apple Silicon UMA}: On macOS, accelerate training using \texttt{torch.device("mps")}, taking advantage of Unified Memory to eliminate PCIe data transfer overhead.
+    \item \textbf{Save State Dictionaries}: Always serialize models using \texttt{torch.save(model.state\_dict(), ...)} to preserve clean architectural portability.
+\end{itemize}
+\end{takeaways}
+
+% ------------------------------------------------------------------------------
+\subsection{Check Yourself}\label{subsec:pytorch_check_yourself}
+% ------------------------------------------------------------------------------
+
+\begin{checkyourself}[Practice Exercises]
+\begin{enumerate}
+    \item \textbf{Manual Autograd Verification}:
+    A single neuron computation graph processes input scalar $x = 2.0$, with weight $w = 3.0$ and bias $b = 1.0$. The linear output is $z = w \cdot x + b$. The loss is the squared error $\mathcal{L} = \frac{1}{2}(z - y)^2$ with ground-truth target $y = 4.0$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the numerical values of forward activations $z$ and loss $\mathcal{L}$.
+        \item Compute the partial derivative $\frac{\partial \mathcal{L}}{\partial z}$.
+        \item Apply the chain rule to derive the analytical gradients $\frac{\partial \mathcal{L}}{\partial w}$, $\frac{\partial \mathcal{L}}{\partial b}$, and $\frac{\partial \mathcal{L}}{\partial x}$.
+    \end{enumerate}
+
+    \item \textbf{DataLoader Batch Arithmetic}:
+    An edge acoustic telemetry dataset contains $N = 1{,}050$ vibration window samples. A \texttt{DataLoader} is configured with batch size $B = 64$.
+    \begin{enumerate}[label=(\alph*)]
+        \item If \texttt{drop\_last=False}, how many total batches are processed in one epoch? What is the sample size of the final batch?
+        \item If \texttt{drop\_last=True}, how many batches are processed, and how many samples are discarded per epoch?
+        \item How many optimizer weight update steps occur over $10$ full epochs if \texttt{drop\_last=False}?
+    \end{enumerate}
+
+    \item \textbf{Gradient Accumulation Bug Diagnosis}:
+    An engineer writes a training loop but accidentally omits \texttt{optimizer.zero\_grad()}. Over the first three training batches, the true batch gradients for weight $w$ are $g_1 = 0.50$, $g_2 = -0.20$, and $g_3 = 0.80$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Calculate the accumulated gradient stored in \texttt{w.grad} at Step 1, Step 2, and Step 3.
+        \item Explain how gradient accumulation can be deliberately exploited to simulate large effective batch sizes on memory-constrained GPUs.
+    \end{enumerate}
+
+    \item \textbf{Neural Network Parameter and Memory Footprint}:
+    An IoT sensor classifier consists of:
+    \begin{itemize}
+        \item Input Layer: $D = 12$ sensor channels.
+        \item Hidden Layer 1: $64$ neurons (fully connected + bias).
+        \item Hidden Layer 2: $32$ neurons (fully connected + bias).
+        \item Output Layer: $K = 2$ classes (logits + bias).
+    \end{itemize}
+    \begin{enumerate}[label=(\alph*)]
+        \item Calculate the total number of trainable parameters (weights and biases).
+        \item Calculate the memory storage required for the weights in standard 32-bit floating point (\texttt{float32}).
+        \item Calculate the memory footprint after post-training 8-bit integer quantization (\texttt{int8}) for an ESP32 microcontroller.
+    \end{enumerate}
+
+    \item \textbf{Hardware Architectures for Deep Learning}:
+    Compare Apple Silicon's Unified Memory Architecture (UMA) with traditional PCIe discrete GPU architectures:
+    \begin{enumerate}[label=(\alph*)]
+        \item Why does a discrete GPU require explicit data transfer (\texttt{tensor.cuda()}) while Apple Silicon UMA does not move physical memory on \texttt{tensor.to("mps")}?
+        \item For streaming IoT edge workloads with small continuous batches, which architecture avoids bus transfer latency bottlenecks?
+    \end{enumerate}
+\end{enumerate}
+\end{checkyourself}
+
+% ------------------------------------------------------------------------------
+\subsection*{Answers}\label{subsec:pytorch_answers}
+% ------------------------------------------------------------------------------
+
+\begin{enumerate}
+    \item \textbf{Manual Autograd Verification}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Forward Activations}:
+        \begin{align*}
+        z &= w \cdot x + b = (3.0)(2.0) + 1.0 = \mathbf{7.0} \\
+        \mathcal{L} &= \frac{1}{2}(z - y)^2 = \frac{1}{2}(7.0 - 4.0)^2 = \frac{1}{2}(3.0)^2 = \frac{9.0}{2} = \mathbf{4.5}
+        \end{align*}
+
+        \item \textbf{Loss Gradient with Respect to $z$}:
+        \begin{equation*}
+        \frac{\partial \mathcal{L}}{\partial z} = \frac{\partial}{\partial z}\left[ \frac{1}{2}(z - y)^2 \right] = (z - y) = 7.0 - 4.0 = \mathbf{3.0}
+        \end{equation*}
+
+        \item \textbf{Chain Rule Gradients}:
+        \begin{align*}
+        \frac{\partial \mathcal{L}}{\partial w} &= \frac{\partial \mathcal{L}}{\partial z} \cdot \frac{\partial z}{\partial w} = (3.0) \cdot x = (3.0)(2.0) = \mathbf{6.0} \\
+        \frac{\partial \mathcal{L}}{\partial b} &= \frac{\partial \mathcal{L}}{\partial z} \cdot \frac{\partial z}{\partial b} = (3.0) \cdot 1.0 = \mathbf{3.0} \\
+        \frac{\partial \mathcal{L}}{\partial x} &= \frac{\partial \mathcal{L}}{\partial z} \cdot \frac{\partial z}{\partial x} = (3.0) \cdot w = (3.0)(3.0) = \mathbf{9.0}
+        \end{align*}
+    \end{enumerate}
+
+    \item \textbf{DataLoader Batch Arithmetic}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{With \texttt{drop\_last=False}}:
+        \begin{equation*}
+        N_{\text{batches}} = \left\lceil \frac{1050}{64} \right\rceil = \lceil 16.406 \rceil = \mathbf{17\text{ batches}}
+        \end{equation*}
+        Full batches: $16 \times 64 = 1024$ samples. \\
+        Final residual batch size: $1050 - 1024 = \mathbf{26\text{ samples}}$.
+
+        \item \textbf{With \texttt{drop\_last=True}}:
+        \begin{equation*}
+        N_{\text{batches}} = \left\lfloor \frac{1050}{64} \right\rfloor = \mathbf{16\text{ batches}}
+        \end{equation*}
+        Discarded samples: $1050 - (16 \times 64) = \mathbf{26\text{ samples}}$ dropped per epoch.
+
+        \item \textbf{Total Updates Across 10 Epochs}:
+        Each batch triggers exactly one \texttt{optimizer.step()}. With 17 batches per epoch:
+        \begin{equation*}
+        \text{Total Updates} = 17 \times 10 = \mathbf{170\text{ weight update steps}}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{Gradient Accumulation Bug Diagnosis}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Accumulated Gradient Values}:
+        Without \texttt{optimizer.zero\_grad()}, new gradients add directly to the existing buffer:
+        \begin{itemize}
+            \item \textbf{Step 1}: $\texttt{w.grad} = g_1 = \mathbf{0.50}$
+            \item \textbf{Step 2}: $\texttt{w.grad} = g_1 + g_2 = 0.50 + (-0.20) = \mathbf{0.30}$
+            \item \textbf{Step 3}: $\texttt{w.grad} = g_1 + g_2 + g_3 = 0.30 + 0.80 = \mathbf{1.10}$
+        \end{itemize}
+
+        \item \textbf{Intentional Exploitation}:
+        When training massive networks on memory-constrained GPUs (such as edge devices with limited VRAM), a batch size of $B=128$ may trigger an Out-of-Memory (OOM) crash. An engineer can set physical batch size to $B=32$, run forward and backward passes across $4$ consecutive mini-batches \textit{without} calling \texttt{optimizer.zero\_grad()}, and execute \texttt{optimizer.step()} only on the 4th batch:
+        \begin{equation*}
+        \mathbf{g}_{\text{eff}} = \frac{1}{4}\sum_{k=1}^4 \mathbf{g}_k
+        \end{equation*}
+        This mathematically replicates an effective batch size of $128$ while consuming only the memory required for $32$ samples.
+    \end{enumerate}
+
+    \item \textbf{Neural Network Parameter and Memory Footprint}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Total Trainable Parameters}:
+        \begin{itemize}
+            \item Layer 1 ($12 \to 64$): $12 \times 64 = 768$ weights, $64$ biases $\implies 768 + 64 = \mathbf{832}$
+            \item Layer 2 ($64 \to 32$): $64 \times 32 = 2048$ weights, $32$ biases $\implies 2048 + 32 = \mathbf{2080}$
+            \item Layer 3 ($32 \to 2$): $32 \times 2 = 64$ weights, $2$ biases $\implies 64 + 2 = \mathbf{66}$
+        \end{itemize}
+        Total parameters: $832 + 2080 + 66 = \mathbf{2{,}978\text{ parameters}}$.
+
+        \item \textbf{Memory Storage (\texttt{float32})}:
+        Each 32-bit float occupies $4\text{ bytes}$:
+        \begin{align*}
+        \text{Memory}_{\text{float32}} &= 2978 \times 4\text{ bytes} = \mathbf{11{,}912\text{ bytes}} \\
+        &= \frac{11{,}912}{1024} \approx \mathbf{11.63\text{ KB}}
+        \end{align*}
+
+        \item \textbf{Memory Storage (\texttt{int8} Quantization)}:
+        Each 8-bit integer occupies $1\text{ byte}$:
+        \begin{align*}
+        \text{Memory}_{\text{int8}} &= 2978 \times 1\text{ byte} = \mathbf{2{,}978\text{ bytes}} \\
+        &= \frac{2{,}978}{1024} \approx \mathbf{2.91\text{ KB}}
+        \end{align*}
+        Quantization achieves a $4\times$ memory reduction, easily fitting inside the tightly constrained $320\text{ KB}$ SRAM of an ESP32.
+    \end{enumerate}
+
+    \item \textbf{Hardware Architectures for Deep Learning}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Physical Memory Organization}:
+        In traditional PC/server workstations, the CPU and discrete GPU have separate physical memory pools (DDR RAM and GDDR VRAM) separated by the PCIe expansion bus. Tensors must be serialized, scheduled, and transferred across PCIe ($16\text{--}64\text{ GB/s}$), incurring latency. In Apple Silicon's Unified Memory Architecture (UMA), the CPU, GPU, and Neural Engine share the exact same physical memory chips. The \texttt{tensor.to("mps")} call simply creates a Metal driver handle pointing to the existing RAM buffer without moving or copying physical bytes.
+        \item \textbf{Streaming Edge Latency}:
+        Apple Silicon's UMA eliminates PCIe bus transfer latency. For streaming IoT sensor pipelines where small batches ($B = 1\text{ to }16$) arrive continuously at high sampling rates ($10\text{ kHz}$), UMA avoids the high round-trip transfer overhead that often cripples discrete GPUs on small workloads.
+    \end{enumerate}
+\end{enumerate}

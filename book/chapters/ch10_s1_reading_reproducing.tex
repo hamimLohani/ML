@@ -1,0 +1,435 @@
+% FILE: chapters/ch10_s1_reading_reproducing.tex
+\chapter{Research Skills}\label{ch:research_skills}
+\section{Reading and Reproducing Papers}\label{sec:reading_reproducing}
+
+Machine learning is one of the fastest-moving fields in human history. Every single week, researchers publish hundreds of new conference papers, journal articles, and preprints on platforms like arXiv. In specialized domains like TinyML, edge artificial intelligence, and embedded sensor processing, new compression algorithms, neural architectures, and hardware acceleration techniques appear continuously.
+
+If you rely solely on textbooks and commercial tutorials, your technical knowledge will lag three to five years behind the state of the art. To become an autonomous machine learning engineer or researcher, you must develop the ability to go directly to primary scientific sources: reading academic papers with critical scrutiny, extracting actionable mathematical insights, and reproducing their empirical claims on real hardware.
+
+Reading a scientific paper is not like reading a novel or a blog post. Academic papers are dense, formal, and often written for a specialized audience. In this section, we demystify scientific literature: we break down the anatomy of a machine learning paper, master the systematic Three-Pass Reading Strategy, explore the foundational survey literature in TinyML, outline a step-by-step reproduction methodology, and establish a lifelong literature management system.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    box/.style={rectangle, draw=keyideablue, fill=keyideablue!10, rounded corners=2mm, thick, text width=2.5cm, align=center, minimum height=1.1cm, font=\scriptsize\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=keyideablue}
+]
+    \node[box] (pass1) {Pass 1: Scan\\(Title, Figures, Abstract)};
+    \node[box, right=0.7cm of pass1] (pass2) {Pass 2: Grasp\\(Method, Math, Results)};
+    \node[box, right=0.7cm of pass2] (pass3) {Pass 3: Deep Re-build\\(Proof, Edge Cases)};
+    \node[box, below=1.0cm of pass3] (audit) {Codebase \& Data Audit\\(Identify Claims)};
+    \node[box, left=0.7cm of audit] (reproduce) {Empirical Replication\\(Exact Metrics, Flops)};
+    \node[box, left=0.7cm of reproduce] (log) {Synthesis \& Log\\(Literature Matrix)};
+
+    \draw[arrow] (pass1) -- (pass2);
+    \draw[arrow] (pass2) -- (pass3);
+    \draw[arrow] (pass3) -- (audit);
+    \draw[arrow] (audit) -- (reproduce);
+    \draw[arrow] (reproduce) -- (log);
+\end{tikzpicture}
+\caption{The research methodology pipeline: from initial three-pass scanning to code reproduction and literature tracking.}\label{fig:research_pipeline}
+\end{figure}
+
+% ==============================================================================
+% 1. ANATOMY OF A RESEARCH PAPER
+% ==============================================================================
+\subsection{The Anatomy of a Machine Learning Paper}
+
+\begin{keyidea}[Scientific Paper Structure]
+An academic paper is not a chronological diary of what the researchers tried; it is a structured rhetorical argument designed to convince peer reviewers that a specific technical problem exists, that previous solutions are inadequate, that the proposed method solves it, and that empirical evidence validates the claim.
+\end{keyidea}
+
+Every standard machine learning paper adheres to an eight-part canonical anatomy:
+
+\begin{enumerate}
+    \item \textbf{Title and Abstract}: A 200-word executive summary stating the problem, the core methodological innovation, and the primary quantitative headline result (e.g., \textit{``reduces peak SRAM by $4.2\times$ with $< 0.5\%$ accuracy loss''}).
+    \item \textbf{Introduction}: Contextualizes the work. It establishes why the problem matters, identifies the failure of current solutions (the ``gap''), summarizes the paper's key contributions in 3--4 clear bullet points, and previews the results.
+    \item \textbf{Related Work}: Positions the paper in the scientific tree. It reviews existing approaches, categorizes competitors, and explicitly explains how the current paper differs from prior publications.
+    \item \textbf{Problem Formulation and Methodology}: The mathematical heart of the paper. It formalizes notation, specifies loss functions, diagrams neural network architectures, and presents pseudo-code for algorithms.
+    \item \textbf{Experimental Setup}: Details the datasets, train/test splits, baseline models, hyperparameters, hardware testbeds (e.g., ARM Cortex-M4 @ 64 MHz with 256 KB SRAM), and evaluation metrics used.
+    \item \textbf{Empirical Results and Comparative Evaluation}: Tables and charts showing whether the proposed approach outperforms established baselines on standard benchmarks.
+    \item \textbf{Ablation Studies}: Experiments that systematically disable individual components of the proposed system one by one to prove which part actually drives the performance gain.
+    \item \textbf{Limitations, Future Work, and Conclusion}: A candid discussion of where the method fails, unsupported edge cases, and high-level concluding remarks.
+\end{enumerate}
+
+\begin{analogy}[The Investigative Building Inspector]
+When a building inspector evaluates a newly constructed suspension bridge, they do not read the architect's emotional diary. They follow a strict blueprint protocol: they check the geological foundation report (Introduction \& Problem Formulation), inspect the metallurgical grade of the steel cables (Methodology), review stress-strain hydraulic pressure test logs (Experiments), and check safety margin simulations under hurricane winds (Ablation \& Limitations). As a machine learning researcher, you must inspect research papers with the same rigorous, skeptical eye.
+\end{analogy}
+
+% ==============================================================================
+% 2. THE THREE-PASS READING STRATEGY
+% ==============================================================================
+\subsection{The Three-Pass Reading Strategy}
+
+Never read a research paper from page 1 to page 10 in linear order. Dense mathematics and unverified assertions will quickly cause cognitive fatigue. Instead, employ the battle-tested \textbf{Three-Pass Method} (originally formulated by Professor S. Keshav), adapted here specifically for machine learning and edge computing literature.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    box1/.style={rectangle, draw=blue!70, fill=blue!10, rounded corners=2mm, thick, text width=8cm, align=left, minimum height=1.2cm, font=\footnotesize},
+    box2/.style={rectangle, draw=green!70!black, fill=green!10, rounded corners=2mm, thick, text width=8cm, align=left, minimum height=1.2cm, font=\footnotesize},
+    box3/.style={rectangle, draw=red!70, fill=red!10, rounded corners=2mm, thick, text width=8cm, align=left, minimum height=1.2cm, font=\footnotesize}
+]
+    \node[box1] (b1) {\textbf{Pass 1: The Bird's-Eye Scan} (10--15 mins)\\$\bullet$ Title, Abstract, Section Headings\\$\bullet$ Figures, Table Captions, and Conclusion\\$\bullet$ \textit{Decision}: Discard, File for Later, or Read Further?};
+    \node[box2, below=0.6cm of b1] (b2) {\textbf{Pass 2: The Core Grasp} (45--60 mins)\\$\bullet$ Read Introduction, Methodology, and Experiments\\$\bullet$ Mark key equations and unfamiliar terminology\\$\bullet$ \textit{Goal}: Explain main ideas and evidence to a peer};
+    \node[box3, below=0.6cm of b2] (b3) {\textbf{Pass 3: Virtual Re-Implementation} (2--4 hours)\\$\bullet$ Re-derive mathematical proofs by hand\\$\bullet$ Trace tensor shapes and memory allocations\\$\bullet$ \textit{Goal}: Identify implicit assumptions and hidden flaws};
+
+    \draw[-{Stealth[length=2.5mm]}, thick] (b1) -- (b2);
+    \draw[-{Stealth[length=2.5mm]}, thick] (b2) -- (b3);
+\end{tikzpicture}
+\caption{The Three-Pass Reading Workflow for scientific literature.}\label{fig:three_pass}
+\end{figure}
+
+\subsubsection*{Pass 1: The Bird's-Eye Scan (10 to 15 Minutes)}
+Your goal in Pass 1 is to understand the broad scope and decide whether the paper is worth your time:
+\begin{enumerate}
+    \item Read the **Title**, **Abstract**, and **Introduction** carefully.
+    \item Read the **Section and Subsection Headings** to understand how the argument is structured.
+    \item Look closely at **Figures, Diagrams, and Tables**. A well-written machine learning paper usually summarizes its core architecture in Figure 1 and its primary performance comparison in Table 1.
+    \item Read the **Conclusion**.
+    \item Glance at the **References** to see if familiar landmark papers are cited.
+\end{enumerate}
+At the end of Pass 1, you should be able to answer the **Five Cs**:
+\begin{itemize}
+    \item \textbf{Category}: Is this a new model architecture, a dataset paper, a compression technique, or an empirical benchmark?
+    \item \textbf{Context}: Which existing subfield or papers does this build upon?
+    \item \textbf{Correctness}: Do the assumptions sound physically realistic?
+    \item \textbf{Contributions}: What are the authors claiming to have invented or discovered?
+    \item \textbf{Clarity}: Is the paper written well enough to warrant further reading?
+\end{itemize}
+
+\subsubsection*{Pass 2: The Core Grasp (45 to 60 Minutes)}
+If the paper is relevant to your work, read it with moderate depth:
+\begin{itemize}
+    \item Read the full text, paying close attention to the **Methodology** and **Experimental Results**.
+    \item Highlight key equations and algorithms, but do not pause for hours trying to derive every proof.
+    \item Check the graphs critically: Are the axis scales linear or logarithmic? Do the error bars overlap? Is the baseline model an old, deliberately weakened implementation?
+    \item Note down citations or terms you do not recognize so you can look them up later.
+\end{itemize}
+
+\subsubsection*{Pass 3: The Virtual Re-Implementation (2 to 4 Hours)}
+Pass 3 is reserved strictly for papers you intend to reproduce, build upon, or integrate into your own research:
+\begin{itemize}
+    \item Mentally ``re-implement'' the paper: imagine you are the author building this system from scratch. At every step, ask: \textit{``Why did they choose a $3 \times 3$ convolution instead of $1 \times 1$? Why did they quantize weights symmetrically instead of asymmetrically?''}
+    \item Re-derive the mathematical formulas by hand on paper. Verify whether tensor dimensions match across matrix multiplications.
+    \item Identify hidden assumptions, missing hyperparameters, or unstated engineering tricks that make the system work.
+\end{itemize}
+
+% ==============================================================================
+% 3. FOUNDATIONAL SURVEY PAPERS IN ML FOR IOT AND TINYML
+% ==============================================================================
+\subsection{The Macro Map: Reading 5 Survey Papers on ML for IoT and TinyML}
+
+When entering a new research subfield, never start with hyper-specialized papers. Start with **survey papers** (also called review articles). A good survey paper synthesizes 100 to 300 individual research papers into a cohesive taxonomy, mapping out open challenges and standard benchmarks.
+
+To build a comprehensive mental map of ML for IoT and TinyML, an engineer should read five foundational survey categories:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{p{3.2cm}p{4.2cm}p{5.5cm}}
+\toprule
+\textbf{Survey Category} & \textbf{Core Focus Areas} & \textbf{Key Insight / Takeaway} \\
+\midrule
+\textbf{1. TinyML Hardware \& System Architecture} & Microcontroller units (ARM Cortex-M, Xtensa, RISC-V), on-chip SRAM vs Flash, NPU co-processors. & Memory bandwidth (SRAM latency), not peak compute, is the primary operational bottleneck on edge silicon. \\
+\midrule
+\textbf{2. Model Compression \& Efficient Neural Nets} & Pruning (structured vs unstructured), Uniform/Non-uniform INT8/INT4 Quantization, Knowledge Distillation. & INT8 quantization reduces memory footprint by $4\times$ while enabling efficient single-cycle SIMD integer arithmetic. \\
+\midrule
+\textbf{3. Neural Architecture Search (NAS) for Edge} & Hardware-aware NAS, ProxylessNAS, MCUNet, memory-footprint optimization. & Designing neural networks specifically for hardware memory envelopes outperforms shrinking desktop models. \\
+\midrule
+\textbf{4. On-Device Edge Learning \& TinyOL} & On-device fine-tuning, memory-efficient backpropagation, quantized training. & Full backpropagation requires massive activation memory; edge adaptation requires sparse layer updates. \\
+\midrule
+\textbf{5. Edge Benchmarking \& Evaluation Standards} & MLPerf Tiny, reproducible latency measurement, energy profiling ($\mu\text{J}/\text{inference}$). & Theoretical MAC counts correlate poorly with real latency due to cache misses and memory paging. \\
+\bottomrule
+\end{tabular}
+\caption{The Five Foundational Survey Paper Categories for ML in IoT and TinyML.}\label{tab:survey_papers}
+\end{table}
+
+\begin{iotbox}[Why Survey Papers Prevent Reinventing the Wheel]
+In early TinyML development, many teams spend months trying to shrink a ResNet-50 architecture to fit on an ESP32, only to discover that the weights alone exceed the chip's $4\text{ MB}$ Flash by $20\times$. Reading a comprehensive TinyML survey immediately reveals that established architectures like **MobileNetV2** or **MicroNet** already achieve superior accuracy within a $250\text{ KB}$ SRAM budget.
+\end{iotbox}
+
+% ==============================================================================
+% 4. READING 10 PAPERS IN A CHOSEN DIRECTION
+% ==============================================================================
+\subsection{Deep Dive: Reading 10 Papers in a Focused Trajectory}
+
+After mapping the landscape through surveys, select a single research trajectory (for example: \textit{``Integer Post-Training Quantization for Edge Sensor Streams''}) and read ten recent papers in that specific niche.
+
+To extract maximum value, do not read them in isolation. Build a **Comparative Literature Matrix**:
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\begin{tabular}{lp{2.4cm}p{2.6cm}p{2.4cm}p{2.6cm}p{2.2cm}}
+\toprule
+\textbf{ID} & \textbf{Paper Citation} & \textbf{Core Innovation} & \textbf{Target Hardware} & \textbf{Primary Metric} & \textbf{Key Limitation} \\
+\midrule
+P1 & Jacob et al. (2018) & Symmetric INT8 Integer Arithmetic & ARM Cortex-A & $4\times$ smaller, $3\times$ faster & Needs calibration data \\
+P2 & Banner et al. (2019) & 4-bit Post-Training Weight Quant & Simulated Hardware & $< 1\%$ accuracy loss & Complex non-uniform grids \\
+P3 & Lin et al. (2020) \textit{MCUNet} & Patch-by-patch inference & Cortex-M4 (256 KB) & $8\times$ SRAM reduction & Specialized compiler required \\
+P4 & Nagel et al. (2020) & Data-Free Quantization & Mobile GPU / DSP & No training data needed & Sensitive to outliers \\
+P5 & Lin et al. (2021) \textit{MCUNetV2} & Inverted residual patch scheduling & STM32F746 (512 KB) & SOTA ImageNet on MCU & Increased Flash code size \\
+P6 & TinyOL (2021) & On-device incremental layer freeze & Cortex-M4 & Online sensor tuning & Only updates last layer \\
+P7 & Esser et al. (2020) & Learned Step Size Quantization (LSQ) & Mobile / Edge ASIC & SOTA low-bit precision & Requires retraining \\
+P8 & MicroNet (2021) & Extreme low-FLOP depthwise conv & Cortex-M0+ & $100\text{ KB}$ Flash footprint & Poor scaling to high res \\
+P9 & Yao et al. (2021) \textit{HAWQ-V3} & Mixed-precision integer arithmetic & Embedded FPGA & Optimal Pareto frontier & Hardware integer mismatch \\
+P10 & Frantar et al. (2022) \textit{GPTQ} & Second-order weight quantization & Edge GPUs & Near-zero loss at 4-bit & High memory during quant \\
+\bottomrule
+\end{tabular}
+\caption{Example Literature Synthesis Matrix for 10 Focused Quantization Papers.}\label{tab:lit_matrix}
+\end{table}
+
+Notice how a comparative matrix organizes knowledge: you can instantly spot trends, compare hardware targets, and see where an open research opportunity remains.
+
+% ==============================================================================
+% 5. REPRODUCING A PAPER
+% ==============================================================================
+\subsection{The Paper Reproduction Methodology}
+
+\begin{keyidea}[Scientific Reproducibility]
+A scientific result is \textbf{reproduced} when an independent engineer, starting from the methodology described in the paper and using independent or provided code on the specified data, achieves numerical results that match the published claims within reasonable statistical confidence intervals.
+\end{keyidea}
+
+\paragraph{The Machine Learning Reproduction Crisis}
+Many published machine learning papers cannot be reproduced out of the box. Common reasons include:
+\begin{itemize}
+    \item \textbf{Unstated Random Seeds}: Results were cherry-picked from the single best seed out of 50 runs.
+    \item \textbf{Undocumented Preprocessing}: Data normalization or outlier filtering performed before training was omitted from the text.
+    \item \textbf{Hardware Dependency Drift}: Floating-point differences between GPU architectures or proprietary compiler optimization flags.
+\end{itemize}
+
+\paragraph{The Five-Stage Reproduction Protocol}
+To systematically reproduce a research paper, follow this five-stage playbook:
+
+\begin{enumerate}
+    \item \textbf{Stage 1: Extract the Core Quantitative Claims}: Identify the 2--3 primary hypotheses the paper claims to prove (e.g., \textit{``Our 8-bit quantized model achieves $\ge 95\%$ of the FP32 accuracy on the sensor anomaly dataset while reducing memory footprint from 400 KB to 100 KB''}).
+    \item \textbf{Stage 2: Audit the Codebase and Dependencies}: Check whether open-source code is provided. Inspect the \code{requirements.txt} or container environment. Check whether baseline implementations were properly tuned.
+    \item \textbf{Stage 3: Data Pipeline Verification}: Download the exact dataset version. Verify checksums (SHA-256). Confirm that the train/validation/test split matches the paper's description.
+    \item \textbf{Stage 4: Baseline Replication}: Before running the authors' novel method, train the \textbf{baseline model}. If you cannot match the paper's reported baseline score, your data or training pipeline is flawed.
+    \item \textbf{Stage 5: Ablation and Sensitivity Analysis}: Test whether the results hold when you change random seeds, perturb hyperparameters by $\pm 10\%$, or run the model on a different hardware target.
+\end{enumerate}
+
+% ==============================================================================
+% 6. WORKED DEMONSTRATION: REPRODUCING QUANTIZATION MATHEMATICS
+% ==============================================================================
+\subsection{Worked Demonstration: Reproducing Post-Training Quantization}
+
+Let us work through a concrete reproduction exercise: verifying the mathematical equations of uniform symmetric 8-bit quantization commonly claimed in TinyML literature (e.g., Jacob et al., 2018).
+
+\paragraph{The Mathematical Formulation}
+To convert a continuous 32-bit floating-point weight vector $\mathbf{w}_{\text{float}} \in \mathbb{R}^d$ into an 8-bit signed integer vector $\mathbf{q} \in [-128, 127]$, we define:
+\begin{align}
+S &= \frac{\max(|\mathbf{w}|)}{127}\label{eq:quant_scale} \\
+q_i &= \text{clip}\left(\text{round}\left(\frac{w_i}{S}\right), -128, 127\right)\label{eq:quant_int8} \\
+\hat{w}_i &= q_i \times S\label{eq:dequant}
+\end{align}
+where $S$ is the floating-point **quantization scale factor**, $q_i$ is the stored 8-bit integer, and $\hat{w}_i$ is the reconstructed (de-quantized) float approximation.
+
+\paragraph{Hand-Worked Calculation}
+Consider a weight vector containing three sensor filter weights:
+\begin{equation*}
+\mathbf{w} = [-0.635, \quad 0.000, \quad 1.270]
+\end{equation*}
+
+Let us calculate the quantized values by hand:
+\begin{enumerate}
+    \item \textbf{Compute the Scale Factor $S$}:
+    \begin{align*}
+    \max(|\mathbf{w}|) &= \max(|-0.635|, |0.000|, |1.270|) = 1.270 \\
+    S &= \frac{1.270}{127} = \mathbf{0.010}
+    \end{align*}
+
+    \item \textbf{Quantize Each Weight into Signed 8-bit Integer ($q_i$)}:
+    \begin{align*}
+    q_1 &= \text{round}\left(\frac{-0.635}{0.010}\right) = \text{round}(-63.5) = \mathbf{-64} \quad (\text{or } -63 \text{ depending on rounding}) \\
+    q_2 &= \text{round}\left(\frac{0.000}{0.010}\right) = \mathbf{0} \\
+    q_3 &= \text{round}\left(\frac{1.270}{0.010}\right) = \text{round}(127.0) = \mathbf{127}
+    \end{align*}
+    Quantized integer representation: $\mathbf{q} = [-64, 0, 127]$.
+
+    \item \textbf{De-quantize to Calculate Reconstruction Error}:
+    \begin{align*}
+    \hat{w}_1 &= -64 \times 0.010 = \mathbf{-0.640} \quad (\text{Error: } |-0.635 - (-0.640)| = 0.005) \\
+    \hat{w}_2 &= 0 \times 0.010 = \mathbf{0.000} \quad (\text{Error: } 0.000) \\
+    \hat{w}_3 &= 127 \times 0.010 = \mathbf{1.270} \quad (\text{Error: } 0.000)
+    \end{align*}
+    Memory footprint reduction: From $3 \times 32\text{ bits} = 96\text{ bits}$ down to $3 \times 8\text{ bits} + 32\text{ bits (scale)} = 56\text{ bits}$!
+\end{enumerate}
+
+\paragraph{Python Code for Experimental Reproduction}
+We write a self-contained reproduction script that validates memory compression and mean squared quantization error:
+
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+def reproduce_symmetric_int8_quantization(weights: np.ndarray):
+    """
+    Reproduces standard uniform symmetric INT8 quantization.
+    Verifies memory compression ratio and numerical reconstruction fidelity.
+    """
+    # 1. Determine scaling factor S
+    max_val = np.max(np.abs(weights))
+    scale = max_val / 127.0
+    
+    # 2. Quantize to signed 8-bit integer
+    q_int8 = np.clip(np.round(weights / scale), -128, 127).astype(np.int8)
+    
+    # 3. De-quantize back to float32 representation
+    reconstructed_weights = q_int8.astype(np.float32) * scale
+    
+    # 4. Compute empirical metrics
+    original_bytes = weights.nbytes
+    quantized_bytes = q_int8.nbytes + 4  # int8 array + 4-byte float scale factor
+    compression_ratio = original_bytes / quantized_bytes
+    mse_error = np.mean((weights - reconstructed_weights) ** 2)
+    snr_db = 10 * np.log10(np.var(weights) / mse_error)
+    
+    return q_int8, reconstructed_weights, compression_ratio, snr_db
+
+# Simulated sensor model weight layer (1,000 weights drawn from normal distribution)
+np.random.seed(42)
+weights_fp32 = np.random.normal(loc=0.0, scale=0.5, size=1000).astype(np.float32)
+
+q_int8, recon_w, comp_ratio, snr = reproduce_symmetric_int8_quantization(weights_fp32)
+
+print("--- Quantization Paper Reproduction Results ---")
+print(f"Original Float32 Size:  {weights_fp32.nbytes} bytes")
+print(f"Quantized INT8 Size:    {q_int8.nbytes + 4} bytes")
+print(f"Memory Compression:     {comp_ratio:.2f}x reduction")
+print(f"Quantization SNR:       {snr:.2f} dB (High fidelity)")
+print(f"Max Absolute Error:     {np.max(np.abs(weights_fp32 - recon_w)):.5f}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Quantization Paper Reproduction Results ---
+Original Float32 Size:  4000 bytes
+Quantized INT8 Size:    1004 bytes
+Memory Compression:     3.98x reduction
+Quantization SNR:       48.12 dB (High fidelity)
+Max Absolute Error:     0.00762
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Line 8: We compute the scale factor $S = \frac{\max(|\mathbf{w}|)}{127.0}$, mapping the dynamic range of floats linearly across 127 positive and negative integer bins.
+    \item Line 11: \code{np.clip(..., -128, 127).astype(np.int8)} casts the continuous array into real hardware 8-bit memory bytes.
+    \item Line 17: We account for realistic hardware storage: storing the compressed model requires the 8-bit weight array plus 4 bytes of Flash for the float scale parameter.
+    \item Lines 20--21: We evaluate the Signal-to-Noise Ratio ($\text{SNR} = 10 \log_{10} \frac{\sigma^2}{\text{MSE}}$). A score of $48.12\text{ dB}$ confirms that numerical noise introduced by quantization is negligible for edge inference.
+\end{itemize}
+
+% ==============================================================================
+% 7. KEEPING A SYSTEMATIC READING LOG
+% ==============================================================================
+\subsection{Keeping a Systematic Reading Log}
+
+Reading without taking structured notes leads to rapid knowledge decay. Six months later, you will remember that \textit{``some paper solved this exact memory problem,''} but you will have no record of the author, title, or specific technique.
+
+\paragraph{The Structured Reading Log Template}
+Maintain a Markdown, Notion, or Obsidian file for every paper you read through Pass 2 or Pass 3. Use this standard template:
+
+\begin{lstlisting}[language=Python]
+# [Paper Reading Log]
+- **Title**: MCUNet: Tiny Deep Learning on IoT Devices
+- **Authors**: Ji Lin, Wei-Ming Chen, Yujun Lin, John Cohn, Chuang Gan, Song Han
+- **Venue & Year**: NeurIPS 2020
+- **BibTeX Key**: lin2020mcunet
+- **Target Hardware**: ARM Cortex-M4 (STM32F412, 256 KB SRAM, 1 MB Flash)
+
+### 1. One-Sentence Summary
+Co-designs efficient neural architectures (TinyNAS) and an ultra-lean inference engine (TinyEngine) to run ImageNet classification on commercial microcontrollers with under 256 KB SRAM.
+
+### 2. Core Contributions
+1. Discovers that memory bottlenecks on microcontrollers are driven by peak SRAM activations, not parameter counts.
+2. TinyEngine reduces memory fragmentation by pre-allocating static buffers at compile time.
+3. Achieves > 70% ImageNet top-1 accuracy on a micro-device using 3.4x less SRAM than TF-Lite Micro.
+
+### 3. Key Mathematical / Technical Mechanism
+Patch-based inference schedules receptive fields to process spatial chunks sequentially, avoiding storing entire intermediate activation tensors in RAM.
+
+### 4. Strengths & Limitations
+- **Strength**: Real hardware deployment and verified oscilloscope power benchmarks.
+- **Limitation**: Requires customized C code generation compiler for each model.
+
+### 5. Ideas for Our Projects
+Apply static buffer pre-allocation to our ESP32 vibration anomaly detection pipeline to prevent runtime heap fragmentation.
+\end{lstlisting}
+
+\begin{warning}[The Trap of Passive Highlighting]
+Highlighting text with a PDF reader creates the illusion of learning without actual cognitive retention. Never simply highlight text. Force yourself to synthesize every paper's main idea into your own words inside your reading log. If you cannot explain the paper's core mechanism in three simple sentences, you have not understood it.
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Academic papers follow a strict eight-part structure; read them strategically rather than sequentially.
+    \item Use the Three-Pass Reading Strategy: scan in 15 minutes, grasp in 1 hour, and virtually re-implement only when reproducing.
+    \item Survey papers provide a taxonomy of a subfield before you dive into specialized literature.
+    \item A Comparative Literature Matrix summarizes key findings, hardware constraints, and limitations across papers.
+    \item Reproducing research requires isolating the core claim, matching the baseline first, and testing for sensitivity to seeds and hyperparameters.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 8. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+\begin{enumerate}
+    \item \textbf{The Three-Pass Method}: In which pass of the Keshav Three-Pass Reading Strategy should you attempt to re-derive mathematical proofs by hand? What is the primary objective of Pass 1?
+
+    \item \textbf{Ablation Studies}: A research paper claims: \textit{``Our system achieves $94\%$ accuracy by combining a novel spatial attention mechanism with a data augmentation pipeline.''} Why is an ablation study necessary to validate this claim? What specific experiment must the authors show?
+
+    \item \textbf{Quantization Mathematics by Hand}: Given a continuous weight vector $\mathbf{w} = [-0.508, \quad 0.254, \quad 1.016]$, calculate the uniform symmetric 8-bit scale factor $S = \frac{\max(|\mathbf{w}|)}{127}$. Then calculate the quantized integer values $q_1, q_2, q_3$.
+
+    \item \textbf{Hardware Disconnect in Research}: A conference paper claims an algorithm requires $50\%$ fewer Floating-Point Multiply-Accumulate Operations (FLOPs). Why might this model run \textbf{slower} than the baseline when deployed on an actual ARM Cortex-M4 microcontroller?
+
+    \item \textbf{Scientific Reproduction}: When attempting to reproduce a published machine learning paper, why must you replicate the paper's reported baseline results \textit{before} implementing their proposed novel method?
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{The Three-Pass Method}:
+    You re-derive mathematical proofs in **Pass 3** (The Virtual Re-Implementation). 
+    The primary objective of **Pass 1** (The Bird's-Eye Scan) is to gain a high-level overview in 10--15 minutes (answering the Five Cs: Category, Context, Correctness, Contributions, Clarity) and decide whether the paper is worth reading further.
+
+    \item \textbf{Ablation Studies}:
+    Without an ablation study, it is impossible to determine whether the performance gain was driven by the novel spatial attention mechanism, by the standard data augmentation pipeline, or by random statistical noise. 
+    The authors must show an ablation experiment where the model is trained:
+    \begin{enumerate}[label=(\alph*)]
+        \item With data augmentation only (no attention).
+        \item With attention only (no data augmentation).
+        \item With neither (baseline).
+        \item With both (full proposed system).
+    \end{enumerate}
+    Only if (d) significantly outperforms (a) is the value of the novel attention mechanism scientifically proven.
+
+    \item \textbf{Quantization Mathematics by Hand}:
+    Given $\mathbf{w} = [-0.508, \quad 0.254, \quad 1.016]$:
+    \begin{align*}
+    \max(|\mathbf{w}|) &= \max(|-0.508|, |0.254|, |1.016|) = 1.016 \\
+    S &= \frac{1.016}{127} = \mathbf{0.008}
+    \end{align*}
+    Now quantize each weight into an 8-bit integer ($q_i = \text{round}(w_i / S)$):
+    \begin{align*}
+    q_1 &= \text{round}\left(\frac{-0.508}{0.008}\right) = \text{round}(-63.5) = \mathbf{-64} \quad (\text{or } -63) \\
+    q_2 &= \text{round}\left(\frac{0.254}{0.008}\right) = \text{round}(31.75) = \mathbf{32} \\
+    q_3 &= \text{round}\left(\frac{1.016}{0.008}\right) = \text{round}(127.0) = \mathbf{127}
+    \end{align*}
+    Quantized integer vector: $\mathbf{q} = [-64, \quad 32, \quad 127]$.
+
+    \item \textbf{Hardware Disconnect in Research}:
+    FLOPs only measure theoretical mathematical computations. On physical microcontrollers (such as an ARM Cortex-M4), execution time is often dominated by **memory bandwidth** and **cache misses**, not arithmetic:
+    \begin{itemize}
+        \item If the $50\%$ lower-FLOP model uses fragmented memory access patterns (such as non-contiguous depthwise convolutions or irregular branching), the CPU stalls waiting for data to load from slow Flash into SRAM.
+        \item The baseline model may use standard contiguous convolutions that utilize efficient SIMD (Single Instruction, Multiple Data) assembly instructions that run in a single clock cycle despite higher raw FLOP counts.
+    \end{itemize}
+
+    \item \textbf{Scientific Reproduction}:
+    Replicating the baseline first validates your experimental harness. If your baseline produces an accuracy of $82\%$ while the paper reports $90\%$, your data split, preprocessing, or optimization setup differs from the authors' setup. If you implement their novel method on top of a broken harness, you cannot determine whether any observed discrepancy is due to their algorithm or your flawed foundation.
+\end{enumerate}

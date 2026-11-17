@@ -1,0 +1,899 @@
+% FILE: chapters/ch02_s4_statistics.tex
+\section{Statistics}\label{sec:statistics}
+
+In the previous section, we explored probability theory. Probability is a \textbf{deductive} science: starting from a known mathematical model of the universe (such as an ideal Gaussian distribution with known parameters $\mu$ and $\sigma$), we calculate the likelihood of observing various hypothetical future outcomes.
+
+\textbf{Statistics} is the exact inverse discipline. Statistics is an \textbf{inductive} science: starting from finite, noisy, incomplete observations collected from the physical world, we work backward to infer the true, hidden mechanisms that generated that data.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.2cm, text centered, font=\small\sffamily},
+    stat_box/.style={rectangle, draw=exampleorange!80, fill=exampleorange!8, thick, rounded corners=2mm, minimum height=1.2cm, text centered, font=\small\sffamily},
+    arrow_prob/.style={-{Stealth[length=2.5mm]}, very thick, draw=keyideablue!80},
+    arrow_stat/.style={-{Stealth[length=2.5mm]}, very thick, draw=exampleorange!80}
+]
+    % Population & Model
+    \node[box, minimum width=4.0cm] (pop) at (-4.5, 0) {\textbf{Population / Model}\\Parameters: $\mu, \sigma^2, p, \lambda$\\(The Hidden Reality)};
+
+    % Sample & Data
+    \node[stat_box, minimum width=4.0cm] (sample) at (4.5, 0) {\textbf{Sample / Data}\\Statistics: $\bar{x}, s^2, \hat{p}$\\(The Observed Facts)};
+
+    % Forward: Probability
+    \draw[arrow_prob] (-2.2, 0.4) -- (2.2, 0.4) node[midway, above, font=\footnotesize\sffamily\bfseries, text=keyideablue!90!black] {Probability (Deduction)};
+    \node[font=\scriptsize\sffamily, text=gray!80!black] at (0, 0.85) {Predicting sample patterns from known models};
+
+    % Backward: Statistics
+    \draw[arrow_stat] (2.2, -0.4) -- (-2.2, -0.4) node[midway, below, font=\footnotesize\sffamily\bfseries, text=exampleorange!90!black] {Statistics (Induction)};
+    \node[font=\scriptsize\sffamily, text=gray!80!black] at (0, -0.85) {Inferring hidden truth from observed data};
+\end{tikzpicture}
+\caption{The complementary duality of probability and statistics. Probability flows forward from models to data; statistics flows backward from data to models.}\label{fig:prob_vs_stat}
+\end{figure}
+
+Without sound statistical principles, machine learning degrades into dangerous superstition. A neural network will happily detect a high mathematical correlation between the random fluctuations of stock prices and the plumage cycles of Arctic birds. A data scientist might celebrate a $98\%$ accuracy score on a validation set without realizing that their small test sample size makes that score indistinguishable from random guessing.
+
+In this section, we build the statistical foundations required to validate models, evaluate sensor data, and make rigorous engineering decisions:
+\begin{enumerate}
+    \item \textbf{Sampling and the Central Limit Theorem}: How small, well-chosen samples reliably reveal the properties of massive populations.
+    \item \textbf{Confidence Intervals}: Expressing our uncertainty about estimated parameters with mathematical rigor.
+    \item \textbf{Hypothesis Testing and $p$-Values}: The formal logic of falsification and deciding whether an observed performance boost is real or a fluke.
+    \item \textbf{Correlation vs.\ Causation}: Why machine learning models latch onto spurious shortcuts, and how to avoid the trap.
+    \item \textbf{The TinyML Bridge}: Running statistical tests and online drift detectors directly on edge microcontrollers.
+\end{enumerate}
+
+% ==============================================================================
+% 1. SAMPLING AND THE CENTRAL LIMIT THEOREM
+% ==============================================================================
+\subsection{Sampling and the Central Limit Theorem}\label{subsec:stat_sampling_clt}
+
+\begin{keyidea}[Populations versus Samples]
+The \textbf{population} is the complete set of all possible entities or events of interest (e.g., all $10{,}000{,}000$ temperature readings that an edge sensor could ever take over its 10-year lifespan). Population properties are called \textbf{parameters} (written in Greek letters: mean $\mu$, standard deviation $\sigma$).
+
+A \textbf{sample} is a finite subset collected from the population (e.g., $n = 500$ readings logged during factory calibration). Quantities computed from sample data are called \textbf{sample statistics} (written in Latin letters: sample mean $\bar{x}$, sample standard deviation $s$).
+\end{keyidea}
+
+\begin{analogy}[The Chef's Ladle]
+When a chef tastes a $20$-liter pot of minestrone soup to see if it needs more salt, they do not drink all $20$ liters (the population). Instead, they thoroughly stir the pot and sample a single spoonful (the sample). 
+
+If the soup is properly stirred (unbiased sampling), that single spoonful contains all the information needed to judge the whole pot. But if the chef samples only the unmixed cream floating on top (sampling bias), or uses an eye-dropper that captures only three drops (insufficient sample size), their judgment of the pot will be disastrously wrong.
+\end{analogy}
+
+\subsubsection{Sampling Strategies in Machine Learning and IoT}
+How we gather our sample determines whether our statistical conclusions are valid or worthless:
+\begin{itemize}
+    \item \textbf{Simple Random Sampling (SRS)}: Every individual item in the population has an equal, independent probability of being chosen. This is the gold standard for unbiased estimation.
+    \item \textbf{Stratified Sampling}: The population is divided into distinct subgroups (\textit{strata}), and samples are drawn proportionally from each stratum. 
+    
+    In edge anomaly detection, where machine failures constitute only $0.1\%$ of real-world operations, simple random sampling might produce a training batch with zero failures. Stratified sampling guarantees that minority failure modes are adequately represented in both training and test sets.
+    \item \textbf{Systematic Sampling}: Selecting items at fixed physical or temporal intervals (e.g., sampling an accelerometer at every $10\text{-th}$ millisecond).
+    \item \textbf{Sampling Bias and Data Leakage}: If training data is collected only during daytime operations, an edge vision model will fail when deployed at night. If sensor calibration data is taken only at room temperature ($20^\circ\text{C}$), the model will display catastrophic bias when deployed in a freezing outdoor field ($ -10^\circ\text{C}$).
+\end{itemize}
+
+\subsubsection{The Sampling Distribution and Standard Error}
+Suppose we collect a sample of size $n$ from an unknown population and compute its sample mean:
+\begin{equation}
+\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_i\label{eq:sample_mean_def}
+\end{equation}
+If our colleague collects a different sample of size $n$ from the same population, their sample mean will be slightly different. Because different samples yield different sample means, \textbf{the sample mean $\bar{X}$ is itself a random variable with its own probability distribution}, called the \textbf{sampling distribution of the mean}.
+
+\paragraph{Formal Definition: Standard Error of the Mean (SEM)}
+By the linearity of expectation, the expected value of the sample mean equals the true population mean:
+\begin{equation}
+\mathbb{E}[\bar{X}] = \mu
+\end{equation}
+The standard deviation of the sampling distribution of the mean is called the \textbf{Standard Error of the Mean (SEM)}, denoted $\text{SE}$ or $\sigma_{\bar{x}}$:
+\begin{equation}
+\text{SE} = \sigma_{\bar{x}} = \frac{\sigma}{\sqrt{n}}\label{eq:sem_def}
+\end{equation}
+When the true population standard deviation $\sigma$ is unknown, we estimate it using the sample standard deviation $s$:
+\begin{equation}
+\widehat{\text{SE}} = \frac{s}{\sqrt{n}} = \frac{1}{\sqrt{n}} \sqrt{\frac{1}{n - 1} \sum_{i=1}^{n} (x_i - \bar{x})^2}\label{eq:sem_sample_def}
+\end{equation}
+
+\begin{keyidea}[The $\sqrt{n}$ Law of Diminishing Returns]
+Notice the square root $\sqrt{n}$ in the denominator of Equation~\eqref{eq:sem_def}. 
+\begin{itemize}
+    \item To cut your estimation uncertainty in half ($\text{SE} \to \frac{1}{2}\text{SE}$), you must collect \textbf{4 times} as much data ($n \to 4n$).
+    \item To reduce your estimation uncertainty by a factor of 10, you must collect \textbf{100 times} as much data!
+\end{itemize}
+In edge computing, gathering and transmitting sensor data drains battery power. Understanding this square-root law prevents engineers from wasting huge amounts of battery energy collecting redundant samples that yield negligible statistical gains.
+\end{keyidea}
+
+\subsubsection{The Central Limit Theorem (CLT)}
+We now present one of the most remarkable and foundational theorems in all of mathematical science.
+
+\begin{keyidea}[The Central Limit Theorem]
+Let $X_1, X_2, \dots, X_n$ be a sequence of independent and identically distributed (i.i.d.) random variables drawn from \textbf{any} arbitrary probability distribution with a finite mean $\mu$ and finite variance $\sigma^2$. 
+
+As the sample size $n$ increases, the sampling distribution of the normalized sample mean converges to the Standard Normal Distribution:
+\begin{equation}
+Z = \frac{\bar{X}_n - \mu}{\sigma / \sqrt{n}} \xrightarrow{d} \mathcal{N}(0, 1) \quad \text{as } n \to \infty\label{eq:clt_formal}
+\end{equation}
+Equivalently, for sufficiently large $n$ (conventionally $n \ge 30$), the distribution of the sample mean is approximately Gaussian, regardless of the parent distribution's shape:
+\begin{equation}
+\bar{X}_n \sim \mathcal{N}\left( \mu, \frac{\sigma^2}{n} \right)\label{eq:clt_gaussian}
+\end{equation}
+\end{keyidea}
+
+\paragraph{Why the CLT is Extraordinary}
+Pause and appreciate the profound implication of Equation~\eqref{eq:clt_gaussian}:
+\begin{itemize}
+    \item The original population can be heavily skewed (e.g., exponential battery failure times).
+    \item It can be completely flat (e.g., uniform quantization noise between $-0.5$ and $+0.5\text{ LSB}$).
+    \item It can be strictly discrete (e.g., coin flips or packet error flags).
+\end{itemize}
+It does not matter! Once you take the average of $n \ge 30$ independent observations, the skewness washes away, the sharp corners smooth out, and a pristine Gaussian bell curve emerges.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.88]
+    % Panel 1: Parent Distribution (Skewed Exponential)
+    \begin{scope}[shift={(-5.2, 0)}]
+        \draw[->, thick] (0, 0) -- (4, 0) node[right, font=\scriptsize\sffamily] {$x$};
+        \draw[->, thick] (0, 0) -- (0, 2.6) node[above, font=\scriptsize\sffamily] {$f(x)$};
+        \draw[domain=0.05:3.6, samples=50, smooth, very thick, warningred!90!black] plot (\x, {2.2*exp(-\x)});
+        \node[font=\footnotesize\sffamily\bfseries, text=warningred!90!black] at (2, 2.8) {Parent Population ($n=1$)};
+        \node[font=\scriptsize\sffamily, text=gray!80!black] at (2, -0.6) {Heavily Skewed Exponential};
+    \end{scope}
+
+    % Panel 2: Sample Means of n=5
+    \begin{scope}[shift={(0, 0)}]
+        \draw[->, thick] (0, 0) -- (4, 0) node[right, font=\scriptsize\sffamily] {$\bar{x}$};
+        \draw[->, thick] (0, 0) -- (0, 2.6) node[above, font=\scriptsize\sffamily] {$f(\bar{x})$};
+        \draw[domain=0.2:3.6, samples=60, smooth, very thick, exampleorange!90!black] plot (\x, {2.6*(\x^2)*exp(-2.5*\x)});
+        \node[font=\footnotesize\sffamily\bfseries, text=exampleorange!90!black] at (2, 2.8) {Sample Means ($n=5$)};
+        \node[font=\scriptsize\sffamily, text=gray!80!black] at (2, -0.6) {Skewness Decreasing};
+    \end{scope}
+
+    % Panel 3: Sample Means of n=30 (Normal Bell Curve)
+    \begin{scope}[shift={(5.2, 0)}]
+        \draw[->, thick] (0, 0) -- (4, 0) node[right, font=\scriptsize\sffamily] {$\bar{x}$};
+        \draw[->, thick] (0, 0) -- (0, 2.6) node[above, font=\scriptsize\sffamily] {$f(\bar{x})$};
+        \draw[domain=0.4:3.6, samples=60, smooth, very thick, analogygreen!90!black] plot (\x, {2.4*exp(-3.5*(\x - 2.0)^2)});
+        \node[font=\footnotesize\sffamily\bfseries, text=analogygreen!90!black] at (2, 2.8) {Sample Means ($n=30$)};
+        \node[font=\scriptsize\sffamily, text=gray!80!black] at (2, -0.6) {Symmetric Gaussian Bell};
+    \end{scope}
+\end{tikzpicture}
+\caption{Visual demonstration of the Central Limit Theorem. As the sample size grows from $n = 1$ to $n = 30$, the sampling distribution of the sample mean transforms from a heavily skewed parent distribution into a symmetric Gaussian bell curve.}\label{fig:clt_morph}
+\end{figure}
+
+\begin{example}[Calculating Standard Error by Hand]
+An IoT engineer tests $n = 36$ wireless soil moisture probes deployed in an agricultural field. The true population standard deviation of soil moisture measurements is known from extensive historical surveys to be $\sigma = 4.8\%$ volumetric water content (VWC). The engineer calculates a sample mean moisture of $\bar{x} = 28.5\%$ VWC.
+\begin{enumerate}
+    \item Compute the Standard Error of the Mean ($\text{SE}$).
+    \item What is the approximate probability that our sample mean $\bar{x}$ lies within $\pm 1.6\%$ of the true field mean $\mu$?
+\end{enumerate}
+
+\paragraph{Solution:}
+\begin{enumerate}
+    \item Using Equation~\eqref{eq:sem_def} with $\sigma = 4.8$ and $n = 36$:
+    \begin{equation*}
+    \text{SE} = \frac{\sigma}{\sqrt{n}} = \frac{4.8}{\sqrt{36}} = \frac{4.8}{6} = \mathbf{0.80\%\text{ VWC}}
+    \end{equation*}
+    The standard deviation of our estimation error is only $0.80\%$, which is six times smaller than the standard deviation of individual sensor probes!
+    \item We wish to evaluate the probability:
+    \begin{equation*}
+    P(\mu - 1.6 \le \bar{X} \le \mu + 1.6)
+    \end{equation*}
+    Notice that the distance $1.6\%$ corresponds to an exact multiple of the standard error:
+    \begin{equation*}
+    \frac{1.6\%}{\text{SE}} = \frac{1.6\%}{0.80\%} = 2.0
+    \end{equation*}
+    By the Central Limit Theorem ($n = 36 \ge 30$), the sample mean follows a normal distribution. Recalling the empirical $68$--$95$--$99.7$ rule from Section~\ref{sec:probability}, the probability of any Gaussian variable falling within $\pm 2\sigma_{\bar{x}}$ of its mean is approximately $\mathbf{95.45\%}$.
+\end{enumerate}
+\end{example}
+
+% ==============================================================================
+% 2. CONFIDENCE INTERVALS
+% ==============================================================================
+\subsection{Confidence Intervals: Quantifying Uncertainty}\label{subsec:stat_confidence_intervals}
+
+When deploying a machine learning model or reporting an edge sensor reading, providing a single number (\textbf{point estimate}) is dangerous:
+\begin{itemize}
+    \item ``The inference latency of our INT8 quantized model is $133.6\text{ }\mu\text{s}$.''
+    \item ``The calibrated ambient temperature is $24.14^\circ\text{C}$.''
+\end{itemize}
+A point estimate offers zero visibility into precision. Did you measure $133.6\text{ }\mu\text{s}$ across $3$ trials or $30{,}000$ trials? Is the margin of error $\pm 0.1\text{ }\mu\text{s}$ or $\pm 50\text{ }\mu\text{s}$?
+
+An \textbf{interval estimate} (or \textbf{Confidence Interval}) provides a range of plausible values for the unknown parameter, combined with an explicit statistical degree of certainty.
+
+\subsubsection{The Frequentist Definition of a Confidence Interval}
+Confidence intervals are universally misunderstood by newcomers. 
+
+\begin{warning}[The Confidence Interval Fallacy]
+Suppose you compute a $95\%$ confidence interval for an edge device's operating current: $[42.1\text{ mA}, 48.5\text{ mA}]$.
+\begin{center}
+\textbf{INCORRECT}: ``There is a $95\%$ probability that the true mean current $\mu$ lies between $42.1\text{ mA}$ and $48.5\text{ mA}$.''
+\end{center}
+In classical (frequentist) statistics, the true parameter $\mu$ is a \textbf{fixed, unchanging constant of nature}. It is not a random variable; it does not move or fluctuate. Therefore, the true parameter is either inside the interval ($100\%$ certainty) or outside ($0\%$ certainty).
+
+\textbf{CORRECT}: The interval $[42.1, 48.5]$ is the entity that is random, because its endpoints depend on the specific sample collected. 
+
+A $95\%$ confidence interval means: \textit{``If we repeat our sampling procedure $100$ independent times, and compute a confidence interval from each sample, approximately $95$ of those $100$ intervals will successfully encompass the true population mean $\mu$, while $5$ will miss it entirely.''}
+\end{warning}
+
+\subsubsection{Constructing Confidence Intervals for the Mean}
+The general structure of any symmetric confidence interval is:
+\begin{equation}
+\text{Confidence Interval} = \text{Point Estimate} \pm (\text{Critical Value} \times \text{Standard Error})\label{eq:ci_general_structure}
+\end{equation}
+The quantity $(\text{Critical Value} \times \text{Standard Error})$ is called the \textbf{Margin of Error (ME)}.
+
+\paragraph{Case 1: Known Population Variance $\sigma^2$ (The $Z$-Interval)}
+When the population standard deviation $\sigma$ is known, we use critical values $z^*$ from the Standard Normal Distribution $\mathcal{N}(0, 1)$:
+\begin{equation}
+\text{CI}_{1-\alpha} = \left[ \bar{x} - z_{\alpha/2}^* \frac{\sigma}{\sqrt{n}}, \quad \bar{x} + z_{\alpha/2}^* \frac{\sigma}{\sqrt{n}} \right]\label{eq:z_interval}
+\end{equation}
+where $\alpha$ is the significance level ($1 - \alpha$ is the confidence level). Standard critical values are:
+\begin{itemize}
+    \item $90\%$ Confidence ($\alpha = 0.10$): $z_{0.05}^* = 1.645$
+    \item $95\%$ Confidence ($\alpha = 0.05$): $z_{0.025}^* = 1.960$
+    \item $99\%$ Confidence ($\alpha = 0.01$): $z_{0.005}^* = 2.576$
+\end{itemize}
+
+\paragraph{Case 2: Unknown Population Variance $\sigma^2$ (The Student's $t$-Interval)}
+In practice, we virtually never know the true population standard deviation $\sigma$. Instead, we must estimate it from our sample using $s$. 
+
+Because $s$ is itself subject to sampling noise, replacing $\sigma$ with $s$ adds extra uncertainty. If we used the standard normal $z^*$ critical values, our intervals would be too narrow and would fail to capture the true mean $95\%$ of the time.
+
+To compensate, William Sealy Gosset (writing under the pseudonym ``Student'') derived the \textbf{Student's $t$-Distribution}. The $t$-distribution resembles a standard normal bell curve, but features \textbf{heavier tails}:
+\begin{equation}
+T = \frac{\bar{X} - \mu}{s / \sqrt{n}} \sim t_{df}\label{eq:t_stat_def}
+\end{equation}
+The shape of the $t$-distribution is governed by its \textbf{degrees of freedom} ($df$):
+\begin{equation}
+df = n - 1\label{eq:df_def}
+\end{equation}
+As $n \to \infty$, the sample standard deviation $s$ converges to $\sigma$, the heavy tails shrink, and the $t$-distribution converges to the Standard Normal Distribution ($t_{\infty} \equiv \mathcal{N}(0, 1)$).
+
+The Student's $t$ confidence interval is computed as:
+\begin{equation}
+\text{CI}_{1-\alpha} = \left[ \bar{x} - t_{\alpha/2, df}^* \frac{s}{\sqrt{n}}, \quad \bar{x} + t_{\alpha/2, df}^* \frac{s}{\sqrt{n}} \right]\label{eq:t_interval}
+\end{equation}
+
+\begin{example}[Calculating a $95\%$ and $99\%$ $t$-Interval by Hand]
+An embedded systems team measures the active sleep-mode leakage current on $n = 9$ prototype ESP32 microcontrollers. The measurements (in microamperes) yield:
+\begin{equation*}
+\bar{x} = 12.40\text{ }\mu\text{A}, \quad s = 0.90\text{ }\mu\text{A}
+\end{equation*}
+Calculate the $95\%$ and $99\%$ confidence intervals for the true mean leakage current of this chip manufacturing batch.
+
+\paragraph{Step 1: Compute Standard Error and Degrees of Freedom}
+\begin{align*}
+df &= n - 1 = 9 - 1 = \mathbf{8} \\
+\widehat{\text{SE}} &= \frac{s}{\sqrt{n}} = \frac{0.90}{\sqrt{9}} = \frac{0.90}{3} = \mathbf{0.30\text{ }\mu\text{A}}
+\end{align*}
+
+\paragraph{Step 2: Look Up Critical Values $t^*$ for $df = 8$}
+From a standard Student's $t$-distribution table:
+\begin{align*}
+\text{For } 95\%\text{ confidence } (\alpha = 0.05, \alpha/2 = 0.025): &\quad t_{0.025, 8}^* = \mathbf{2.306} \\
+\text{For } 99\%\text{ confidence } (\alpha = 0.01, \alpha/2 = 0.005): &\quad t_{0.005, 8}^* = \mathbf{3.355}
+\end{align*}
+
+\paragraph{Step 3: Compute Margins of Error}
+\begin{align*}
+\text{ME}_{95\%} &= t_{0.025, 8}^* \times \widehat{\text{SE}} = 2.306 \times 0.30 = \mathbf{0.6918\text{ }\mu\text{A}} \\
+\text{ME}_{99\%} &= t_{0.005, 8}^* \times \widehat{\text{SE}} = 3.355 \times 0.30 = \mathbf{1.0065\text{ }\mu\text{A}}
+\end{align*}
+
+\paragraph{Step 4: Compute Intervals}
+\begin{align*}
+95\%\text{ CI: } [12.40 - 0.6918, \ 12.40 + 0.6918] &= [\mathbf{11.71\text{ }\mu\text{A}}, \ \mathbf{13.09\text{ }\mu\text{A}}] \\
+99\%\text{ CI: } [12.40 - 1.0065, \ 12.40 + 1.0065] &= [\mathbf{11.39\text{ }\mu\text{A}}, \ \mathbf{13.41\text{ }\mu\text{A}}]
+\end{align*}
+\textbf{Analysis}: Demanding higher confidence ($99\%$ vs $95\%$) requires a wider interval ($[11.39, 13.41]$ vs $[11.71, 13.09]$). More certainty always costs precision!
+\end{example}
+
+% ==============================================================================
+% 3. HYPOTHESIS TESTING AND P-VALUES
+% ==============================================================================
+\subsection{Hypothesis Testing and the True Meaning of $p$-Values}\label{subsec:stat_hypothesis_testing}
+
+In machine learning and edge systems engineering, we constantly make modifications:
+\begin{itemize}
+    \item ``We quantized the weights from FP32 to INT8; did inference speed up significantly?''
+    \item ``We changed our accelerometer feature extraction algorithm; did anomaly detection improve, or was the higher score just lucky validation noise?''
+\end{itemize}
+We cannot rely on wishful thinking. \textbf{Hypothesis testing} is the formal statistical framework for determining whether an observed experimental effect is real or simply an artifact of random sampling noise.
+
+\subsubsection{The Null and Alternative Hypotheses}
+Every hypothesis test pits two opposing claims against each other:
+\begin{itemize}
+    \item \textbf{The Null Hypothesis ($H_0$)}: The claim of ``no effect'', ``no difference'', or status quo. In statistical testing, we assume $H_0$ is true until proven guilty beyond a reasonable doubt:
+    \begin{equation}
+    H_0: \mu_1 - \mu_2 = 0 \quad (\text{Quantized model has the same latency as baseline})
+    \end{equation}
+    \item \textbf{The Alternative Hypothesis ($H_1$ or $H_a$)}: The claim we are trying to prove:
+    \begin{align}
+    \text{Two-sided:}\quad &H_1: \mu_1 - \mu_2 \ne 0 \quad (\text{Latency is different}) \notag\\
+    \text{One-sided:}\quad &H_1: \mu_1 - \mu_2 < 0 \quad (\text{Quantized model is faster})
+    \end{align}
+\end{itemize}
+
+\subsubsection{The 5-Step Hypothesis Testing Workflow}
+\begin{enumerate}
+    \item \textbf{State Hypotheses}: Clearly define $H_0$ and $H_1$.
+    \item \textbf{Set the Significance Level ($\alpha$)}: Specify the maximum acceptable probability of committing a false alarm (Type I error). By convention, $\alpha = 0.05$ ($5\%$) or $\alpha = 0.01$ ($1\%$).
+    \item \textbf{Compute the Test Statistic}: Measure how far our sample statistic deviates from the null hypothesis, standardized by the standard error:
+    \begin{equation}
+    t = \frac{\text{Observed Effect} - \text{Hypothesized Effect}}{\text{Standard Error}} = \frac{\bar{x} - \mu_0}{s / \sqrt{n}}\label{eq:t_statistic_signal_noise}
+    \end{equation}
+    The test statistic is simply a \textbf{signal-to-noise ratio}: signal (numerator) divided by noise (denominator).
+    \item \textbf{Calculate the $p$-Value}: Determine the probability of obtaining a test statistic at least as extreme as the one observed, assuming $H_0$ is true.
+    \item \textbf{Render Decision}:
+    \begin{itemize}
+        \item If $p \le \alpha$: \textbf{Reject $H_0$}. The result is statistically significant.
+        \item If $p > \alpha$: \textbf{Fail to reject $H_0$}. The data provides insufficient evidence to conclude an effect exists.
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{The Quadrant of Errors: Type I and Type II}
+Because we make decisions based on noisy samples rather than total populations, any statistical test can make an error:
+
+\begin{table}[htbp]
+\centering
+\caption{The decision matrix of statistical hypothesis testing.}\label{tab:error_quadrant}
+\small
+\begin{tabular}{lcc}
+\toprule
+& \textbf{Null Hypothesis $H_0$ is TRUE} & \textbf{Null Hypothesis $H_0$ is FALSE} \\
+\midrule
+\textbf{Reject $H_0$} & \textbf{Type I Error ($\alpha$)} & \textbf{Correct Decision ($1 - \beta$)} \\
+& False Alarm (Convicting innocent) & \textbf{Statistical Power} \\
+\midrule
+\textbf{Fail to Reject $H_0$} & \textbf{Correct Decision ($1 - \alpha$)} & \textbf{Type II Error ($\beta$)} \\
+& True Negative & Missed Detection (Letting guilty go free) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{Type I Error ($\alpha$)}: The probability of rejecting $H_0$ when $H_0$ is actually true. (You claim your new model is faster when it actually isn't).
+    \item \textbf{Type II Error ($\beta$)}: The probability of failing to reject $H_0$ when $H_1$ is true. (Your new model really is faster, but your test failed to detect it).
+    \item \textbf{Statistical Power ($1 - \beta$)}: The probability that your test will correctly detect a genuine effect. Power increases when sample size $n$ increases or when the true effect size is large.
+\end{itemize}
+
+\subsubsection{What a $p$-Value IS and IS NOT}
+The $p$-value is arguably the most widely abused metric in modern science:
+
+\begin{keyidea}[Precise Definition of the $p$-Value]
+The \textbf{$p$-value} is the exact probability of observing a test statistic \textbf{at least as extreme} as the one computed from your sample data, \textbf{under the strict assumption that the null hypothesis $H_0$ is true}:
+\begin{equation}
+p\text{-value} = P(\text{Data at least as extreme as observed} \mid H_0 \text{ is true})\label{eq:p_val_def}
+\end{equation}
+\end{keyidea}
+
+\begin{warning}[Four Dangerous $p$-Value Myths]
+\begin{enumerate}
+    \item \textbf{MYTH}: ``The $p$-value is the probability that the null hypothesis is true.''
+    
+    \textbf{REALITY}: The $p$-value is calculated \textit{assuming} $H_0$ is $100\%$ true ($P(\text{Data} \mid H_0)$). It cannot tell you $P(H_0 \mid \text{Data})$ without applying Bayes' rule with a prior belief!
+    \item \textbf{MYTH}: ``A small $p$-value ($p < 0.001$) means the experimental effect is massive and important.''
+    
+    \textbf{REALITY}: A tiny $p$-value means only that the result is unlikely to be pure random chance. If you collect $n = 1{,}000{,}000$ samples, an utterly trivial latency difference of $0.0001\text{ }\mu\text{s}$ will have $p < 10^{-10}$. Never confuse \textit{statistical significance} with \textit{practical importance}!
+    \item \textbf{MYTH}: ``Failing to reject $H_0$ ($p > 0.05$) proves that the null hypothesis is true.''
+    
+    \textbf{REALITY}: Absence of evidence is not evidence of absence! A high $p$-value simply means your sample was too noisy or too small to spot the effect.
+    \item \textbf{MYTH}: ``$p = 0.05$ means there is only a $5\%$ chance of a false discovery.''
+    
+    \textbf{REALITY}: If prior base rates for genuine discoveries are low (as in drug discovery or feature mining), a threshold of $\alpha = 0.05$ can produce a false discovery rate exceeding $30\%$ due to the base-rate fallacy!
+\end{enumerate}
+\end{warning}
+
+\begin{example}[Complete Hand-Worked Hypothesis Test]
+A robotics factory uses an electric spindle motor whose baseline operating temperature has been calibrated over years to have a mean of $\mu_0 = 45.0^\circ\text{C}$.
+
+A machine learning engineer implements a TinyML predictive maintenance controller designed to optimize current draw and cool the motor. They deploy the controller across $n = 16$ test runs and record motor temperatures, obtaining:
+\begin{equation*}
+\bar{x} = 42.6^\circ\text{C}, \quad s = 3.2^\circ\text{C}
+\end{equation*}
+At a significance level of $\alpha = 0.01$, does this data prove that the new controller significantly cools the motor?
+
+\paragraph{Step 1: State Hypotheses}
+We test whether the controller reduces temperature below $45.0^\circ\text{C}$ (one-tailed left test):
+\begin{align*}
+H_0: \mu &= 45.0^\circ\text{C} \\
+H_1: \mu &< 45.0^\circ\text{C}
+\end{align*}
+
+\paragraph{Step 2: Significance Level and Critical Threshold}
+Significance level: $\alpha = 0.01$. Degrees of freedom: $df = n - 1 = 16 - 1 = \mathbf{15}$.
+For a left-tailed test at $\alpha = 0.01$ and $df = 15$, the critical $t$-value from the $t$-table is:
+\begin{equation*}
+t_{\text{crit}} = -t_{0.01, 15}^* = \mathbf{-2.602}
+\end{equation*}
+\textbf{Decision Rule}: Reject $H_0$ if $t_{\text{stat}} \le -2.602$.
+
+\paragraph{Step 3: Calculate Standard Error and Test Statistic}
+\begin{align*}
+\widehat{\text{SE}} &= \frac{s}{\sqrt{n}} = \frac{3.2}{\sqrt{16}} = \frac{3.2}{4} = \mathbf{0.80^\circ\text{C}} \\
+t_{\text{stat}} &= \frac{\bar{x} - \mu_0}{\widehat{\text{SE}}} = \frac{42.6 - 45.0}{0.80} = \frac{-2.40}{0.80} = \mathbf{-3.00}
+\end{align*}
+
+\paragraph{Step 4: Decision and Conclusion}
+Since $t_{\text{stat}} = -3.00 < -2.602$, our observed sample mean lies deep inside the critical rejection region.
+Using statistical software or a $t$-table, the exact one-tailed $p$-value for $t = -3.00$ at $df = 15$ is:
+\begin{equation*}
+p\text{-value} = P(t_{15} \le -3.00) \approx \mathbf{0.0045} \quad (0.45\%)
+\end{equation*}
+Because $p = 0.0045 < 0.01$, we \textbf{reject the null hypothesis $H_0$}. There is statistically significant evidence at the $1\%$ level that the predictive maintenance controller reduces the motor's operating temperature.
+\end{example}
+
+% ==============================================================================
+% 4. CORRELATION VS CAUSATION
+% ==============================================================================
+\subsection{Correlation vs.\ Causation: The Peril of Machine Learning Shortcuts}\label{subsec:stat_correlation_causation}
+
+Machine learning models are, at their computational core, extraordinarily powerful **pattern correlation extractors**. When you train a deep neural network, gradient descent searches through billions of parameter combinations to find any statistical association that links the input features $\mathbf{x}$ to the target labels $y$.
+
+However, reality is governed by **cause and effect**, not correlation. When an artificial intelligence confuses correlation with causation, it fails catastrophically in the physical world.
+
+\subsubsection{Pearson Linear Correlation versus Spearman Rank Correlation}
+In Section~\ref{sec:probability}, we defined the Pearson correlation coefficient $r \in [-1, +1]$:
+\begin{equation}
+r = \frac{\sum (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum (x_i - \bar{x})^2 \sum (y_i - \bar{y})^2}}\label{eq:pearson_r}
+\end{equation}
+Pearson's $r$ evaluates \textbf{strictly linear relationships}. If the relationship is monotonic but non-linear (e.g., $y = e^{x}$ or $y = x^3$), Pearson's $r$ will underestimate the strength of the association. Furthermore, Pearson's $r$ is easily contaminated by a single extreme sensor spike.
+
+To measure non-linear monotonic relationships robustly, we use the \textbf{Spearman Rank Correlation Coefficient} $\rho_s$ (or $r_s$):
+\begin{equation}
+\rho_s = 1 - \frac{6 \sum d_i^2}{n(n^2 - 1)}\label{eq:spearman_rho}
+\end{equation}
+where each data point $x_i$ and $y_i$ is converted into its integer rank ($1, 2, \dots, n$), and $d_i = \text{rank}(x_i) - \text{rank}(y_i)$ is the difference between ranks.
+\begin{itemize}
+    \item If $Y$ always increases when $X$ increases (even if exponentially or quadratically), $\rho_s = +1.0$, whereas Pearson's $r$ might be only $0.85$.
+    \item Because it operates on ranks rather than raw magnitudes, Spearman correlation is completely immune to extreme sensor outliers!
+\end{itemize}
+
+\subsubsection{The Three Causal Mechanisms Behind Correlation}
+When variable $X$ and variable $Y$ are strongly correlated, exactly one of three structural mechanisms is at play:
+\begin{enumerate}
+    \item \textbf{Direct Causation}: $X$ physically influences $Y$ ($X \to Y$), or $Y$ physically influences $X$ ($Y \to X$). 
+    
+    \textit{Example}: Increasing motor armature voltage ($X$) directly causes rotation speed ($Y$) to increase.
+    \item \textbf{Confounding (Common Cause)}: An unobserved third variable $Z$ simultaneously drives both $X$ and $Y$ ($X \leftarrow Z \to Y$).
+    
+    \textit{Example}: In a fleet of agricultural IoT nodes, battery voltage sag ($X$) is strongly correlated with wireless packet transmission errors ($Y$). Does low battery cause packets to drop? No! A blistering midday heat wave ($Z$) increases internal battery resistance (causing voltage sag) and simultaneously degrades RF antenna propagation efficiency (causing packet loss). The sun ($Z$) is the confounder.
+    \item \textbf{Spurious Coincidence (Pure Random Chance)}: In large datasets with thousands of monitored variables, completely unrelated signals will show high mathematical correlation simply by chance.
+    
+    \textit{Example}: US spending on science and technology correlates with suicides by hanging ($r = 0.998$). Margarine consumption correlates with the divorce rate in Maine ($r = 0.993$). Neither has any causal link whatsoever.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    cnode/.style={circle, draw=keyideablue!80, fill=keyideablue!10, thick, minimum size=1.1cm, font=\small\sffamily\bfseries},
+    confnode/.style={circle, draw=warningred!80, fill=warningred!10, thick, minimum size=1.1cm, font=\small\sffamily\bfseries},
+    arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
+]
+    % Case 1: Direct Causation
+    \begin{scope}[shift={(-4.8, 0)}]
+        \node[cnode] (X1) at (-1.3, 0) {$X$};
+        \node[cnode] (Y1) at (1.3, 0) {$Y$};
+        \draw[arrow, draw=analogygreen!80!black] (X1) -- (Y1) node[midway, above, font=\scriptsize\sffamily] {Causation};
+        \node[font=\footnotesize\sffamily\bfseries] at (0, -1.2) {1. Direct Causal Link};
+        \node[font=\scriptsize\sffamily, text=gray!80!black] at (0, -1.7) {$X$ directly alters $Y$};
+    \end{scope}
+
+    % Case 2: Confounding
+    \begin{scope}[shift={(0, 0)}]
+        \node[confnode] (Z2) at (0, 1.2) {$Z$};
+        \node[cnode] (X2) at (-1.3, -0.4) {$X$};
+        \node[cnode] (Y2) at (1.3, -0.4) {$Y$};
+        \draw[arrow, draw=warningred!80!black] (Z2) -- (X2);
+        \draw[arrow, draw=warningred!80!black] (Z2) -- (Y2);
+        \draw[dashed, <->, thick, draw=blue!60] (X2) -- (Y2) node[midway, below, font=\scriptsize\sffamily] {Correlation};
+        \node[font=\footnotesize\sffamily\bfseries] at (0, -1.2) {2. Confounder $Z$};
+        \node[font=\scriptsize\sffamily, text=gray!80!black] at (0, -1.7) {Common cause creates illusion};
+    \end{scope}
+
+    % Case 3: Spurious
+    \begin{scope}[shift={(4.8, 0)}]
+        \node[cnode] (X3) at (-1.3, 0) {$X$};
+        \node[cnode] (Y3) at (1.3, 0) {$Y$};
+        \draw[dashed, <->, thick, draw=purple!70] (X3) -- (Y3) node[midway, above, font=\scriptsize\sffamily] {Noise Coincidence};
+        \node[font=\footnotesize\sffamily\bfseries] at (0, -1.2) {3. Spurious Association};
+        \node[font=\scriptsize\sffamily, text=gray!80!black] at (0, -1.7) {Random coincidence in big data};
+    \end{scope}
+\end{tikzpicture}
+\caption{The three causal mechanisms behind observed statistical correlation. Machine learning models cannot distinguish between them using observational data alone.}\label{fig:causal_mechanisms}
+\end{figure}
+
+\subsubsection{The Shortcut Learning Trap in Artificial Intelligence}
+When machine learning models encounter confounded data during training, they consistently exploit \textbf{spurious shortcuts} rather than learning real underlying physical features:
+\begin{itemize}
+    \item \textbf{The Husky vs.\ Wolf Vision Failure}: A deep neural network trained to classify wolves vs.\ huskies achieved $95\%$ accuracy. When tested on new images, it misclassified a husky standing on snow as a wolf. 
+    
+    Salience analysis revealed that every training image of a wolf contained a background of white snow, while every husky was photographed on green grass. The network had never learned the physical anatomy of a wolf; it had simply learned to count white pixels!
+    \item \textbf{The TinyML Sensor Shortcut}: An edge neural network deployed on an electric delivery van predicts battery drain from accelerometer vibrations. During training in winter, cold temperatures caused high battery resistance (fast drain) and stiff road ice caused sharp road vibrations. 
+    
+    The neural network learned that ``high vibration causes battery drain.'' When summer arrived, the van drove over bumpy gravel roads; the model panicked and predicted instant battery death, even though battery health was optimal.
+\end{itemize}
+
+\paragraph{How to Protect Edge Models from Spurious Correlation}
+To prevent your models from falling into shortcut traps:
+\begin{enumerate}
+    \item \textbf{Randomized Controlled Experiments (A/B Testing)}: The gold standard for establishing causation. By randomly assigning edge devices to receive Firmware A or Firmware B, you physically sever all incoming confounding arrows ($Z \to X$).
+    \item \textbf{Out-of-Distribution (OOD) Stress Testing}: Never evaluate models solely on test data collected under the same conditions as training data. Test your models across different seasons, varying battery levels, and varied physical hardware.
+    \item \textbf{Feature Attribution and Explainability}: Inspect feature importance using SHAP (Shapley Additive exPlanations) or permutation importance to verify that the model relies on physically sensible inputs.
+\end{enumerate}
+
+% ==============================================================================
+% 5. PYTHON IMPLEMENTATION
+% ==============================================================================
+\subsection{Hands-On Python: Simulation, Testing, and Correlation}\label{subsec:stat_python}
+
+Let us write a comprehensive Python script using NumPy and SciPy to numerically verify the Central Limit Theorem, calculate $t$-distribution confidence intervals, run a two-sample Welch's $t$-test on TinyML inference latency, and contrast Pearson and Spearman correlations.
+
+\begin{lstlisting}[style=pythonstyle]
+import numpy as np
+from scipy import stats
+
+# 1. Deterministic seed for reproducible results
+np.random.seed(42)
+
+# 2. Central Limit Theorem: Sampling from a heavily skewed Exponential parent
+# True population parameters: lambda = 0.5 -> mean = 2.0, std = 2.0
+pop_mean = 2.0
+pop_std = 2.0
+n_samples = 36          # Size of each sample batch
+n_experiments = 5000    # Number of repeated sampling trials
+
+# Draw 5000 independent samples of size 36 from Exponential distribution
+sample_means = [
+    np.mean(np.random.exponential(scale=pop_mean, size=n_samples)) 
+    for _ in range(n_experiments)
+]
+emp_mean_of_means = np.mean(sample_means)
+emp_sem = np.std(sample_means, ddof=1)
+theo_sem = pop_std / np.sqrt(n_samples)
+
+# 3. Confidence Intervals for Sensor Calibration
+# 25 temperature calibration readings from an environmental test chamber
+sensor_readings = np.array([
+    24.2, 23.8, 24.5, 24.1, 23.9, 24.3, 24.0, 24.4, 23.7, 24.2,
+    24.1, 24.6, 23.9, 24.0, 24.3, 24.2, 23.8, 24.5, 24.1, 24.0,
+    24.4, 23.9, 24.2, 24.3, 24.1
+])
+n_readings = len(sensor_readings)
+s_mean = np.mean(sensor_readings)
+s_std = np.std(sensor_readings, ddof=1)
+s_sem = s_std / np.sqrt(n_readings)
+
+# Calculate 95% and 99% Student-t confidence intervals
+ci_95 = stats.t.interval(0.95, df=n_readings - 1, loc=s_mean, scale=s_sem)
+ci_99 = stats.t.interval(0.99, df=n_readings - 1, loc=s_mean, scale=s_sem)
+
+# 4. Two-Sample Welch t-Test: Comparing Edge Inference Latency
+# Microseconds per inference: FP32 baseline model vs INT8 quantized model
+latency_fp32 = np.array([412, 425, 418, 430, 415, 422, 428, 419, 424, 431])
+latency_int8 = np.array([128, 135, 130, 142, 126, 138, 132, 129, 136, 140])
+
+# Welch t-test does NOT assume equal variances
+t_stat, p_val = stats.ttest_ind(latency_fp32, latency_int8, equal_var=False)
+
+# 5. Pearson vs. Spearman on Monotonic Non-Linear Data
+x = np.linspace(1, 10, 20)
+y = np.exp(x / 2.0)  # Pure monotonic exponential curve
+r_pearson, _ = stats.pearsonr(x, y)
+r_spearman, _ = stats.spearmanr(x, y)
+
+# Print Detailed Results
+print("--- 1. Central Limit Theorem ---")
+print(f"Population Mean: {pop_mean:.2f}, Population Std: {pop_std:.2f}")
+print(f"Sample Size n: {n_samples}, Experiments: {n_experiments}")
+print(f"Mean of Sample Means: {emp_mean_of_means:.4f} (Matches mu)")
+print(f"Theoretical SEM:      {theo_sem:.4f}")
+print(f"Empirical SEM:        {emp_sem:.4f} (Matches sigma / sqrt(n))")
+
+print("\n--- 2. Sensor Calibration 95% and 99% CI ---")
+print(f"n = {n_readings}, Mean = {s_mean:.4f} C, Std = {s_std:.4f} C, SEM = {s_sem:.4f} C")
+print(f"95% CI: [{ci_95[0]:.4f}, {ci_95[1]:.4f}] C")
+print(f"99% CI: [{ci_99[0]:.4f}, {ci_99[1]:.4f}] C")
+
+print("\n--- 3. Two-Sample Welch t-Test (Inference Latency) ---")
+print(f"FP32 Baseline Mean: {np.mean(latency_fp32):.1f} us (std = {np.std(latency_fp32, ddof=1):.2f})")
+print(f"INT8 Quantized Mean: {np.mean(latency_int8):.1f} us (std = {np.std(latency_int8, ddof=1):.2f})")
+print(f"t-statistic: {t_stat:.4f}, p-value: {p_val:.4e}")
+
+print("\n--- 4. Correlation vs Non-Linearity ---")
+print(f"Pearson r:  {r_pearson:.4f} (Linear metric, underestimates fit)")
+print(f"Spearman r: {r_spearman:.4f} (Rank metric, detects perfect monotonic fit)")
+\end{lstlisting}
+
+Executing this script produces the exact output below:
+\begin{lstlisting}[style=outputstyle]
+--- 1. Central Limit Theorem ---
+Population Mean: 2.00, Population Std: 2.00
+Sample Size n: 36, Experiments: 5000
+Mean of Sample Means: 1.9985 (Matches mu)
+Theoretical SEM:      0.3333
+Empirical SEM:        0.3328 (Matches sigma / sqrt(n))
+
+--- 2. Sensor Calibration 95% and 99% CI ---
+n = 25, Mean = 24.1400 C, Std = 0.2380 C, SEM = 0.0476 C
+95% CI: [24.0417, 24.2383] C
+99% CI: [24.0068, 24.2732] C
+
+--- 3. Two-Sample Welch t-Test (Inference Latency) ---
+FP32 Baseline Mean: 422.4 us (std = 6.38)
+INT8 Quantized Mean: 133.6 us (std = 5.42)
+t-statistic: 109.0869, p-value: 2.7189e-26
+
+--- 4. Correlation vs Non-Linearity ---
+Pearson r:  0.8702 (Linear metric, underestimates fit)
+Spearman r: 1.0000 (Rank metric, detects perfect monotonic fit)
+\end{lstlisting}
+
+\paragraph{Detailed Code Walkthrough:}
+\begin{itemize}
+    \item \textbf{Lines 8--20}: We draw $5{,}000$ independent samples from an Exponential distribution. Although the exponential PDF is strictly asymmetric, the empirical mean of the sample means is $1.9985$ (nearly identical to $\mu = 2.00$), and the empirical standard error is $0.3328$, closely tracking the theoretical prediction $\text{SEM} = \frac{2.0}{\sqrt{36}} = 0.3333$.
+    \item \textbf{Lines 23--35}: We compute confidence intervals for $n = 25$ sensor readings using SciPy's \texttt{stats.t.interval}. Notice that the $99\%$ interval ($[24.0068, 24.2732]$) is wider than the $95\%$ interval ($[24.0417, 24.2383]$), demonstrating the trade-off between certainty and margin of error.
+    \item \textbf{Lines 38--43}: We run Welch's two-sample $t$-test using \texttt{equal\_var=False}. The resulting $t$-statistic of $109.08$ produces an astronomical $p$-value of $2.72 \times 10^{-26}$, establishing beyond any statistical doubt that INT8 quantization accelerates inference on the microcontroller.
+    \item \textbf{Lines 46--49}: For the exponential relationship $y = e^{x/2}$, Pearson's $r$ reports only $0.8702$ because the curve bends, while Spearman's rank correlation correctly registers a perfect $\rho_s = 1.0000$.
+\end{itemize}
+
+% ==============================================================================
+% 6. IOT AND TINYML CONNECTION
+% ==============================================================================
+\subsection{IoT and TinyML: Statistical Testing at the Edge}\label{subsec:stat_iot}
+
+\begin{iotbox}[Online Sensor Drift and Statistical Quality Control at the Edge]
+Microcontrollers deployed in industrial Internet of Things ecosystems must operate autonomously for years without cloud supervision. Over time, physical sensors suffer **sensor drift**:
+\begin{itemize}
+    \item Electrochemical gas sensors oxidize and lose sensitivity.
+    \item Accelerometer MEMS springs experience microscopic mechanical relaxation.
+    \item Optical lenses accumulate dust, shifting the baseline pixel brightness.
+\end{itemize}
+
+How can an ESP32 or ARM Cortex-M0+ microcontroller determine whether a sudden jump in sensor readings represents a true environmental event (such as a gas leak) or simply progressive hardware drift?
+
+\paragraph{1. The Two-Sample Welch's $t$-Test on Microcontrollers}
+An edge device maintains two circular buffers in RAM:
+\begin{itemize}
+    \item A long-term **Baseline Buffer** ($n_1 = 64$ samples) tracking historical normal operations.
+    \item A short-term **Window Buffer** ($n_2 = 16$ samples) capturing immediate recent activity.
+\end{itemize}
+The microcontroller computes Welch's $t$-statistic in real time:
+\begin{equation}
+t = \frac{\bar{x}_2 - \bar{x}_1}{\sqrt{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}}}\label{eq:welch_embedded}
+\end{equation}
+If $|t| > 3.0$, the microcontroller triggers a self-calibration interrupt or flags a statistically significant environmental event.
+
+\paragraph{2. Lightweight C Implementation of Online Drift Testing}
+Below is an optimized, memory-efficient C routine suitable for bare-metal microcontrollers without dynamic heap allocation:
+
+\begin{lstlisting}[style=pythonstyle]
+// Embedded C: Online Two-Sample Welch t-Test for Edge Sensor Drift
+#include <math.h>
+#include <stdbool.h>
+
+typedef struct {
+    float mean;
+    float variance;
+    uint16_t n;
+} BufferStats;
+
+// Computes mean and sample variance in a single pass (Welford)
+BufferStats compute_buffer_stats(const float* buffer, uint16_t n) {
+    BufferStats res = {0.0f, 0.0f, n};
+    if (n < 2) return res;
+    
+    float m2 = 0.0f;
+    for (uint16_t i = 0; i < n; i++) {
+        float delta = buffer[i] - res.mean;
+        res.mean += delta / (i + 1);
+        float delta2 = buffer[i] - res.mean;
+        m2 += delta * delta2;
+    }
+    res.variance = m2 / (n - 1);
+    return res;
+}
+
+// Returns true if current window significantly differs from baseline
+bool detect_drift_welch(const BufferStats* baseline, 
+                        const BufferStats* live_win, 
+                        float t_threshold) {
+    float se_sq = (baseline->variance / baseline->n) + 
+                  (live_win->variance / live_win->n);
+    if (se_sq < 1e-7f) return false; // Prevent division by zero
+    
+    float t_stat = fabsf(live_win->mean - baseline->mean) / sqrtf(se_sq);
+    return (t_stat > t_threshold); // e.g., t_threshold = 2.80 (~99% confidence)
+}
+\end{lstlisting}
+This routine requires fewer than $100$ bytes of RAM, performs zero dynamic memory allocations, and runs in under $10\text{ }\mu\text{s}$ on an ESP32 clocked at $160\text{ MHz}$.
+\end{iotbox}
+
+% ==============================================================================
+% 7. COMMON PITFALLS
+% ==============================================================================
+\subsection{Common Pitfalls in Statistical Machine Learning}\label{subsec:stat_pitfalls}
+
+\begin{warning}[Four Critical Statistical Traps That Invalidate ML Experiments]
+\begin{enumerate}
+    \item \textbf{$p$-Hacking and the Multiple Testing Problem}:
+    If you test $m = 100$ completely random, useless noise features against your target at $\alpha = 0.05$, the probability of getting \textbf{at least one false positive} is:
+    \begin{equation}
+    P(\text{At least 1 false alarm}) = 1 - (1 - 0.05)^{100} = 1 - 0.0059 = \mathbf{99.41\%}
+    \end{equation}
+    You are practically guaranteed to discover ``statistically significant'' features that are pure noise! 
+    
+    \textbf{Solution}: Apply the \textbf{Bonferroni Correction}, dividing your threshold by the number of tests: $\alpha' = \frac{\alpha}{m}$ (e.g., $\frac{0.05}{100} = 0.0005$), or use the False Discovery Rate (FDR / Benjamini-Hochberg procedure).
+
+    \item \textbf{Confusing ``Fail to Reject $H_0$'' with ``Accepting $H_0$''}:
+    Failing to reject the null hypothesis ($p = 0.12$) does \textbf{not} prove that your baseline model and new model are identical. It simply proves that with your current sample size $n$, you lacked the statistical power to resolve the difference. 
+
+    \item \textbf{Reporting Benchmark Accuracies Without Confidence Intervals}:
+    Writing in a research paper that ``Model A achieves $94.2\%$ accuracy while Model B achieves $93.1\%$'' is statistically meaningless if your test set had only $n = 50$ samples. 
+    
+    For $n = 50$, the margin of error at $95\%$ confidence is roughly $\pm 7\%$. Model A's true performance is $[87.2\%, 100\%]$ and Model B's is $[86.1\%, 100\%]$---their performance is completely indistinguishable! Always report $\text{Mean} \pm 95\%\text{ CI}$.
+
+    \item \textbf{A/B Testing with Temporal Confounding}:
+    A team tests a new TinyML motor controller on Monday and the legacy controller on Friday. Monday was hot ($35^\circ\text{C}$); Friday was cold ($18^\circ\text{C}$). The temperature difference confounds the benchmark. 
+    
+    True A/B testing requires interleaving: alternating between algorithms across identical environmental conditions.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 8. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:stat_takeaways}
+
+\begin{takeaways}[Core Principles of Statistics for Machine Learning]
+\begin{itemize}
+    \item \textbf{Induction vs.\ Deduction}: Probability flows forward from known models to predicted data; statistics flows backward from finite, noisy data to infer hidden underlying models.
+    \item \textbf{Standard Error Shrinks with $\sqrt{n}$}: The standard error of the mean is $\text{SE} = \frac{\sigma}{\sqrt{n}}$. To halve your estimation uncertainty, you must collect $4\times$ as many samples.
+    \item \textbf{The Central Limit Theorem is Universal}: Regardless of how skewed or non-normal the parent population is, the sampling distribution of the sample mean converges to a Gaussian distribution $\mathcal{N}(\mu, \sigma^2/n)$ as $n \ge 30$.
+    \item \textbf{Confidence Intervals Quantify Parameter Uncertainty}: A $95\%$ confidence interval $[\bar{x} \pm t^* \text{SE}]$ means that across repeated sampling trials, $95\%$ of constructed intervals will capture the fixed true parameter $\mu$.
+    \item \textbf{The Real Meaning of $p$-Values}: The $p$-value is $P(\text{Data} \mid H_0)$, NOT $P(H_0 \mid \text{Data})$. It measures how unusual the sample data is under the assumption that no effect exists. A tiny $p$-value does not imply a large physical effect size.
+    \item \textbf{Correlation is Not Causation}: Statistical association can arise from direct causation, third-variable confounding, or pure coincidence. Machine learning models easily fall into shortcut learning traps when confounders are present.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 9. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:stat_check_yourself}
+
+Test your mastery of sampling, the Central Limit Theorem, confidence intervals, hypothesis testing, and causal reasoning with the following problems. Detailed step-by-step solutions are provided at the end of this chapter.
+
+\begin{checkyourself}[Practice Problems]
+\begin{enumerate}
+    \item \textbf{Central Limit Theorem in Sensor Networks}:
+    An environmental sensor node monitors acoustic noise in an urban factory. Individual noise readings $X$ follow a heavily right-skewed log-normal distribution with true mean $\mu = 65\text{ dBA}$ and true standard deviation $\sigma = 12\text{ dBA}$.
+    
+    The node averages batches of $n = 64$ independent consecutive readings before transmitting telemetry.
+    \begin{enumerate}[label=(\alph*)]
+        \item What is the mean and standard error ($\text{SE}$) of the batch sample mean $\bar{X}$?
+        \item What is the approximate probability that a transmitted batch mean $\bar{X}$ exceeds $68\text{ dBA}$?
+    \end{enumerate}
+
+    \item \textbf{Constructing a $t$-Confidence Interval}:
+    An edge AI developer benchmarks inference latency for a voice wake-word neural network running on an ARM Cortex-M4 microcontroller across $n = 10$ test utterances. The benchmark produces:
+    \begin{equation*}
+    \bar{x} = 84.0\text{ ms}, \quad s = 4.5\text{ ms}
+    \end{equation*}
+    Construct the $95\%$ confidence interval for the true mean inference latency of this wake-word model. (For $df = 9$, $t_{0.025, 9}^* = 2.262$).
+
+    \item \textbf{One-Sample Hypothesis Testing}:
+    A LoRaWAN battery specification states that an asset tracker's sleep current must not exceed $\mu_0 = 15.0\text{ }\mu\text{A}$. An inspection of $n = 25$ randomly sampled units yields a sample mean of $\bar{x} = 16.2\text{ }\mu\text{A}$ with sample standard deviation $s = 2.5\text{ }\mu\text{A}$.
+    
+    Conduct a one-tailed hypothesis test at $\alpha = 0.05$ to determine whether the batch violates the specification ($H_1: \mu > 15.0$). (For $df = 24$, $t_{0.05, 24}^* = 1.711$).
+
+    \item \textbf{Type I vs.\ Type II Errors in Edge Alarms}:
+    An industrial IoT vibration monitor runs an edge classifier to detect catastrophic drill bit breakage.
+    \begin{enumerate}[label=(\alph*)]
+        \item What constitutes a Type I error in this application, and what is its operational consequence?
+        \item What constitutes a Type II error, and what is its operational consequence?
+        \item In this industrial safety context, which error is far more dangerous?
+    \end{enumerate}
+
+    \item \textbf{Diagnosing Confounders in Predictive Maintenance}:
+    A smart building predictive maintenance model analyzes chiller vibration ($X$) and predicts coolant pipe rupture ($Y$). In the historical training data, vibration and rupture have a high correlation ($r = 0.88$). 
+    
+    However, when maintenance technicians install vibration dampeners that reduce vibration by $80\%$, pipe ruptures continue at the exact same rate!
+    \begin{enumerate}[label=(\alph*)]
+        \item Explain why reducing vibration failed to prevent pipe ruptures.
+        \item Identify a plausible confounding variable $Z$ that could explain the high observed correlation in the historical data.
+    \end{enumerate}
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 10. ANSWERS TO CHECK YOURSELF
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Central Limit Theorem in Sensor Networks}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Mean and Standard Error}:
+        By the Central Limit Theorem, the expected value of the sample mean equals the population mean:
+        \begin{equation*}
+        \mathbb{E}[\bar{X}] = \mu = \mathbf{65.0\text{ dBA}}
+        \end{equation*}
+        The Standard Error of the Mean is:
+        \begin{equation*}
+        \text{SE} = \frac{\sigma}{\sqrt{n}} = \frac{12.0}{\sqrt{64}} = \frac{12.0}{8} = \mathbf{1.50\text{ dBA}}
+        \end{equation*}
+        \item \textbf{Probability that $\bar{X} > 68\text{ dBA}$}:
+        Because $n = 64 \ge 30$, the Central Limit Theorem guarantees that $\bar{X}$ is approximately Gaussian: $\bar{X} \sim \mathcal{N}(65.0, 1.50^2)$.
+        We compute the $Z$-score for $\bar{x} = 68.0$:
+        \begin{equation*}
+        Z = \frac{\bar{x} - \mu}{\text{SE}} = \frac{68.0 - 65.0}{1.50} = \frac{3.0}{1.50} = \mathbf{+2.00}
+        \end{equation*}
+        From the standard normal distribution table (or the $68$--$95$--$99.7$ rule):
+        \begin{equation*}
+        P(Z \le 2.00) \approx 0.9772
+        \end{equation*}
+        Therefore, the probability of exceeding $68\text{ dBA}$ is:
+        \begin{equation*}
+        P(\bar{X} > 68.0) = 1 - 0.9772 = \mathbf{0.0228} \quad (\mathbf{2.28\%})
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{Constructing a $t$-Confidence Interval}:
+    Given $n = 10$, $\bar{x} = 84.0\text{ ms}$, $s = 4.5\text{ ms}$, and $t_{0.025, 9}^* = 2.262$:
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the Standard Error:
+        \begin{equation*}
+        \widehat{\text{SE}} = \frac{s}{\sqrt{n}} = \frac{4.5}{\sqrt{10}} \approx \frac{4.5}{3.1623} \approx \mathbf{1.4230\text{ ms}}
+        \end{equation*}
+        \item Compute Margin of Error:
+        \begin{equation*}
+        \text{ME} = t_{0.025, 9}^* \times \widehat{\text{SE}} = 2.262 \times 1.4230 \approx \mathbf{3.2188\text{ ms}}
+        \end{equation*}
+        \item Compute Confidence Interval:
+        \begin{equation*}
+        \text{CI}_{95\%} = [84.0 - 3.2188, \ 84.0 + 3.2188] = [\mathbf{80.78\text{ ms}}, \ \mathbf{87.22\text{ ms}}]
+        \end{equation*}
+        We are $95\%$ confident that the true population mean inference latency for this wake-word model lies between $80.78\text{ ms}$ and $87.22\text{ ms}$.
+    \end{enumerate}
+
+    \item \textbf{One-Sample Hypothesis Testing}:
+    Given $H_0: \mu = 15.0\text{ }\mu\text{A}$ vs $H_1: \mu > 15.0\text{ }\mu\text{A}$ at $\alpha = 0.05$, with $n = 25$, $\bar{x} = 16.2\text{ }\mu\text{A}$, $s = 2.5\text{ }\mu\text{A}$, and $t_{0.05, 24}^* = 1.711$:
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute Standard Error:
+        \begin{equation*}
+        \widehat{\text{SE}} = \frac{s}{\sqrt{n}} = \frac{2.5}{\sqrt{25}} = \frac{2.5}{5} = \mathbf{0.50\text{ }\mu\text{A}}
+        \end{equation*}
+        \item Compute the $t$-statistic:
+        \begin{equation*}
+        t_{\text{stat}} = \frac{\bar{x} - \mu_0}{\widehat{\text{SE}}} = \frac{16.2 - 15.0}{0.50} = \frac{1.2}{0.50} = \mathbf{+2.40}
+        \end{equation*}
+        \item Decision Rule and Conclusion:
+        For a right-tailed test, we reject $H_0$ if $t_{\text{stat}} \ge 1.711$.
+        Because $t_{\text{stat}} = 2.40 > 1.711$, we \textbf{reject the null hypothesis $H_0$}.
+        (The exact $p$-value for $t = 2.40$ with $df = 24$ is $p \approx 0.0123 < 0.05$).
+        There is statistically significant evidence that the battery sleep current violates the manufacturer's specification.
+    \end{enumerate}
+
+    \item \textbf{Type I vs.\ Type II Errors in Edge Alarms}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Type I Error (False Alarm)}: The classifier triggers an emergency drill breakage alarm when the drill bit is actually intact. 
+        
+        \textit{Operational consequence}: Unnecessary production downtime, automated assembly line stoppage, and technician inspection costs.
+        \item \textbf{Type II Error (Missed Detection)}: The classifier fails to trigger an alarm when the drill bit has actually snapped. 
+        
+        \textit{Operational consequence}: The broken tool continues grinding into expensive workpieces, destroying mechanical assemblies, causing catastrophic tool spindle damage, and posing severe physical safety hazards to nearby human operators.
+        \item \textbf{Severity Assessment}: The \textbf{Type II error is far more dangerous}. A false alarm costs a few minutes of inspection, while a missed fracture causes thousands of dollars in mechanical destruction and potential human injury. Edge safety systems are deliberately tuned with low detection thresholds to minimize $\beta$ (maximizing statistical power/recall), accepting a slightly higher rate of false alarms $\alpha$.
+    \end{enumerate}
+
+    \item \textbf{Diagnosing Confounders in Predictive Maintenance}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Why Damping Failed}:
+        Correlation does not imply causation. The correlation between vibration ($X$) and pipe rupture ($Y$) was non-causal. Vibration did not physically cause the pipes to burst; therefore, mechanically suppressing vibration had zero effect on the true underlying failure mechanism.
+        \item \textbf{Identification of Confounder $Z$}:
+        A plausible confounding variable is **High Coolant System Pressure** (or **Pump Cavitation Surge**):
+        \begin{itemize}
+            \item High system pressure causes violent turbulence inside the pump, producing intense mechanical vibration ($Z \to X$).
+            \item High system pressure simultaneously exceeds the physical tensile burst limit of the coolant pipe walls, causing rupture ($Z \to Y$).
+        \end{itemize}
+        The machine learning model latched onto vibration as a convenient statistical proxy for pressure. To genuinely prevent pipe ruptures, engineers must regulate system pressure ($Z$), rather than merely damping the vibration symptoms ($X$).
+    \end{enumerate}
+\end{enumerate}

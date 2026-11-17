@@ -1,0 +1,1036 @@
+% FILE: chapters/ch04_s6_model_quality.tex
+\section{Model Quality and scikit-learn Pipelines}\label{sec:model_quality_pipelines}
+
+In the preceding sections of Chapter~\ref{ch:classical_ml}, we explored an array of machine learning algorithms: linear and polynomial regression, logistic classification, decision trees, support vector machines, ensemble methods, and unsupervised anomaly detectors. Yet, in real-world engineering, selecting an algorithm is only the first step. The defining challenge of machine learning is not training a model to fit historical data; it is guaranteeing that the model will perform reliably on \textbf{unseen future data}.
+
+In industrial IoT, smart infrastructure, and embedded edge systems, model failure carries severe operational consequences:
+\begin{itemize}
+    \item A predictive maintenance model with $99.5\%$ reported accuracy on training logs may trigger dozens of false alarms daily when deployed on a factory floor, prompting operators to disable the warning system entirely.
+    \item An overfitted battery state-of-charge estimator on an autonomous agricultural robot may report $40\%$ remaining charge when the physical cell is completely depleted, causing the machine to stall in an active harvest field.
+    \item A medical wearable ECG classifier evaluated without proper leakage prevention may generalize poorly across different patients, misdiagnosing dangerous cardiac arrhythmias.
+\end{itemize}
+
+Achieving production-grade model quality requires a rigorous mathematical and structural discipline. We must understand how errors arise, constrain model complexity through regularization, evaluate performance through uncorrupted cross-validation, select evaluation metrics aligned with domain risks, and encapsulate complete data processing workflows inside leak-free production pipelines.
+
+% ------------------------------------------------------------------------------
+\subsection{Overfitting, Underfitting, and the Bias-Variance Decomposition}\label{subsec:bias_variance}
+% ------------------------------------------------------------------------------
+
+At the core of machine learning theory lies the fundamental trade-off between two opposing sources of prediction error: \textbf{Bias} and \textbf{Variance}.
+
+\subsubsection{The Mathematical Decomposition of Generalization Error}
+
+Suppose the true physical process generating our sensor observations is governed by an unknown target function $f(\mathbf{x})$ corrupted by additive noise $\epsilon$:
+\begin{equation}
+y = f(\mathbf{x}) + \epsilon, \qquad \text{where } \mathbb{E}[\epsilon] = 0 \text{ and } \text{Var}(\epsilon) = \sigma^2\label{eq:data_generating_process}
+\end{equation}
+The noise $\epsilon$ encapsulates physical fluctuations beyond our ability to measure: thermal Johnson noise in sensor resistors, high-frequency electromagnetic interference, and unmeasured environmental variables.
+
+Now suppose we collect a training dataset $\mathcal{D} = \{(\mathbf{x}_1, y_1), \dots, (\mathbf{x}_N, y_N)\}$ and fit an estimator $\hat{f}(\mathbf{x}; \mathcal{D})$. Because $\mathcal{D}$ is drawn randomly from the physical world, our trained model $\hat{f}$ is itself a random entity. If we trained on a different dataset $\mathcal{D}'$, we would obtain a slightly different model $\hat{f}(\mathbf{x}; \mathcal{D}')$.
+
+To assess model quality at an unseen test point $\mathbf{x}$, we compute the \textbf{Expected Prediction Error} (Mean Squared Error) across all possible training datasets $\mathcal{D}$ and noise realizations $\epsilon$:
+\begin{equation}
+\text{EPE}(\mathbf{x}) = \mathbb{E}_{\mathcal{D}, \epsilon}\left[ \left(y - \hat{f}(\mathbf{x}; \mathcal{D})\right)^2 \right]\label{eq:epe_definition}
+\end{equation}
+Expanding this expectation algebraically reveals a foundational result:
+\begin{align}
+\text{EPE}(\mathbf{x}) &= \mathbb{E}\left[ \left(f(\mathbf{x}) + \epsilon - \hat{f}(\mathbf{x})\right)^2 \right] \nonumber \\
+&= \mathbb{E}\left[ \left( (f(\mathbf{x}) - \mathbb{E}[\hat{f}(\mathbf{x})]) + (\mathbb{E}[\hat{f}(\mathbf{x})] - \hat{f}(\mathbf{x})) + \epsilon \right)^2 \right] \nonumber \\
+&= \underbrace{\left( \mathbb{E}[\hat{f}(\mathbf{x})] - f(\mathbf{x}) \right)^2}_{\text{Bias}^2} + \underbrace{\mathbb{E}\left[ \left( \hat{f}(\mathbf{x}) - \mathbb{E}[\hat{f}(\mathbf{x})] \right)^2 \right]}_{\text{Variance}} + \underbrace{\sigma^2}_{\text{Irreducible Error}}\label{eq:bias_variance_decomposition}
+\end{align}
+
+Equation~\eqref{eq:bias_variance_decomposition} establishes that total generalization error decomposes into three distinct terms:
+\begin{enumerate}
+    \item \textbf{$\text{Bias}^2$ (Underfitting)}: The squared difference between the average prediction of our model across all possible training sets and the true underlying physical function $f(\mathbf{x})$. Bias represents error introduced by erroneous or overly simplistic assumptions in the learning algorithm (e.g., fitting a straight line to quadratic battery discharge curves).
+    \item \textbf{Variance (Overfitting)}: The variability of the model prediction around its own expected value when trained on different random samples. High variance indicates that the model is hypersensitive to the specific random noise present in the training set.
+    \item \textbf{Irreducible Noise ($\sigma^2$)}: The intrinsic randomness of the physical data-generating process. No machine learning algorithm, regardless of complexity or training data volume, can reduce error below $\sigma^2$.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.95]
+    % Axes
+    \draw[-{Stealth[length=2.5mm]}, thick, gray!80] (0, 0) -- (10.5, 0) node[right, font=\small\sffamily] {Model Complexity};
+    \draw[-{Stealth[length=2.5mm]}, thick, gray!80] (0, 0) -- (0, 5.5) node[above, font=\small\sffamily] {Error};
+
+    % Irreducible error line
+    \draw[gray!60, dashed, thick] (0, 1.0) -- (10.0, 1.0) node[right, font=\scriptsize\sffamily] {Irreducible Noise $\sigma^2$};
+
+    % Bias squared curve (Decreasing)
+    \draw[keyideablue, thick] plot[smooth] coordinates {(0.5, 4.8) (2.0, 3.4) (4.0, 2.0) (6.0, 1.3) (8.0, 1.08) (9.8, 1.02)};
+    \node[keyideablue, font=\footnotesize\sffamily, anchor=west] at (2.0, 3.7) {$\text{Bias}^2$};
+
+    % Variance curve (Increasing)
+    \draw[analogygreen, thick] plot[smooth] coordinates {(0.5, 0.1) (2.0, 0.25) (4.0, 0.6) (6.0, 1.3) (8.0, 2.7) (9.8, 4.9)};
+    \node[analogygreen, font=\footnotesize\sffamily, anchor=west] at (8.2, 3.8) {Variance};
+
+    % Total Test Error curve (U-shaped)
+    \draw[warningred, very thick] plot[smooth] coordinates {(0.5, 5.0) (2.0, 3.8) (4.0, 2.8) (5.2, 2.55) (6.0, 2.65) (8.0, 3.85) (9.8, 5.9)};
+    \node[warningred, font=\footnotesize\bfseries\sffamily, anchor=west] at (8.5, 5.6) {Total Test Error};
+
+    % Training Error curve (Monotonically decreasing)
+    \draw[gray!70, thick, dotted] plot[smooth] coordinates {(0.5, 4.4) (2.0, 2.8) (4.0, 1.5) (6.0, 0.7) (8.0, 0.25) (9.8, 0.05)};
+    \node[gray!80, font=\scriptsize\sffamily, anchor=west] at (6.5, 0.4) {Training Error};
+
+    % Optimal Complexity Marker
+    \draw[dashed, black!60] (5.2, 0) -- (5.2, 2.55);
+    \fill[warningred] (5.2, 2.55) circle (2.5pt);
+    \node[font=\footnotesize\bfseries\sffamily, anchor=north] at (5.2, -0.15) {Optimal Complexity};
+
+    % Zones
+    \node[keyideablue, font=\small\bfseries\sffamily] at (2.2, 4.9) {Underfitting Zone};
+    \node[keyideablue, font=\scriptsize\sffamily] at (2.2, 4.5) {(High Bias, Low Variance)};
+
+    \node[warningred, font=\small\bfseries\sffamily] at (8.2, 4.9) {Overfitting Zone};
+    \node[warningred, font=\scriptsize\sffamily] at (8.2, 4.5) {(Low Bias, High Variance)};
+\end{tikzpicture}
+\caption{The Bias-Variance Trade-off. As model complexity increases, bias monotonically decreases while variance escalates. Training error continually decreases, creating the dangerous illusion of improvement. Test error achieves a distinct global minimum at the point of optimal balance.}\label{fig:bias_variance_tradeoff}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.88]
+    % Styles
+    \tikzset{
+        target/.style={circle, draw=gray!60, fill=white, thick},
+        hit/.style={circle, fill=warningred, inner sep=1.4pt}
+    }
+
+    % Target 1: Low Bias, Low Variance (Ideal)
+    \begin{scope}[shift={(0, 3.5)}]
+        \draw[target, fill=keyideablue!8] (0, 0) circle (1.4cm);
+        \draw[target, fill=keyideablue!15] (0, 0) circle (0.95cm);
+        \draw[target, fill=keyideablue!25] (0, 0) circle (0.5cm);
+        \fill[keyideablue!80] (0, 0) circle (2pt);
+        % Tight hits at center
+        \foreach \x/\y in {0.05/0.1, -0.1/-0.05, 0.12/-0.1, -0.08/0.15, 0.0/0.0} {
+            \node[hit] at (\x, \y) {};
+        }
+        \node[font=\footnotesize\bfseries\sffamily, align=center] at (0, -1.8) {Low Bias, Low Variance\\(The Ideal Model)};
+    \end{scope}
+
+    % Target 2: High Bias, Low Variance (Underfit)
+    \begin{scope}[shift={(5.0, 3.5)}]
+        \draw[target, fill=gray!5] (0, 0) circle (1.4cm);
+        \draw[target, fill=gray!12] (0, 0) circle (0.95cm);
+        \draw[target, fill=gray!20] (0, 0) circle (0.5cm);
+        \fill[gray!80] (0, 0) circle (2pt);
+        % Tight hits off-center
+        \foreach \x/\y in {0.8/0.85, 0.9/0.7, 0.75/0.95, 0.85/0.8, 0.7/0.75} {
+            \node[hit] at (\x, \y) {};
+        }
+        \node[font=\footnotesize\bfseries\sffamily, align=center] at (0, -1.8) {High Bias, Low Variance\\(Consistent but Wrong / Underfit)};
+    \end{scope}
+
+    % Target 3: Low Bias, High Variance (Overfit)
+    \begin{scope}[shift={(0, -1.5)}]
+        \draw[target, fill=gray!5] (0, 0) circle (1.4cm);
+        \draw[target, fill=gray!12] (0, 0) circle (0.95cm);
+        \draw[target, fill=gray!20] (0, 0) circle (0.5cm);
+        \fill[gray!80] (0, 0) circle (2pt);
+        % Dispersed hits centered around bullseye
+        \foreach \x/\y in {0.5/0.7, -0.6/0.4, 0.2/-0.8, -0.7/-0.6, 0.8/-0.3, -0.1/0.9} {
+            \node[hit] at (\x, \y) {};
+        }
+        \node[font=\footnotesize\bfseries\sffamily, align=center] at (0, -1.8) {Low Bias, High Variance\\(Centered on Average, but Erratic)};
+    \end{scope}
+
+    % Target 4: High Bias, High Variance (Worst)
+    \begin{scope}[shift={(5.0, -1.5)}]
+        \draw[target, fill=gray!5] (0, 0) circle (1.4cm);
+        \draw[target, fill=gray!12] (0, 0) circle (0.95cm);
+        \draw[target, fill=gray!20] (0, 0) circle (0.5cm);
+        \fill[gray!80] (0, 0) circle (2pt);
+        % Dispersed hits far from center
+        \foreach \x/\y in {0.9/0.4, 1.2/1.0, 0.4/1.2, 0.6/0.7, 1.1/0.5} {
+            \node[hit] at (\x, \y) {};
+        }
+        \node[font=\footnotesize\bfseries\sffamily, align=center] at (0, -1.8) {High Bias, High Variance\\(Inaccurate and Unstable)};
+    \end{scope}
+\end{tikzpicture}
+\caption{The bullseye target analogy for Bias and Variance. The center of the target represents the true physical process. Each shot represents the prediction of a model trained on a distinct random realization of training data.}\label{fig:bullseye_analogy}
+\end{figure}
+
+\begin{analogy}[The Memorizing Student vs The Understanding Student]
+Consider two engineering students preparing for an examination:
+\begin{itemize}
+    \item \textbf{Student A (Underfitting / High Bias)}: Studies only a one-page summary sheet. When confronted with complex examination questions, their answers are overly simplistic and wrong. They have not learned the necessary patterns.
+    \item \textbf{Student B (Overfitting / High Variance)}: Memorizes every single homework problem word-for-word, including typographical errors and arbitrary question numbers. On the homework, they score $100\%$. But on the exam, when the instructor changes the numerical values slightly, Student B fails completely because they memorized noise rather than principles.
+    \item \textbf{Student C (Balanced)}: Learns the core physical laws and equations. They may make minor algebraic errors on the homework, but they generalize cleanly to new exam problems.
+\end{itemize}
+\end{analogy}
+
+\subsubsection{Diagnostic Symptoms and Engineering Remedies}
+
+How do we diagnose whether an edge model suffers from high bias or high variance in practice? Table~\ref{tab:bias_variance_diagnosis} outlines the empirical indicators and appropriate interventions.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lp{5.2cm}p{5.8cm}}
+\toprule
+\textbf{Regime} & \textbf{Empirical Symptoms} & \textbf{Engineering Remedies} \\
+\midrule
+\textbf{High Bias} & \textbullet\ High training error \newline \textbullet\ High validation error \newline \textbullet\ Validation error nearly equal to training error & \textbullet\ Add polynomial or interaction features \newline \textbullet\ Increase model capacity (deeper trees, more neural units) \newline \textbullet\ Decrease regularization strength ($\lambda \downarrow$ or $C \uparrow$) \\
+\addlinespace[4pt]
+\textbf{High Variance} & \textbullet\ Extremely low training error \newline \textbullet\ Substantially higher validation error \newline \textbullet\ Wide performance gap between train and test & \textbullet\ Collect more training samples \newline \textbullet\ Apply L1/L2 regularization ($\lambda \uparrow$ or $C \downarrow$) \newline \textbullet\ Reduce feature count (feature selection / PCA) \newline \textbullet\ Restrict tree depth (\texttt{max\_depth}, \texttt{min\_samples\_leaf}) \\
+\bottomrule
+\end{tabular}
+\caption{Diagnostic indicators and corrective actions for Bias-Variance failure modes.}\label{tab:bias_variance_diagnosis}
+\end{table}
+
+% ------------------------------------------------------------------------------
+\subsection{Constraining Model Complexity: L1 and L2 Regularization}\label{subsec:regularization}
+% ------------------------------------------------------------------------------
+
+When an estimator exhibits high variance, the mathematical mechanism driving the overfitting is almost invariably \textbf{coefficient explosion}. As a linear or polynomial model strains to fit noisy training samples, its learned weights $\mathbf{w} = [w_1, \dots, w_D]^T$ oscillate to immense positive and negative values that cancel each other out on training points but produce wild swings on unseen data.
+
+To prevent coefficient explosion, we introduce a \textbf{regularization penalty} $\Omega(\mathbf{w})$ directly into the training loss function:
+\begin{equation}
+\min_{\mathbf{w}} \quad \mathcal{J}_{\text{reg}}(\mathbf{w}) = \mathcal{L}_{\text{data}}(\mathbf{w}) + \lambda \, \Omega(\mathbf{w})\label{eq:penalized_loss}
+\end{equation}
+where $\mathcal{L}_{\text{data}}(\mathbf{w})$ is the empirical training loss (e.g., Mean Squared Error or Binary Cross-Entropy), and $\lambda \ge 0$ is the user-controlled \textbf{regularization strength}.
+
+\subsubsection{L2 Regularization (Ridge Regression / Weight Decay)}
+
+In \textbf{Ridge Regression} (also termed Tikhonov regularization or weight decay), the penalty is the squared Euclidean ($\ell_2$) norm of the weight vector:
+\begin{equation}
+\Omega_{\ell_2}(\mathbf{w}) = \frac{1}{2} \|\mathbf{w}\|_2^2 = \frac{1}{2} \sum_{j=1}^D w_j^2\label{eq:l2_norm_def}
+\end{equation}
+For ordinary linear regression, the regularized objective is:
+\begin{equation}
+\mathcal{J}_{\text{Ridge}}(\mathbf{w}) = \frac{1}{2N} \|\mathbf{y} - \mathbf{X}\mathbf{w}\|_2^2 + \frac{\lambda}{2} \|\mathbf{w}\|_2^2\label{eq:ridge_objective}
+\end{equation}
+Taking the gradient with respect to $\mathbf{w}$ and setting it to zero yields the regularized normal equations:
+\begin{align}
+\nabla_{\mathbf{w}} \mathcal{J}_{\text{Ridge}} &= -\frac{1}{N} \mathbf{X}^T (\mathbf{y} - \mathbf{X}\mathbf{w}) + \lambda \mathbf{w} = \mathbf{0} \nonumber \\
+\implies \quad \mathbf{w}_{\text{Ridge}} &= \left( \mathbf{X}^T\mathbf{X} + N\lambda \mathbf{I} \right)^{-1} \mathbf{X}^T \mathbf{y}\label{eq:ridge_analytical_solution}
+\end{align}
+where $\mathbf{I}$ is the $D \times D$ identity matrix.
+
+\begin{keyidea}[Why Ridge Regularization Guarantees Numerical Stability]
+In IoT sensor arrays, features are frequently collinear (e.g., three redundant thermocouples measuring the same motor casing). When features are collinear, the matrix $\mathbf{X}^T\mathbf{X}$ is singular or near-singular, causing standard Ordinary Least Squares $(\mathbf{X}^T\mathbf{X})^{-1}$ to fail or produce wildly unstable weights.
+
+Adding $N\lambda \mathbf{I}$ to the diagonal of $\mathbf{X}^T\mathbf{X}$ shifts all eigenvalues upward by $N\lambda$. Because $\lambda > 0$, the matrix $(\mathbf{X}^T\mathbf{X} + N\lambda \mathbf{I})$ is \textbf{strictly positive definite and unconditionally invertible}, even when the number of features exceeds the number of observations ($D > N$)!
+\end{keyidea}
+
+\subsubsection{L1 Regularization (Lasso Regression)}
+
+In 1996, Robert Tibshirani introduced the \textbf{Lasso} (\textit{Least Absolute Shrinkage and Selection Operator}), which penalizes the sum of absolute values ($\ell_1$ norm):
+\begin{equation}
+\Omega_{\ell_1}(\mathbf{w}) = \|\mathbf{w}\|_1 = \sum_{j=1}^D |w_j|\label{eq:l1_norm_def}
+\end{equation}
+The regularized Lasso objective is:
+\begin{equation}
+\mathcal{J}_{\text{Lasso}}(\mathbf{w}) = \frac{1}{2N} \|\mathbf{y} - \mathbf{X}\mathbf{w}\|_2^2 + \alpha \sum_{j=1}^D |w_j|\label{eq:lasso_objective}
+\end{equation}
+Because the absolute value function $|w_j|$ has a sharp non-differentiable cusp at $w_j = 0$, the Lasso objective cannot be solved in closed form via matrix inversion. Instead, it is optimized using subgradient descent or \textbf{coordinate descent}.
+
+The one-dimensional coordinate descent update for weight $w_j$ incorporates the \textbf{soft-thresholding operator} $\mathcal{S}_{\alpha}$:
+\begin{equation}
+w_j^* = \mathcal{S}_{\alpha}(\rho_j) = \text{sign}(\rho_j) \max\left( |\rho_j| - \alpha, \ 0 \right) = 
+\begin{cases}
+\rho_j - \alpha & \text{if } \rho_j > \alpha \\
+0 & \text{if } |\rho_j| \le \alpha \\
+\rho_j + \alpha & \text{if } \rho_j < -\alpha
+\end{cases}\label{eq:soft_thresholding}
+\end{equation}
+where $\rho_j$ represents the correlation between feature $\mathbf{x}_j$ and the residual target. If the predictive contribution of feature $j$ does not exceed threshold $\alpha$, the weight is driven \textbf{exactly to zero}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Left side: L1 Lasso (Diamond)
+    \begin{scope}[shift={(0, 0)}]
+        % Axes
+        \draw[-{Stealth[length=2mm]}, gray!80] (-3.2, 0) -- (3.2, 0) node[right, font=\footnotesize\sffamily] {$w_1$};
+        \draw[-{Stealth[length=2mm]}, gray!80] (0, -3.2) -- (0, 3.2) node[above, font=\footnotesize\sffamily] {$w_2$};
+
+        % L1 Constraint Diamond: |w1| + |w2| <= C
+        \draw[thick, keyideablue, fill=keyideablue!12] (0, 1.8) -- (1.8, 0) -- (0, -1.8) -- (-1.8, 0) -- cycle;
+        \node[keyideablue, font=\scriptsize\bfseries\sffamily] at (-1.1, 1.2) {$\|\mathbf{w}\|_1 \le C$};
+
+        % Unconstrained OLS minimum
+        \coordinate (ols) at (2.2, 2.0);
+        \fill[black] (ols) circle (2pt) node[above right, font=\scriptsize\sffamily] {$\mathbf{w}_{\text{OLS}}$};
+
+        % Elliptical Contours of Loss
+        \draw[warningred!70, thick, rotate around={35:(2.2, 2.0)}] (ols) ellipse (0.7cm and 0.4cm);
+        \draw[warningred!80, thick, rotate around={35:(2.2, 2.0)}] (ols) ellipse (1.3cm and 0.75cm);
+        \draw[warningred, very thick, rotate around={35:(2.2, 2.0)}] (ols) ellipse (1.95cm and 1.1cm);
+
+        % Touch point at corner (0, 1.8)
+        \fill[warningred] (0, 1.8) circle (3pt);
+        \draw[-{Stealth[length=2mm]}, warningred, thick] (1.0, 2.6) -- (0.1, 1.9);
+        \node[warningred, font=\scriptsize\bfseries\sffamily, align=left] at (1.1, 2.8) {Intersection at Corner!\\$w_1 = 0$ (Exact Sparsity)};
+
+        \node[font=\small\bfseries\sffamily] at (0, -3.7) {(a) Lasso ($\ell_1$) Regularization};
+    \end{scope}
+
+    % Right side: L2 Ridge (Circle)
+    \begin{scope}[shift={(7.2, 0)}]
+        % Axes
+        \draw[-{Stealth[length=2mm]}, gray!80] (-3.2, 0) -- (3.2, 0) node[right, font=\footnotesize\sffamily] {$w_1$};
+        \draw[-{Stealth[length=2mm]}, gray!80] (0, -3.2) -- (0, 3.2) node[above, font=\footnotesize\sffamily] {$w_2$};
+
+        % L2 Constraint Circle: w1^2 + w2^2 <= C^2
+        \draw[thick, analogygreen, fill=analogygreen!12] (0, 0) circle (1.8cm);
+        \node[analogygreen, font=\scriptsize\bfseries\sffamily] at (-1.1, 1.2) {$\|\mathbf{w}\|_2^2 \le C^2$};
+
+        % Unconstrained OLS minimum
+        \coordinate (ols2) at (2.2, 2.0);
+        \fill[black] (ols2) circle (2pt) node[above right, font=\scriptsize\sffamily] {$\mathbf{w}_{\text{OLS}}$};
+
+        % Elliptical Contours of Loss
+        \draw[warningred!70, thick, rotate around={35:(2.2, 2.0)}] (ols2) ellipse (0.6cm and 0.35cm);
+        \draw[warningred!80, thick, rotate around={35:(2.2, 2.0)}] (ols2) ellipse (1.1cm and 0.65cm);
+        \draw[warningred, very thick, rotate around={35:(2.2, 2.0)}] (ols2) ellipse (1.6cm and 0.95cm);
+
+        % Touch point along smooth curve
+        \coordinate (touch) at (0.95, 1.53);
+        \fill[warningred] (touch) circle (3pt);
+        \draw[-{Stealth[length=2mm]}, warningred, thick] (2.2, 1.2) -- (1.1, 1.5);
+        \node[warningred, font=\scriptsize\bfseries\sffamily, align=left] at (2.3, 1.0) {Tangent on Arc\\$w_1 \ne 0, w_2 \ne 0$\\(Shrunk but Dense)};
+
+        \node[font=\small\bfseries\sffamily] at (0, -3.7) {(b) Ridge ($\ell_2$) Regularization};
+    \end{scope}
+\end{tikzpicture}
+\caption{The geometric distinction between L1 and L2 regularization. The red ellipses represent contours of the unconstrained training loss. The blue diamond and green circle represent the constraint budgets. Because the $\ell_1$ ball possesses sharp corners along the coordinate axes, expanding loss contours typically make contact at a corner, driving coefficients exactly to zero. The smooth circular $\ell_2$ ball makes tangential contact along a curved edge, shrinking coefficients without setting them to zero.}\label{fig:l1_vs_l2_geometry}
+\end{figure}
+
+\subsubsection{Elastic Net: Combining L1 and L2}
+
+While Lasso performs automatic feature selection, it suffers from two major limitations in real sensor telemetry:
+\begin{enumerate}
+    \item When multiple features are strongly correlated (such as vibration readings from adjacent machine axes), Lasso arbitrarily picks one feature and zeroes out the rest, ignoring the physical redundancy.
+    \item When $D > N$, Lasso can select at most $N$ features before saturating.
+\end{enumerate}
+Hui Zou and Trevor Hastie introduced the \textbf{Elastic Net} to merge the strengths of both penalties:
+\begin{equation}
+\mathcal{J}_{\text{ElasticNet}}(\mathbf{w}) = \frac{1}{2N}\|\mathbf{y} - \mathbf{X}\mathbf{w}\|_2^2 + \alpha \left( \rho \|\mathbf{w}\|_1 + \frac{1 - \rho}{2} \|\mathbf{w}\|_2^2 \right)\label{eq:elastic_net}
+\end{equation}
+where $\rho \in [0, 1]$ is the mixing parameter (\texttt{l1\_ratio} in scikit-learn). When $\rho = 1$, Elastic Net reduces to pure Lasso; when $\rho = 0$, it becomes pure Ridge. For $\rho \in (0, 1)$, it performs sparse feature selection while retaining the \textbf{grouping effect}: correlated sensor channels are selected together with mutually shrunken weights.
+
+% ------------------------------------------------------------------------------
+\subsection{Rigorous Model Validation: Cross-Validation Strategies}\label{subsec:cross_validation}
+% ------------------------------------------------------------------------------
+
+A single train-test split (e.g., $80\%$ train, $20\%$ test) is inadequate for robust engineering validation:
+\begin{itemize}
+    \item \textbf{Statistical Variance of the Test Metric}: On a modest test set of $100$ sensor events, a model making $5$ mistakes scores $95\%$ accuracy; by random variation, a different split might incur $9$ mistakes ($91\%$ accuracy). Which number should the engineer trust?
+    \item \textbf{Data Starvation}: Small edge datasets cannot afford to permanently lock away $20\text{--}30\%$ of valuable anomalous failure logs.
+\end{itemize}
+
+\subsubsection{$k$-Fold Cross-Validation}
+
+In \textbf{$k$-Fold Cross-Validation}, the available dataset $\mathcal{D}$ is partitioned into $k$ equal-sized, mutually exclusive subsets (folds) $\mathcal{F}_1, \mathcal{F}_2, \dots, \mathcal{F}_k$:
+\begin{enumerate}
+    \item For each iteration $i \in \{1, 2, \dots, k\}$:
+    \begin{itemize}
+        \item Hold out fold $\mathcal{F}_i$ as the validation set.
+        \item Train the estimator $\hat{f}_i$ on the union of the remaining $k-1$ folds: $\mathcal{D}_{(-i)} = \bigcup_{j \ne i} \mathcal{F}_j$.
+        \item Evaluate $\hat{f}_i$ on fold $\mathcal{F}_i$, obtaining validation score $S_i$.
+    \end{itemize}
+    \item Compute the mean validation score and empirical standard error:
+    \begin{equation}
+    \bar{\mu}_{\text{CV}} = \frac{1}{k}\sum_{i=1}^k S_i, \qquad \text{SE}_{\text{CV}} = \frac{1}{\sqrt{k}} \sqrt{\frac{1}{k-1}\sum_{i=1}^k (S_i - \bar{\mu}_{\text{CV}})^2}\label{eq:cv_mean_se}
+    \end{equation}
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Labels
+    \node[font=\footnotesize\bfseries\sffamily] at (-1.8, 3.6) {Fold 1};
+    \node[font=\footnotesize\bfseries\sffamily] at (-1.8, 2.7) {Fold 2};
+    \node[font=\footnotesize\bfseries\sffamily] at (-1.8, 1.8) {Fold 3};
+    \node[font=\footnotesize\bfseries\sffamily] at (-1.8, 0.9) {Fold 4};
+    \node[font=\footnotesize\bfseries\sffamily] at (-1.8, 0.0) {Fold 5};
+
+    % Draw blocks for 5 folds
+    % Block style: 5 sections each 2cm wide, total 10cm
+    \foreach \iter in {1,...,5} {
+        \pgfmathsetmacro{\ypos}{4.5 - 0.9*\iter}
+        \foreach \block in {1,...,5} {
+            \pgfmathsetmacro{\xpos}{2.0 * (\block - 1)}
+            \ifnum \iter=\block
+                % Validation fold (Orange)
+                \draw[fill=exampleorange!30, draw=exampleorange!90, thick, rounded corners=1mm] (\xpos, \ypos-0.3) rectangle (\xpos+1.8, \ypos+0.3);
+                \node[font=\scriptsize\bfseries\sffamily, exampleorange!90] at (\xpos+0.9, \ypos) {Val};
+            \else
+                % Training fold (Blue)
+                \draw[fill=keyideablue!15, draw=keyideablue!70, thick, rounded corners=1mm] (\xpos, \ypos-0.3) rectangle (\xpos+1.8, \ypos+0.3);
+                \node[font=\scriptsize\sffamily, keyideablue!80] at (\xpos+0.9, \ypos) {Train};
+            \fi
+        }
+    }
+
+    % Aggregate arrow
+    \draw[-{Stealth[length=2.5mm]}, very thick, gray!80] (10.2, 1.8) -- (11.2, 1.8);
+    \node[font=\scriptsize\bfseries\sffamily, align=center] at (12.3, 1.8) {Average Score\\$\bar{\mu}_{\text{CV}} \pm \text{SE}$};
+\end{tikzpicture}
+\caption{The 5-fold cross-validation cycle. Every observation serves as an out-of-sample validation target exactly once, producing an uncorrupted estimate of generalization performance.}\label{fig:k_fold_cv}
+\end{figure}
+
+\paragraph{Choosing $k$: The Bias-Variance Trade-off of Cross-Validation}
+\begin{itemize}
+    \item \textbf{$k = 5$ or $k = 10$ (Recommended Standard)}: Provides a well-calibrated compromise. Each model trains on $80\text{--}90\%$ of the data, minimizing training bias, while the moderate overlap between training folds controls the variance of the estimator.
+    \item \textbf{$k = N$ (Leave-One-Out Cross-Validation / LOOCV)}: Every sample is held out individually. While virtually unbiased, LOOCV is computationally prohibitive for large datasets and exhibits high variance because the $N$ training sets are nearly identical ($99.9\%$ correlated).
+\end{itemize}
+
+\subsubsection{Stratified and Time-Series Cross-Validation}
+
+Two specialized validation schemes are mandatory for real-world telemetry:
+\begin{enumerate}
+    \item \textbf{Stratified $k$-Fold}: In highly imbalanced classification (e.g., $2\%$ machine failures), standard random partitioning may produce folds containing zero failure events. \texttt{StratifiedKFold} forces every individual fold to mirror the exact global class proportions ($2\%$ positives in every fold).
+    \item \textbf{Time-Series Split (\texttt{TimeSeriesSplit})}: For continuous physical processes, shuffling samples across time introduces \textbf{lookahead leakage}: predicting temperature at 12:00 PM using training data from 12:05 PM. As illustrated in Figure~\ref{fig:timeseries_cv}, validation folds must strictly adhere to the temporal arrow of time using an expanding or rolling window.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Time arrow
+    \draw[-{Stealth[length=2.5mm]}, thick, gray!80] (0, 3.8) -- (10.2, 3.8) node[right, font=\footnotesize\sffamily] {Time $t \longrightarrow$};
+
+    % Split 1
+    \node[font=\footnotesize\bfseries\sffamily] at (-1.8, 2.7) {Split 1};
+    \draw[fill=keyideablue!15, draw=keyideablue!70, thick, rounded corners=1mm] (0, 2.4) rectangle (3.0, 3.0);
+    \node[font=\scriptsize\sffamily, keyideablue!90] at (1.5, 2.7) {Train (Folds 1--2)};
+    \draw[fill=exampleorange!30, draw=exampleorange!90, thick, rounded corners=1mm] (3.2, 2.4) rectangle (4.8, 3.0);
+    \node[font=\scriptsize\bfseries\sffamily, exampleorange!90] at (4.0, 2.7) {Val (Fold 3)};
+
+    % Split 2
+    \node[font=\footnotesize\bfseries\sffamily] at (-1.8, 1.6) {Split 2};
+    \draw[fill=keyideablue!15, draw=keyideablue!70, thick, rounded corners=1mm] (0, 1.3) rectangle (4.8, 1.9);
+    \node[font=\scriptsize\sffamily, keyideablue!90] at (2.4, 1.6) {Train (Folds 1--3)};
+    \draw[fill=exampleorange!30, draw=exampleorange!90, thick, rounded corners=1mm] (5.0, 1.3) rectangle (6.6, 1.9);
+    \node[font=\scriptsize\bfseries\sffamily, exampleorange!90] at (5.8, 1.6) {Val (Fold 4)};
+
+    % Split 3
+    \node[font=\footnotesize\bfseries\sffamily] at (-1.8, 0.5) {Split 3};
+    \draw[fill=keyideablue!15, draw=keyideablue!70, thick, rounded corners=1mm] (0, 0.2) rectangle (6.6, 0.8);
+    \node[font=\scriptsize\sffamily, keyideablue!90] at (3.3, 0.5) {Train (Folds 1--4)};
+    \draw[fill=exampleorange!30, draw=exampleorange!90, thick, rounded corners=1mm] (6.8, 0.2) rectangle (8.4, 0.8);
+    \node[font=\scriptsize\bfseries\sffamily, exampleorange!90] at (7.6, 0.5) {Val (Fold 5)};
+\end{tikzpicture}
+\caption{Temporal split validation (\texttt{TimeSeriesSplit}). Training data expands strictly forward in time, preventing future observations from contaminating past predictions.}\label{fig:timeseries_cv}
+\end{figure}
+
+% ------------------------------------------------------------------------------
+\subsection{Hyperparameter Optimization: Grid Search vs Random Search}\label{subsec:hyperparameter_tuning}
+% ------------------------------------------------------------------------------
+
+Machine learning algorithms involve two distinct classes of numerical values:
+\begin{itemize}
+    \item \textbf{Model Parameters}: Coefficients learned automatically from data via numerical optimization during training (e.g., weights $\mathbf{w}$ and bias $b$).
+    \item \textbf{Hyperparameters}: Architectural configurations established by the engineer prior to training that govern the learning process (e.g., regularization strength $\lambda$, tree depth \texttt{max\_depth}, kernel bandwidth $\gamma$).
+\end{itemize}
+
+\subsubsection{Grid Search (\texttt{GridSearchCV})}
+
+\textbf{Grid Search} performs an exhaustive sweep across a manually specified discrete Cartesian grid of hyperparameter candidates. If hyperparameter $A$ has $m_1$ values, hyperparameter $B$ has $m_2$ values, and we evaluate with $k$-fold cross-validation, the total number of models fitted is:
+\begin{equation}
+N_{\text{fits}} = \left( \prod_{j=1}^P m_j \right) \times k\label{eq:grid_search_cost}
+\end{equation}
+While straightforward and reproducible, Grid Search scales with exponential complexity $\mathcal{O}(m^P)$ as the number of hyperparameters $P$ grows (the curse of dimensionality).
+
+\subsubsection{Random Search (\texttt{RandomizedSearchCV})}
+
+In their seminal 2012 paper, James Bergstra and Yoshua Bengio proved that \textbf{Randomized Search} is fundamentally more efficient than Grid Search for hyperparameter optimization:
+
+\begin{keyidea}[Bergstra \& Bengio: The Low Effective Dimensionality of Hyperparameters]
+In virtually all machine learning algorithms, only a small subset of hyperparameters strongly dictate performance for any given dataset, while others exert negligible influence.
+\begin{itemize}
+    \item In a $3 \times 3$ Grid Search ($9$ trials), only $3$ distinct values of each hyperparameter are tested.
+    \item In a $9$-trial Random Search, $9$ distinct values of every hyperparameter are explored across the continuous parameter domain.
+\end{itemize}
+Because the critical hyperparameter is tested at $9$ distinct coordinates rather than $3$, Random Search explores the influential dimensions far more thoroughly within the exact same computational budget.
+\end{keyidea}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Left side: Grid Search
+    \begin{scope}[shift={(0, 0)}]
+        \draw[thick, gray!80] (0, 0) rectangle (4.5, 4.5);
+        \node[font=\footnotesize\sffamily, anchor=north] at (2.25, -0.2) {Important Hyperparameter ($H_1$)};
+        \node[font=\footnotesize\sffamily, rotate=90, anchor=south] at (-0.3, 2.25) {Unimportant ($H_2$)};
+
+        % 3x3 Grid points
+        \foreach \x in {0.75, 2.25, 3.75} {
+            \foreach \y in {0.75, 2.25, 3.75} {
+                \fill[keyideablue] (\x, \y) circle (3pt);
+            }
+        }
+        % Projection along H1
+        \foreach \x in {0.75, 2.25, 3.75} {
+            \draw[keyideablue, dashed] (\x, 0) -- (\x, 4.5);
+            \fill[keyideablue!90] (\x, -0.05) circle (2.5pt);
+        }
+        \node[keyideablue, font=\scriptsize\bfseries\sffamily, align=center] at (2.25, 4.9) {Grid Search: 9 trials\\Only 3 distinct $H_1$ values!};
+    \end{scope}
+
+    % Right side: Random Search
+    \begin{scope}[shift={(7.0, 0)}]
+        \draw[thick, gray!80] (0, 0) rectangle (4.5, 4.5);
+        \node[font=\footnotesize\sffamily, anchor=north] at (2.25, -0.2) {Important Hyperparameter ($H_1$)};
+        \node[font=\footnotesize\sffamily, rotate=90, anchor=south] at (-0.3, 2.25) {Unimportant ($H_2$)};
+
+        % 9 Random points
+        \foreach \x/\y in {0.4/3.8, 0.9/1.1, 1.4/2.6, 1.8/4.1, 2.3/0.6, 2.8/3.2, 3.4/1.8, 3.9/4.3, 4.2/0.9} {
+            \fill[analogygreen!90!black] (\x, \y) circle (3pt);
+            \draw[analogygreen!60, dashed] (\x, 0) -- (\x, \y);
+            \fill[analogygreen!90!black] (\x, -0.05) circle (2.5pt);
+        }
+        \node[analogygreen!90!black, font=\scriptsize\bfseries\sffamily, align=center] at (2.25, 4.9) {Random Search: 9 trials\\9 distinct $H_1$ values explored!};
+    \end{scope}
+\end{tikzpicture}
+\caption{Grid Search versus Random Search across a two-dimensional hyperparameter space. When only one hyperparameter ($H_1$) strongly governs model quality, Grid Search wastes resources re-evaluating the same three $H_1$ settings. Random Search tests nine unique values of $H_1$, dramatically increasing the probability of discovering the optimal operating zone.}\label{fig:grid_vs_random_search}
+\end{figure}
+
+% ------------------------------------------------------------------------------
+\subsection{Comprehensive Model Evaluation Metrics}\label{subsec:metrics}
+% ------------------------------------------------------------------------------
+
+A machine learning algorithm is only as sound as the mathematical metric chosen to evaluate it. Selecting an inappropriate metric can render validation studies entirely meaningless.
+
+\subsubsection{Regression Metrics: Quantifying Continuous Errors}
+
+Let $y_1, \dots, y_N$ denote ground-truth continuous sensor measurements, and $\hat{y}_1, \dots, \hat{y}_N$ denote model predictions.
+
+\paragraph{Mean Absolute Error (MAE)}
+\begin{equation}
+\text{MAE} = \frac{1}{N}\sum_{i=1}^N |y_i - \hat{y}_i|\label{eq:mae}
+\end{equation}
+MAE computes the average magnitude of prediction residuals. It preserves the exact physical units of the target variable ($^\circ\text{C}$, $\text{bar}$, $\text{RPM}$) and weights all errors linearly, making it highly robust against occasional aberrant sensor spikes.
+
+\paragraph{Mean Squared Error (MSE) and Root Mean Squared Error (RMSE)}
+\begin{equation}
+\text{MSE} = \frac{1}{N}\sum_{i=1}^N (y_i - \hat{y}_i)^2, \qquad \text{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^N (y_i - \hat{y}_i)^2}\label{eq:rmse}
+\end{equation}
+Because RMSE squares individual errors prior to averaging, it heavily penalizes large errors. An error of $10\text{ bar}$ contributes $100$ times more to the MSE than an error of $1\text{ bar}$. In safety-critical systems where small deviations are tolerable but massive excursions cause catastrophic equipment failure, RMSE is the preferred optimization metric.
+
+\paragraph{Coefficient of Determination ($R^2$)}
+\begin{equation}
+R^2 = 1 - \frac{\text{SS}_{\text{res}}}{\text{SS}_{\text{tot}}} = 1 - \frac{\sum_{i=1}^N (y_i - \hat{y}_i)^2}{\sum_{i=1}^N (y_i - \bar{y})^2}\label{eq:r_squared}
+\end{equation}
+where $\bar{y} = \frac{1}{N}\sum y_i$ is the empirical mean of the target.
+\begin{itemize}
+    \item $R^2 = 1.0$: Perfect predictions ($\hat{y}_i = y_i$).
+    \item $R^2 = 0.0$: The model performs no better than simply predicting the historical baseline mean $\bar{y}$ for every sample.
+    \item $R^2 < 0.0$: The model performs worse than predicting the horizontal mean $\bar{y}$. This frequently occurs when a severely overfit model is evaluated on unseen test data.
+\end{itemize}
+
+\begin{warning}[$R^2$ and Spurious Feature Inflation]
+In multiple regression, adding any additional feature $\mathbf{x}_{\text{new}}$ will never decrease $R^2$ on training data, even if $\mathbf{x}_{\text{new}}$ consists of pure random noise. To correct for this inflation, engineers report \textbf{Adjusted $R^2$}:
+\begin{equation}
+R^2_{\text{adj}} = 1 - \left[ \frac{(1 - R^2)(N - 1)}{N - D - 1} \right]\label{eq:adjusted_r2}
+\end{equation}
+which penalizes the objective for every extra degree of freedom $D$ consumed.
+\end{warning}
+
+\subsubsection{Classification Metrics and the Confusion Matrix}
+
+For classification tasks, binary evaluation begins with the $2 \times 2$ \textbf{Confusion Matrix}, which tabulates model decisions against ground truth:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.95]
+    % Top Headers
+    \node[font=\small\bfseries\sffamily] at (3.2, 4.4) {Actual Positive ($y=1$)};
+    \node[font=\small\bfseries\sffamily] at (7.6, 4.4) {Actual Negative ($y=0$)};
+
+    % Left Headers
+    \node[font=\small\bfseries\sffamily, rotate=90] at (-0.6, 2.7) {Pred Positive ($\hat{y}=1$)};
+    \node[font=\small\bfseries\sffamily, rotate=90] at (-0.6, 0.7) {Pred Negative ($\hat{y}=0$)};
+
+    % Matrix Cells
+    % TP (Top-Left)
+    \draw[fill=analogygreen!20, draw=analogygreen!80, thick, rounded corners=2mm] (1.0, 1.8) rectangle (5.4, 3.8);
+    \node[font=\normalsize\bfseries\sffamily, analogygreen!90!black] at (3.2, 3.2) {True Positive (TP)};
+    \node[font=\scriptsize\sffamily, align=center] at (3.2, 2.4) {Fault correctly detected\\Alarm triggered};
+
+    % FP (Top-Right)
+    \draw[fill=warningred!15, draw=warningred!80, thick, rounded corners=2mm] (5.6, 1.8) rectangle (10.0, 3.8);
+    \node[font=\normalsize\bfseries\sffamily, warningred!90!black] at (7.8, 3.2) {False Positive (FP)};
+    \node[font=\scriptsize\sffamily, align=center] at (7.8, 2.4) {False Alarm (Type I Error)\\Normal flagged as fault};
+
+    % FN (Bottom-Left)
+    \draw[fill=warningred!25, draw=warningred!90, thick, rounded corners=2mm] (1.0, -0.4) rectangle (5.4, 1.6);
+    \node[font=\normalsize\bfseries\sffamily, warningred!90!black] at (3.2, 1.0) {False Negative (FN)};
+    \node[font=\scriptsize\sffamily, align=center] at (3.2, 0.2) {Missed Fault (Type II Error)\\Catastrophic failure unflagged};
+
+    % TN (Bottom-Right)
+    \draw[fill=keyideablue!15, draw=keyideablue!80, thick, rounded corners=2mm] (5.6, -0.4) rectangle (10.0, 1.6);
+    \node[font=\normalsize\bfseries\sffamily, keyideablue!90!black] at (7.8, 1.0) {True Negative (TN)};
+    \node[font=\scriptsize\sffamily, align=center] at (7.8, 0.2) {Normal state verified\\Nominal operation};
+
+    % Derived Formula Annotations
+    \draw[-{Stealth[length=2mm]}, thick, analogygreen!80] (5.4, 2.8) -- (10.4, 2.8) node[right, font=\scriptsize\bfseries\sffamily] {$\text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}$};
+    \draw[-{Stealth[length=2mm]}, thick, keyideablue!80] (3.2, -0.4) -- (3.2, -1.1) node[below, font=\scriptsize\bfseries\sffamily] {$\text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}$};
+    \draw[-{Stealth[length=2mm]}, thick, keyideablue!80] (7.8, -0.4) -- (7.8, -1.1) node[below, font=\scriptsize\bfseries\sffamily] {$\text{Specificity} = \frac{\text{TN}}{\text{TN} + \text{FP}}$};
+\end{tikzpicture}
+\caption{The $2 \times 2$ Confusion Matrix and its core derived operational metrics.}\label{fig:confusion_matrix}
+\end{figure}
+
+From these four fundamental counts, we derive:
+\begin{enumerate}
+    \item \textbf{Accuracy}: Overall proportion of correct classifications:
+    \begin{equation}
+    \text{Accuracy} = \frac{\text{TP} + \text{TN}}{\text{TP} + \text{TN} + \text{FP} + \text{FN}}\label{eq:accuracy}
+    \end{equation}
+    \item \textbf{Precision (Positive Predictive Value)}: When the system sounds an alarm, what is the probability that an actual physical fault exists?
+    \begin{equation}
+    \text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}\label{eq:precision}
+    \end{equation}
+    Low precision creates operator fatigue due to constant false alarms.
+    \item \textbf{Recall (Sensitivity / True Positive Rate)}: Out of all actual physical faults that occurred, what fraction did the model catch?
+    \begin{equation}
+    \text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}\label{eq:recall}
+    \end{equation}
+    Low recall means dangerous failures go unflagged, risking machine destruction.
+    \item \textbf{Specificity (True Negative Rate)}: Proportion of healthy states correctly left unflagged:
+    \begin{equation}
+    \text{Specificity} = \frac{\text{TN}}{\text{TN} + \text{FP}}\label{eq:specificity}
+    \end{equation}
+    \item \textbf{$F_1$-Score}: The harmonic mean of Precision and Recall:
+    \begin{equation}
+    F_1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}} = \frac{2\text{TP}}{2\text{TP} + \text{FP} + \text{FN}}\label{eq:f1_score}
+    \end{equation}
+    The harmonic mean punishes extreme imbalances: a model with $99\%$ precision but $2\%$ recall yields $F_1 \approx 3.9\%$, exposing the failure immediately.
+    \item \textbf{$F_\beta$-Score}: When false negatives and false positives carry asymmetric costs, the generalized $F_\beta$ metric weights Recall $\beta$ times as heavily as Precision:
+    \begin{equation}
+    F_\beta = (1 + \beta^2) \frac{\text{Precision} \cdot \text{Recall}}{\beta^2 \text{Precision} + \text{Recall}}\label{eq:f_beta_score}
+    \end{equation}
+    In critical safety systems (e.g., turbine overheat shutdown), missing a fault is far more dangerous than triggering a false alarm; engineers set $\beta = 2$ ($F_2$-score) to prioritize Recall.
+\end{enumerate}
+
+\begin{warning}[The Accuracy Paradox in Imbalanced Telemetry]
+Suppose an offshore wind turbine suffers bearing failure during only $10$ hours out of an entire year ($8{,}760$ hours total). A trivial dummy algorithm programmed to output ``Normal'' $100\%$ of the time achieves:
+\begin{equation*}
+\text{Accuracy} = \frac{8750 + 0}{8760} = \mathbf{99.88\%}
+\end{equation*}
+Despite its near-perfect accuracy score, this model is completely worthless because its Recall is $0.0\%$. \textbf{Never use raw Accuracy to evaluate imbalanced datasets.} Always inspect Precision, Recall, and the Confusion Matrix.
+\end{warning}
+
+\subsubsection{Threshold Curves: ROC-AUC vs Precision-Recall Curves}
+
+Most classification algorithms do not output hard binary decisions directly; they compute a continuous probability $\hat{p} = P(y = 1 \mid \mathbf{x})$. Converting $\hat{p}$ into a discrete prediction requires selecting an operational classification threshold $\tau$:
+\begin{equation}
+\hat{y} = 
+\begin{cases}
+1 & \text{if } \hat{p} \ge \tau \\
+0 & \text{if } \hat{p} < \tau
+\end{cases}\label{eq:threshold_rule}
+\end{equation}
+Varying $\tau \in [0, 1]$ traces out two distinct evaluation curves:
+
+\paragraph{Receiver Operating Characteristic (ROC) Curve}
+Plots the True Positive Rate ($\text{Recall}$) on the vertical axis against the False Positive Rate ($\text{FPR} = 1 - \text{Specificity}$) on the horizontal axis across all possible thresholds.
+\begin{itemize}
+    \item The diagonal line from $(0,0)$ to $(1,1)$ represents random guessing ($\text{AUC} = 0.5$).
+    \item A perfect classifier hugs the top-left corner ($\text{AUC} = 1.0$).
+    \item \textbf{ROC-AUC Interpretation}: The probability that the classifier will assign a higher risk score $\hat{p}$ to a randomly chosen positive instance than to a randomly chosen negative instance.
+\end{itemize}
+
+\paragraph{Precision-Recall (PR) Curve}
+Plots Precision on the vertical axis against Recall on the horizontal axis across all thresholds.
+\begin{itemize}
+    \item \textbf{Why PR Curves Dominate on Imbalanced Data}: When negatives vastly outnumber positives ($N \gg P$), the False Positive Rate denominator ($\text{FP} + \text{TN}$) is dominated by $\text{TN}$. A model can generate hundreds of false alarms ($\text{FP} = 200$) while $\text{FPR}$ remains deceptively tiny ($200 / 100{,}000 = 0.002$), keeping the ROC curve artificially elevated. 
+    \item In contrast, the Precision formula ($\frac{\text{TP}}{\text{TP} + \text{FP}}$) directly penalizes $\text{FP}$ against $\text{TP}$. If $\text{TP} = 20$, Precision plummets to $20 / (20 + 200) \approx 9.1\%$, immediately exposing the algorithm's deficiencies.
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+\subsection{The Golden Standard: scikit-learn Pipelines}\label{subsec:sklearn_pipelines}
+% ------------------------------------------------------------------------------
+
+We now address the single most pervasive source of failure in applied machine learning: \textbf{Data Leakage during Preprocessing}.
+
+\begin{warning}[The Cardinal Sin: Preprocessing Before Splitting]
+Consider a common novice workflow:
+\begin{lstlisting}[style=pythonstyle]
+# WRONG: Catastrophic Data Leakage!
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X) # Computes global mean and std across ALL data!
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2)
+\end{lstlisting}
+When \texttt{scaler.fit\_transform(X)} runs on the entire dataset, the empirical means and standard deviations computed by the scaler incorporate data from the test set! Information from the test distribution leaks into the training pipeline. The resulting test metrics will be artificially optimistic, collapsing once deployed in production.
+\end{warning}
+
+\subsubsection{Pipeline Architecture and Leak-Free Execution}
+
+To prevent data leakage, every transformation applied to the data (imputation, scaling, one-hot encoding, feature selection) must be fitted \textbf{strictly and exclusively on the training folds}, and subsequently applied to validation or test folds without updating parameters:
+\begin{equation}
+\mathbf{z}_{\text{train}} = \frac{\mathbf{x}_{\text{train}} - \boldsymbol{\mu}_{\text{train}}}{\boldsymbol{\sigma}_{\text{train}}}, \qquad \mathbf{z}_{\text{test}} = \frac{\mathbf{x}_{\text{test}} - \boldsymbol{\mu}_{\text{train}}}{\boldsymbol{\sigma}_{\text{train}}}\label{eq:leak_free_scaling}
+\end{equation}
+
+The scikit-learn \texttt{Pipeline} object enforces this discipline automatically:
+\begin{itemize}
+    \item When \texttt{pipeline.fit(X\_train, y\_train)} is invoked, each intermediate transformer calls \texttt{fit\_transform()} sequentially, passing the transformed output to the next stage, before finally calling \texttt{fit()} on the estimator.
+    \item When \texttt{pipeline.predict(X\_test)} is called, intermediate transformers execute \texttt{transform()} using the frozen training parameters, before passing the clean data to the estimator's \texttt{predict()} method.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!10, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
+    est_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!15, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Pipeline Container
+    \draw[dashed, gray!70, thick, rounded corners=3mm, fill=gray!3] (-0.5, -0.8) rectangle (12.2, 2.2);
+    \node[font=\footnotesize\bfseries\sffamily, text=gray!80, anchor=north west] at (-0.3, 2.1) {scikit-learn Pipeline Encapsulation};
+
+    % Stages
+    \node[box, minimum width=2.2cm] (s1) at (1.2, 0.7) {1. Imputer\\(\texttt{median})};
+    \node[box, minimum width=2.2cm] (s2) at (4.2, 0.7) {2. Scaler\\(\texttt{Standard})};
+    \node[box, minimum width=2.4cm] (s3) at (7.4, 0.7) {3. Selector\\(\texttt{L1 Sparsity})};
+    \node[est_box, minimum width=2.4cm] (s4) at (10.6, 0.7) {4. Estimator\\(\texttt{Classifier})};
+
+    % Connections
+    \draw[arrow] (-1.8, 0.7) -- node[above, font=\scriptsize\sffamily] {$\mathbf{X}_{\text{raw}}$} (s1.west);
+    \draw[arrow] (s1.east) -- (s2.west);
+    \draw[arrow] (s2.east) -- (s3.west);
+    \draw[arrow] (s3.east) -- (s4.west);
+    \draw[arrow] (s4.east) -- node[above, font=\scriptsize\sffamily] {$\hat{\mathbf{y}}$} (12.8, 0.7);
+\end{tikzpicture}
+\caption{The scikit-learn Pipeline architecture. Preprocessing stages and final estimator are chained into an atomic estimator object, guaranteeing zero data leakage during cross-validation.}\label{fig:pipeline_architecture}
+\end{figure}
+
+\subsubsection{End-to-End Production Example: IoT Pumping Station Pipeline}
+
+Listing~\ref{lst:production_pipeline} illustrates an industrial-grade predictive maintenance workflow. Telemetry includes continuous sensor streams (temperature, vibration, current), categorical metadata (machine type), missing sensor readings, and severe class imbalance. We combine \texttt{ColumnTransformer}, \texttt{Pipeline}, \texttt{StratifiedKFold}, and \texttt{GridSearchCV} into an integrated system.
+
+\begin{lstlisting}[style=pythonstyle, caption={Leak-free machine learning pipeline with hyperparameter tuning.}, label={lst:production_pipeline}]
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split, StratifiedKFold, GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+
+np.random.seed(42)
+N = 600
+
+# 1. Synthesize realistic IoT telemetry DataFrame
+df = pd.DataFrame({
+    'vibration_rms': np.random.exponential(scale=1.5, size=N),
+    'bearing_temp': np.random.normal(loc=65.0, scale=8.0, size=N),
+    'motor_current': np.random.normal(loc=12.0, scale=2.5, size=N),
+    'machine_type': np.random.choice(['Pump_A', 'Pump_B', 'Compressor_C'], size=N)
+})
+
+# Inject intermittent hardware communication dropouts (missing values)
+df.loc[np.random.choice(N, 20, replace=False), 'bearing_temp'] = np.nan
+df.loc[np.random.choice(N, 15, replace=False), 'vibration_rms'] = np.nan
+
+# Define physical failure probability: high vibration and elevated temperature
+failure_prob = 1 / (1 + np.exp(-(0.8 * df['vibration_rms'].fillna(1.5) + 
+                                  0.1 * (df['bearing_temp'].fillna(65.0) - 65.0) - 2.5)))
+y = (np.random.rand(N) < failure_prob).astype(int)
+
+# 2. Partition into Train and Test sets strictly BEFORE any preprocessing
+X_train, X_test, y_train, y_test = train_test_split(
+    df, y, test_size=0.25, stratify=y, random_state=42
+)
+
+# 3. Define heterogeneous feature sub-pipelines via ColumnTransformer
+num_features = ['vibration_rms', 'bearing_temp', 'motor_current']
+cat_features = ['machine_type']
+
+num_pipeline = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='median')),
+    ('scaler', StandardScaler())
+])
+
+cat_pipeline = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='most_frequent')),
+    ('encoder', OneHotEncoder(drop='first', sparse_output=False))
+])
+
+preprocessor = ColumnTransformer(transformers=[
+    ('num', num_pipeline, num_features),
+    ('cat', cat_pipeline, cat_features)
+])
+
+# 4. Assemble the master pipeline with regularized Logistic Regression
+pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('classifier', LogisticRegression(C=1.0, random_state=42, max_iter=1000))
+])
+
+# 5. Nested Cross-Validation and Hyperparameter Optimization
+param_grid = {
+    'classifier__C': [0.01, 0.1, 1.0, 10.0],
+    'preprocessor__num__imputer__strategy': ['mean', 'median']
+}
+
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+grid = GridSearchCV(pipeline, param_grid, cv=cv, scoring='f1', n_jobs=-1)
+grid.fit(X_train, y_train)
+
+# 6. Evaluate strictly on uncorrupted held-out test data
+best_model = grid.best_estimator_
+y_pred = best_model.predict(X_test)
+y_proba = best_model.predict_proba(X_test)[:, 1]
+
+print("Optimal Hyperparameters:", grid.best_params_)
+print("Best 5-Fold CV F1-Score: {:.4f}".format(grid.best_score_))
+print("Test Set ROC-AUC:        {:.4f}".format(roc_auc_score(y_test, y_proba)))
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred, digits=3))
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle, caption={Execution output of production pipeline.}]
+Optimal Hyperparameters: {'classifier__C': 1.0, 'preprocessor__num__imputer__strategy': 'mean'}
+Best 5-Fold CV F1-Score: 0.5026
+Test Set ROC-AUC:        0.8091
+
+Confusion Matrix:
+ [[96 12]
+ [21 21]]
+
+Classification Report:
+               precision    recall  f1-score   support
+           0      0.821     0.889     0.853       108
+           1      0.636     0.500     0.560        42
+    accuracy                          0.780       150
+   macro avg      0.728     0.694     0.707       150
+weighted avg      0.769     0.780     0.771       150
+\end{lstlisting}
+
+\begin{iotbox}[From Python Pipeline to Bare-Metal C on ESP32]
+How does a trained scikit-learn pipeline transition to an embedded microcontroller?
+\begin{enumerate}
+    \item \textbf{Frozen Transformation Constants}: The imputer medians $\mathbf{m} \in \mathbb{R}^3$, standard scaler means $\boldsymbol{\mu} \in \mathbb{R}^3$, and scales $\boldsymbol{\sigma} \in \mathbb{R}^3$ are extracted as fixed floating-point constants:
+    \begin{lstlisting}[style=pythonstyle]
+    means = best_model.named_steps['preprocessor'].named_transformers_['num']['scaler'].mean_
+    scales = best_model.named_steps['preprocessor'].named_transformers_['num']['scaler'].scale_
+    weights = best_model.named_steps['classifier'].coef_[0]
+    intercept = best_model.named_steps['classifier'].intercept_[0]
+    \end{lstlisting}
+    \item \textbf{Microsecond C Inference}: On an ESP32 or ARM Cortex-M, inference compiles into a static C function without dynamic memory allocation:
+    \begin{lstlisting}[style=pythonstyle]
+    // Embedded C snippet on ESP32
+    float z0 = (vibration_rms - 1.542f) / 1.488f;
+    float z1 = (bearing_temp  - 65.12f) / 7.892f;
+    float z2 = (motor_current - 11.95f) / 2.451f;
+    float logit = intercept + w0*z0 + w1*z1 + w2*z2;
+    float prob = 1.0f / (1.0f + expf(-logit));
+    bool alarm = (prob >= 0.35f); // Calibrated operational threshold
+    \end{lstlisting}
+\end{enumerate}
+\end{iotbox}
+
+% ------------------------------------------------------------------------------
+\subsection{Summary and Practical Checklist}\label{subsec:model_quality_summary}
+% ------------------------------------------------------------------------------
+
+\begin{takeaways}[Eight Rules of Model Quality and Validation]
+\begin{itemize}
+    \item \textbf{Generalization Error Decomposes}: Total error is $\text{Bias}^2 + \text{Variance} + \sigma^2$. High bias requires model capacity; high variance requires regularization or more data.
+    \item \textbf{Training Error is Deceptive}: Complex models can drive training error to zero while test error explodes. Never evaluate model quality on training data.
+    \item \textbf{L2 Stabilizes, L1 Selects}: L2 (Ridge) shrinks weights smoothly and conditions collinear feature matrices; L1 (Lasso) drives uninformative weights exactly to zero, performing automatic feature selection.
+    \item \textbf{Elastic Net Groups Redundancies}: When sensor channels are physically coupled, Elastic Net avoids Lasso's erratic feature dropping by maintaining correlated groups.
+    \item \textbf{Cross-Validation Validates Unseen Data}: Use $k=5$ or $k=10$ folds. In imbalanced classification, always use \texttt{StratifiedKFold}. For time-series, always use \texttt{TimeSeriesSplit}.
+    \item \textbf{Random Search Beats Grid Search}: Randomly sampling hyperparameter distributions discovers superior configurations in significantly fewer iterations by testing more distinct coordinates along vital dimensions.
+    \item \textbf{Never Trust Raw Accuracy on Imbalanced Data}: A naive model predicting nominal status can achieve $99\%$ accuracy while missing every failure. Rely on Precision, Recall, $F_1$, and PR-AUC.
+    \item \textbf{Pipelines Prevent Catastrophic Leakage}: Wrap all scalers, encoders, and estimators in a scikit-learn \texttt{Pipeline} so transformers fit strictly on training folds.
+\end{itemize}
+\end{takeaways}
+
+% ------------------------------------------------------------------------------
+\subsection{Check Yourself}\label{subsec:model_quality_check_yourself}
+% ------------------------------------------------------------------------------
+
+\begin{checkyourself}[Practice Exercises]
+\begin{enumerate}
+    \item \textbf{Bias-Variance Numerical Decomposition}:
+    A turbine speed sensor model is evaluated at operating point $x = 2.0$. The true physical speed is $f(2.0) = 5.0\text{ kRPM}$, and the sensor has irreducible variance $\sigma^2 = 0.09$. Three distinct models trained on independent datasets yield predictions $\hat{f}_1 = 4.8$, $\hat{f}_2 = 5.2$, and $\hat{f}_3 = 5.6$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the expected model prediction $\mathbb{E}[\hat{f}(2.0)]$.
+        \item Calculate the model Bias and squared Bias ($\text{Bias}^2$).
+        \item Calculate the model Variance ($\text{Var}(\hat{f})$).
+        \item Compute the Total Expected Prediction Error ($\text{EPE}$).
+    \end{enumerate}
+
+    \item \textbf{Confusion Matrix and Operational Risk Metrics}:
+    A predictive maintenance system monitors $1{,}000$ machine cycles. The ground-truth dataset contains $50$ physical component failures and $950$ normal cycles. The model flags $70$ cycles as failures. Among the $70$ flagged cycles, $42$ are actual failures.
+    \begin{enumerate}[label=(\alph*)]
+        \item Construct the complete $2 \times 2$ Confusion Matrix ($\text{TP}, \text{FP}, \text{FN}, \text{TN}$).
+        \item Compute Accuracy, Precision, Recall, and Specificity.
+        \item Compute the $F_1$-Score.
+        \item Compute the $F_2$-Score ($\beta = 2$) and explain why an industrial plant manager prefers $F_2$ over Accuracy.
+    \end{enumerate}
+
+    \item \textbf{Regression Metric Evaluation}:
+    An energy management system predicts power generation ($\text{kW}$) for four industrial generators.
+    \begin{itemize}
+        \item Ground-truth measurements: $\mathbf{y} = [100.0, \ 150.0, \ 200.0, \ 250.0]^T$.
+        \item Model predictions: $\hat{\mathbf{y}} = [105.0, \ 140.0, \ 195.0, \ 270.0]^T$.
+    \end{itemize}
+    \begin{enumerate}[label=(\alph*)]
+        \item Calculate the residual error vector $\mathbf{e} = \mathbf{y} - \hat{\mathbf{y}}$.
+        \item Compute the Mean Absolute Error (MAE).
+        \item Compute the Mean Squared Error (MSE) and Root Mean Squared Error (RMSE).
+        \item Compute the Coefficient of Determination ($R^2$).
+    \end{enumerate}
+
+    \item \textbf{L1 versus L2 Regularization Penalties}:
+    A regularized model learns a weight vector $\mathbf{w} = [0.8, \ -1.5, \ 0.0, \ 2.0]^T$ across four sensor channels.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the $\ell_1$ norm penalty $\|\mathbf{w}\|_1$.
+        \item Compute the squared $\ell_2$ norm penalty $\|\mathbf{w}\|_2^2$.
+        \item Explain why the third coefficient ($w_3 = 0.0$) provides evidence that Lasso ($\ell_1$) was utilized rather than Ridge ($\ell_2$).
+    \end{enumerate}
+
+    \item \textbf{Data Leakage Detection in Python Pipelines}:
+    Examine the following preprocessing script:
+    \begin{lstlisting}[style=pythonstyle]
+    imputer = SimpleImputer(strategy='mean')
+    X_imputed = imputer.fit_transform(X_telemetry)
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_imputed)
+    cv_scores = cross_val_score(LogisticRegression(), X_scaled, y, cv=5)
+    \end{lstlisting}
+    Identify the specific mechanism of data leakage in this code and write the corrected version using scikit-learn's \texttt{Pipeline}.
+\end{enumerate}
+\end{checkyourself}
+
+% ------------------------------------------------------------------------------
+\subsection*{Answers}\label{subsec:model_quality_answers}
+% ------------------------------------------------------------------------------
+
+\begin{enumerate}
+    \item \textbf{Bias-Variance Numerical Decomposition}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Expected Prediction}:
+        \begin{equation*}
+        \mathbb{E}[\hat{f}(2.0)] = \frac{4.8 + 5.2 + 5.6}{3} = \frac{15.6}{3} = \mathbf{5.20\text{ kRPM}}
+        \end{equation*}
+
+        \item \textbf{Bias and Squared Bias}:
+        \begin{align*}
+        \text{Bias} &= \mathbb{E}[\hat{f}(2.0)] - f(2.0) = 5.20 - 5.00 = \mathbf{0.20\text{ kRPM}} \\
+        \text{Bias}^2 &= (0.20)^2 = \mathbf{0.0400}
+        \end{align*}
+
+        \item \textbf{Variance}:
+        \begin{align*}
+        \text{Var}(\hat{f}) &= \frac{1}{3} \sum_{i=1}^3 (\hat{f}_i - 5.20)^2 = \frac{(4.8 - 5.2)^2 + (5.2 - 5.2)^2 + (5.6 - 5.2)^2}{3} \\
+        &= \frac{(-0.4)^2 + 0^2 + (0.4)^2}{3} = \frac{0.16 + 0.16}{3} = \frac{0.32}{3} \approx \mathbf{0.1067}
+        \end{align*}
+
+        \item \textbf{Total Expected Prediction Error (EPE)}:
+        \begin{equation*}
+        \text{EPE} = \text{Bias}^2 + \text{Var}(\hat{f}) + \sigma^2 = 0.0400 + 0.1067 + 0.0900 = \mathbf{0.2367}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{Confusion Matrix and Operational Risk Metrics}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Confusion Matrix Derivation}:
+        \begin{itemize}
+            \item Total Positives $P = 50$, Total Negatives $N = 950$.
+            \item Flagged Positives $= 70$, of which $42$ are true failures $\implies \mathbf{\text{TP} = 42}$.
+            \item False Alarms $\implies \mathbf{\text{FP}} = 70 - 42 = \mathbf{28}$.
+            \item Missed Failures $\implies \mathbf{\text{FN}} = 50 - 42 = \mathbf{8}$.
+            \item Correct Normals $\implies \mathbf{\text{TN}} = 950 - 28 = \mathbf{922}$.
+        \end{itemize}
+        The complete matrix is:
+        \begin{equation*}
+        \begin{bmatrix} \text{TP} & \text{FP} \\ \text{FN} & \text{TN} \end{bmatrix} = \begin{bmatrix} 42 & 28 \\ 8 & 922 \end{bmatrix}
+        \end{equation*}
+
+        \item \textbf{Derived Metrics}:
+        \begin{align*}
+        \text{Accuracy} &= \frac{\text{TP} + \text{TN}}{\text{Total}} = \frac{42 + 922}{1000} = \frac{964}{1000} = \mathbf{0.9640} \quad (96.40\%) \\
+        \text{Precision} &= \frac{\text{TP}}{\text{TP} + \text{FP}} = \frac{42}{42 + 28} = \frac{42}{70} = \mathbf{0.6000} \quad (60.00\%) \\
+        \text{Recall} &= \frac{\text{TP}}{\text{TP} + \text{FN}} = \frac{42}{42 + 8} = \frac{42}{50} = \mathbf{0.8400} \quad (84.00\%) \\
+        \text{Specificity} &= \frac{\text{TN}}{\text{TN} + \text{FP}} = \frac{922}{922 + 28} = \frac{922}{950} \approx \mathbf{0.9705} \quad (97.05\%)
+        \end{align*}
+
+        \item \textbf{$F_1$-Score}:
+        \begin{equation*}
+        F_1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}} = 2 \cdot \frac{0.60 \times 0.84}{0.60 + 0.84} = \frac{1.008}{1.44} = \mathbf{0.7000}
+        \end{equation*}
+
+        \item \textbf{$F_2$-Score ($\beta = 2$)}:
+        \begin{equation*}
+        F_2 = (1 + 2^2) \frac{\text{Precision} \cdot \text{Recall}}{2^2 \text{Precision} + \text{Recall}} = 5 \cdot \frac{0.60 \times 0.84}{4(0.60) + 0.84} = \frac{2.520}{2.40 + 0.84} = \frac{2.520}{3.24} \approx \mathbf{0.7778}
+        \end{equation*}
+        \textbf{Operational Significance}: While Accuracy appears deceptively high ($96.4\%$), the model actually misses $16\%$ of physical machine failures ($\text{FN} = 8$ out of $50$). An unpredicted turbine failure causes tens of thousands of dollars in mechanical destruction and downtime, whereas a false alarm ($\text{FP} = 28$) merely incurs a quick technician visual check. The plant manager prioritizes $F_2$ because it weights Recall twice as heavily as Precision, penalizing missed failures rigorously.
+    \end{enumerate}
+
+    \item \textbf{Regression Metric Evaluation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Residual Error Vector}:
+        \begin{equation*}
+        \mathbf{e} = \mathbf{y} - \hat{\mathbf{y}} = \begin{bmatrix} 100.0 - 105.0 \\ 150.0 - 140.0 \\ 200.0 - 195.0 \\ 250.0 - 270.0 \end{bmatrix} = \begin{bmatrix} -5.0 \\ 10.0 \\ 5.0 \\ -20.0 \end{bmatrix} \text{ kW}
+        \end{equation*}
+
+        \item \textbf{Mean Absolute Error (MAE)}:
+        \begin{equation*}
+        \text{MAE} = \frac{|-5.0| + |10.0| + |5.0| + |-20.0|}{4} = \frac{5.0 + 10.0 + 5.0 + 20.0}{4} = \frac{40.0}{4} = \mathbf{10.00\text{ kW}}
+        \end{equation*}
+
+        \item \textbf{MSE and RMSE}:
+        \begin{align*}
+        \text{MSE} &= \frac{(-5.0)^2 + (10.0)^2 + (5.0)^2 + (-20.0)^2}{4} = \frac{25.0 + 100.0 + 25.0 + 400.0}{4} = \frac{550.0}{4} = \mathbf{137.50\text{ kW}^2} \\
+        \text{RMSE} &= \sqrt{137.50} \approx \mathbf{11.726\text{ kW}}
+        \end{align*}
+
+        \item \textbf{Coefficient of Determination ($R^2$)}:
+        Mean target value: $\bar{y} = \frac{100 + 150 + 200 + 250}{4} = 175.0\text{ kW}$.
+        \begin{align*}
+        \text{SS}_{\text{tot}} &= (100 - 175)^2 + (150 - 175)^2 + (200 - 175)^2 + (250 - 175)^2 \\
+        &= (-75)^2 + (-25)^2 + (25)^2 + (75)^2 = 5625 + 625 + 625 + 5625 = \mathbf{12{,}500.0} \\
+        \text{SS}_{\text{res}} &= \sum e_i^2 = 550.0 \\
+        R^2 &= 1 - \frac{\text{SS}_{\text{res}}}{\text{SS}_{\text{tot}}} = 1 - \frac{550.0}{12{,}500.0} = 1 - 0.0440 = \mathbf{0.9560} \quad (95.60\%)
+        \end{align*}
+        The model explains $95.60\%$ of the variance in generator power output.
+    \end{enumerate}
+
+    \item \textbf{L1 versus L2 Regularization Penalties}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{$\ell_1$ Norm Penalty}:
+        \begin{equation*}
+        \|\mathbf{w}\|_1 = |0.8| + |-1.5| + |0.0| + |2.0| = 0.8 + 1.5 + 0.0 + 2.0 = \mathbf{4.30}
+        \end{equation*}
+
+        \item \textbf{Squared $\ell_2$ Norm Penalty}:
+        \begin{equation*}
+        \|\mathbf{w}\|_2^2 = (0.8)^2 + (-1.5)^2 + (0.0)^2 + (2.0)^2 = 0.64 + 2.25 + 0.0 + 4.00 = \mathbf{6.8900}
+        \end{equation*}
+
+        \item \textbf{Evidence of Lasso ($\ell_1$)}:
+        L2 regularization shrinks weights smoothly toward zero via gradient $-2\lambda \mathbf{w}$, which diminishes to zero as $w_j \to 0$, meaning coefficients asymptotically approach zero but mathematically never equal zero. In contrast, L1 regularization applies a constant subgradient penalty $\pm \alpha$, driving non-essential coefficients ($w_3$) \textbf{identically to zero}. Having an exact zero indicates sparse feature selection via Lasso.
+    \end{enumerate}
+
+    \item \textbf{Data Leakage Detection in Python Pipelines}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{The Flaw}: Calling \texttt{imputer.fit\_transform(X\_telemetry)} and \texttt{scaler.fit\_transform(X\_imputed)} calculates global statistics (imputation means, feature means $\boldsymbol{\mu}$, and feature standard deviations $\boldsymbol{\sigma}$) across the \textbf{entire dataset} before cross-validation begins. During each cross-validation fold, the validation fold's information has already leaked into the training representation, generating falsely optimistic validation scores.
+        \item \textbf{Corrected Leak-Free Pipeline}:
+        \begin{lstlisting}[style=pythonstyle]
+        from sklearn.pipeline import Pipeline
+        from sklearn.impute import SimpleImputer
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.model_selection import cross_val_score
+
+        # Chain imputer, scaler, and estimator into a leak-free pipeline
+        pipeline = Pipeline(steps=[
+            ('imputer', SimpleImputer(strategy='mean')),
+            ('scaler', StandardScaler()),
+            ('classifier', LogisticRegression(random_state=42))
+        ])
+
+        # Cross-validation now fits imputer and scaler STRICTLY on training folds
+        cv_scores = cross_val_score(pipeline, X_telemetry, y, cv=5, scoring='f1')
+        \end{lstlisting}
+    \end{enumerate}
+\end{enumerate}

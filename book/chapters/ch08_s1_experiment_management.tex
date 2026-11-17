@@ -1,0 +1,387 @@
+% FILE: chapters/ch08_s1_experiment_management.tex
+\chapter{MLOps and Deployment}\label{ch:mlops_deployment}
+\section{Experiment Management}\label{sec:experiment_management}
+
+In an academic laboratory or beginner tutorial, machine learning often feels simple: you open a single Jupyter Notebook, load a clean CSV file, train a model, print an accuracy score of $92\%$, and declare victory. 
+
+In industrial edge computing and TinyML, this ad-hoc approach leads directly to catastrophe. In real-world engineering, you do not train one model; you train hundreds of variations. You experiment with different sensor sampling rates, test 15 different sliding window sizes, compare raw accelerometer features against FFT spectrograms, sweep learning rates, and evaluate multiple quantization schemes (floating-point 32-bit versus quantized integer 8-bit).
+
+Six months later, an edge device deployed in a remote solar field begins reporting erratic sensor classifications. If you have no formal experiment management, you will find yourself asking impossible questions: \textit{Which version of the dataset trained this firmware binary? What hyperparameters were used? Why can no engineer on the team reproduce those results?}
+
+\textbf{Machine Learning Operations (MLOps)} applies the battle-tested principles of software engineering—version control, automated tracking, continuous integration, and reproducibility—to the messy, non-deterministic world of machine learning. In this section, we master the three pillars of experiment management: automated experiment tracking, dataset and model versioning, and bit-for-bit computational reproducibility.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    box/.style={rectangle, draw=keyideablue, fill=keyideablue!10, rounded corners=2mm, thick, text width=2.5cm, align=center, minimum height=1.1cm, font=\footnotesize\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=keyideablue}
+]
+    \node[box] (data) {Dataset + Version\\(DVC / Git Commit)};
+    \node[box, right=0.8cm of data] (code) {Code + Config\\(Pinned Seeds, Env)};
+    \node[box, right=0.8cm of code] (tracker) {Experiment Tracker\\(MLflow Tracking)};
+    \node[box, below=1.0cm of tracker] (registry) {Model Registry\\(Staging $\to$ Production)};
+    \node[box, left=0.8cm of registry] (quant) {Edge Quantization\\(\code{.tflite} / INT8)};
+    \node[box, left=0.8cm of quant] (ota) {OTA Deployment\\(ESP32 Fleet)};
+
+    \draw[arrow] (data) -- (tracker);
+    \draw[arrow] (code) -- (tracker);
+    \draw[arrow] (tracker) -- (registry);
+    \draw[arrow] (registry) -- (quant);
+    \draw[arrow] (quant) -- (ota);
+\end{tikzpicture}
+\caption{The end-to-end MLOps pipeline: from tracked experiments to validated model registry and edge OTA deployment.}\label{fig:mlops_lifecycle}
+\end{figure}
+
+% ==============================================================================
+% 1. EXPERIMENT TRACKING
+% ==============================================================================
+\subsection{Experiment Tracking: The Laboratory Notebook of Machine Learning}
+
+\begin{keyidea}[Experiment Tracking]
+\textbf{Experiment tracking} is the automated practice of logging all inputs (code commits, hyperparameters, dataset versions) and all outputs (metrics, loss curves, confusion matrices, serialized model binaries) for every training run in a centralized, searchable database.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Without tracking, developers record results on scraps of paper, spreadsheets, or in terminal printouts. When you return to a project after two weeks, you cannot remember whether the model named \texttt{model\_best\_final.h5} was trained with a learning rate of $0.01$ or $0.001$, or whether it used the filtered or unfiltered sensor dataset. Automated experiment tracking tools like **MLflow** and **Weights \& Biases** eliminate guesswork by recording every run automatically.
+
+\begin{analogy}[The Pharmaceutical Chemist's Laboratory Journal]
+When pharmaceutical chemists formulate a new antibiotic, they do not casually mix beakers and dump the liquid into bottles. For every single trial batch, they record the exact room temperature, chemical supplier lot number, catalyst mass in milligrams, stirring speed in RPM, and the resulting bacterial kill rate. If Batch \#418 produces a miraculous breakthrough, they can inspect the log and reproduce the exact compound down to the molecule. Experiment tracking is your digital laboratory journal.
+\end{analogy}
+
+\paragraph{The Three Core Primitives of Experiment Tracking}
+In modern experiment tracking systems (such as MLflow), every training run records three distinct types of data:
+\begin{enumerate}
+    \item \textbf{Parameters (Inputs)}: Key-value configuration settings that remain fixed before training begins:
+    \begin{itemize}
+        \item Examples: \code{learning_rate = 0.001}, \code{batch_size = 32}, \code{window_size_ms = 500}, \code{filter_type = "median"}.
+    \end{itemize}
+    \item \textbf{Metrics (Outputs)}: Scalar values recorded during or after training that measure performance over time:
+    \begin{itemize}
+        \item Examples: \code{train_loss}, \code{val_accuracy}, \code{inference_latency_us}, \code{peak_ram_bytes}.
+    \end{itemize}
+    \item \textbf{Artifacts (Output Files)}: Binary files, models, plots, and metadata generated by the run:
+    \begin{itemize}
+        \item Examples: Serialized weights (\code{.onnx}, \code{.tflite}), confusion matrix heatmaps (\code{.png}), C-arrays for microcontrollers (\code{model.h}).
+    \end{itemize}
+\end{enumerate}
+
+\paragraph{Python Code with MLflow}
+\begin{lstlisting}[language=Python]
+import mlflow
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+
+# 1. Configure local tracking directory
+mlflow.set_tracking_uri("sqlite:///mlflow_edge.db")
+mlflow.set_experiment("ESP32_Vibration_Anomaly_Detection")
+
+# 2. Simulated training features (e.g., RMS and Peak-to-Peak from 100Hz vibration)
+X_train = np.array([[0.5, 1.2], [0.6, 1.4], [2.8, 6.1], [3.1, 7.0]])
+y_train = np.array([0, 0, 1, 1])  # 0: Healthy, 1: Bearing Fault
+
+# Hyperparameters
+params = {
+    "c_regularization": 1.0,
+    "solver": "lbfgs",
+    "window_size_samples": 50,
+    "sensor_model": "MPU6050",
+    "target_mcu": "ESP32-WROOM-32"
+}
+
+# 3. Start tracked experiment run
+with mlflow.start_run(run_name="logistic_reg_baseline"):
+    # Log all configuration parameters
+    mlflow.log_params(params)
+    
+    # Train model
+    clf = LogisticRegression(C=params["c_regularization"], solver=params["solver"])
+    clf.fit(X_train, y_train)
+    
+    # Evaluate
+    preds = clf.predict(X_train)
+    acc = accuracy_score(y_train, preds)
+    
+    # Simulate hardware footprint metrics on edge MCU
+    model_size_bytes = len(clf.coef_.tobytes()) + len(clf.intercept_.tobytes())
+    estimated_inference_us = 4.2  # Microseconds on 240MHz Xtensa core
+    
+    # Log performance and hardware metrics
+    mlflow.log_metric("train_accuracy", acc)
+    mlflow.log_metric("flash_footprint_bytes", model_size_bytes)
+    mlflow.log_metric("latency_microseconds", estimated_inference_us)
+    
+    # Log scikit-learn model artifact
+    mlflow.sklearn.log_model(clf, artifact_path="model")
+    
+    print("--- MLflow Run Logged Successfully ---")
+    print(f"Logged Accuracy:   {acc * 100:.1f}%")
+    print(f"Model Flash Size:  {model_size_bytes} bytes")
+    print(f"Expected Latency:  {estimated_inference_us} us")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- MLflow Run Logged Successfully ---
+Logged Accuracy:   100.0%
+Model Flash Size:  24 bytes
+Expected Latency:  4.2 us
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Line 7: \code{mlflow.set_tracking_uri("sqlite:///mlflow_edge.db")} initializes a local, serverless SQLite database to store all experiment logs.
+    \item Line 16: We bundle model hyperparameters and physical hardware constraints (\code{target_mcu: "ESP32-WROOM-32"}) together into a parameter dictionary.
+    \item Line 25: \code{with mlflow.start_run(...):} creates an isolated tracking run. If the script crashes, the run status is automatically recorded as \code{FAILED}.
+    \item Lines 40--42: We record both classical accuracy and \textbf{edge hardware metrics} (\code{flash_footprint_bytes}, \code{latency_microseconds}), ensuring edge memory constraints are visible during model selection.
+\end{itemize}
+
+\begin{iotbox}[Logging Hardware Constraints in MLflow]
+In TinyML, a model with $99.5\%$ accuracy is completely useless if it consumes $600\text{ KB}$ of SRAM on an ESP32 that only has $320\text{ KB}$. Always log \code{flash_footprint_bytes} and \code{sram_peak_bytes} as primary metrics in your experiment tracking dashboard. When sorting runs, filter for models that satisfy your hardware budget first, and only then select for highest accuracy!
+\end{iotbox}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Automated experiment tracking records parameters, metrics, and model artifacts for every training iteration.
+    \item For edge devices, track flash footprint and inference latency alongside accuracy and loss.
+    \item Context managers (\code{with mlflow.start_run()}) ensure complete audit trails even when training fails.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 2. DATASET AND MODEL VERSIONING
+% ==============================================================================
+\subsection{Dataset and Model Versioning: Lineage and Registries}
+
+\begin{keyidea}[Data Lineage and Model Registries]
+\begin{itemize}
+    \item \textbf{Dataset Versioning}: Cryptographically tracks revisions of large raw sensor data files without bloating code repositories, linking every model to the exact data snapshot used to train it.
+    \item \textbf{Model Registry}: A centralized repository that tracks the lifecycle stages of trained models (e.g., \texttt{Candidate} $\to$ \texttt{Staging} $\to$ \texttt{Production} $\to$ \texttt{Archived}) before deploying to edge hardware.
+\end{itemize}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Git was designed for text source code; storing 50 gigabytes of binary accelerometer sensor recordings in a Git repository makes it unusable. Without data versioning, teams overwrite datasets on shared network drives. When an updated sensor calibration file alters 100 rows, past training runs become impossible to audit. 
+
+Furthermore, once a model is trained, how do 1,000 ESP32 devices deployed across a smart city know which model binary to download over Wi-Fi? A \textbf{Model Registry} provides a single source of truth for the official production binary.
+
+\paragraph{The Cryptographic Checksum (SHA-256)}
+To track datasets without copying gigabytes of files, tools like **DVC (Data Version Control)** compute a unique mathematical fingerprint called a **hash** (specifically, SHA-256):
+\begin{equation}
+\text{Hash} = \text{SHA-256}(\text{Raw Sensor File})\label{eq:sha256}
+\end{equation}
+A cryptographic hash has two essential mathematical properties:
+\begin{enumerate}
+    \item \textbf{Deterministic}: Feeding the exact same file into the algorithm always produces the exact same 64-character hexadecimal string.
+    \item \textbf{The Avalanche Effect}: Changing even a single bit (e.g., changing one sensor reading from $24.1^\circ\text{C}$ to $24.2^\circ\text{C}$) completely scrambles the output hash, creating a completely different signature.
+\end{enumerate}
+
+\paragraph{Hand Calculation Demonstration: The Avalanche Effect}
+Consider two tiny strings representing sensor data:
+\begin{align*}
+\text{File A: } & \texttt{"TEMP:24.1"} \implies \text{Hash: } \texttt{b3d4f8...7a2} \\
+\text{File B: } & \texttt{"TEMP:24.2"} \implies \text{Hash: } \texttt{19c0e2...9f4}
+\end{align*}
+Even though only a single digit changed, the two hashes share zero resemblance. DVC stores this tiny 64-character hash in Git, while the 50 GB dataset sits securely in cloud storage.
+
+\paragraph{The Model Lifecycle Stages}
+In a formal Model Registry:
+\begin{itemize}
+    \item \textbf{None / Experimental}: Newly trained candidate models under active exploration.
+    \item \textbf{Staging}: Models undergoing automated verification on hardware test benches (testing ESP32 memory consumption, numerical quantization drift, battery drain).
+    \item \textbf{Production}: The official, validated model currently running live on the edge fleet.
+    \item \textbf{Archived}: Deprecated past versions kept strictly for audit and rollback capabilities.
+\end{itemize}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import hashlib
+
+# Simulating raw sensor file content
+sensor_log_v1 = b"timestamp_ms,ax,ay,az\n1000,0.01,0.02,9.81\n1010,0.02,0.01,9.80"
+sensor_log_v2 = b"timestamp_ms,ax,ay,az\n1000,0.01,0.02,9.81\n1010,0.02,0.01,9.82" # 1 digit change!
+
+# Compute SHA-256 cryptographic fingerprints
+hash_v1 = hashlib.sha256(sensor_log_v1).hexdigest()
+hash_v2 = hashlib.sha256(sensor_log_v2).hexdigest()
+
+print("--- Dataset Cryptographic Fingerprints (SHA-256) ---")
+print(f"Dataset v1 Hash: {hash_v1}")
+print(f"Dataset v2 Hash: {hash_v2}")
+print(f"Hashes Match?    {hash_v1 == hash_v2}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Dataset Cryptographic Fingerprints (SHA-256) ---
+Dataset v1 Hash: 34e8156db6c3741893c5d6c8dfbcf27930335e2365287f7637db54b419b6ea74
+Dataset v2 Hash: ebe02c0b0a8801ceb8364d96a7516d252fe0c16fb35db40d5e8ee4a938c8c575
+Hashes Match?    False
+\end{lstlisting}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Never store large binary sensor datasets directly in Git; use data versioning tools like DVC.
+    \item SHA-256 cryptographic hashes detect any modification, addition, or corruption in training datasets.
+    \item Model registries enforce formal transitions (\texttt{Staging} $\to$ \texttt{Production}), preventing unverified models from deploying to hardware.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 3. REPRODUCIBILITY: SEEDS AND DEPENDENCY LOCKING
+% ==============================================================================
+\subsection{Reproducibility: Seeds, Containers, and Dependency Locking}
+
+\begin{keyidea}[Bit-for-Bit Reproducibility]
+A machine learning experiment is \textbf{reproducible} if an independent engineer, running the same code on the same data on a different computer months later, obtains the exact same mathematical weights and predictions.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+How many times have you heard: \textit{``Well, it worked on my machine!''} You train a TinyML model on your MacBook that achieves $96\%$ accuracy and fits inside $128\text{ KB}$ of flash memory. You hand the script to a colleague running Linux. They run the exact same code, but the model achieves only $74\%$ accuracy and its compiled binary consumes $180\text{ KB}$ of flash. 
+
+Why? Because random numbers were initialized differently, or an underlying library (such as NumPy or Scikit-Learn) updated its internal algorithms between versions.
+
+\paragraph{The Three Sources of Non-Determinism}
+To achieve true reproducibility, an engineer must eliminate three sources of variation:
+\begin{enumerate}
+    \item \textbf{Pseudo-Random Number Generators (PRNGs)}:
+    Computers cannot generate truly random numbers. They use mathematical recurrence formulas that generate a deterministic sequence of numbers starting from a single initial integer called the **seed**. If you set the seed to the same number, the computer generates the exact same sequence of pseudo-random numbers every time!
+    \item \textbf{Software Dependency Drift}:
+    If your script specifies \code{scikit-learn} without a version number, \code{pip} will install whatever version exists today. If the library developers change a default solver or tolerance in version 1.4, your model behavior changes silently.
+    \item \textbf{Hardware and Compiler Floating-Point Differences}:
+    Different CPU architectures (Intel x86 vs. Apple Silicon ARM vs. Xtensa ESP32) implement floating-point rounding instructions slightly differently.
+\end{enumerate}
+
+\paragraph{Hand Calculation Demonstration: The Linear Congruential PRNG}
+To understand why seeds work, examine the simplest mathematical pseudo-random number generator, the \textbf{Linear Congruential Generator (LCG)}:
+\begin{equation}
+X_{n+1} = (a X_n + c) \pmod m\label{eq:lcg}
+\end{equation}
+Let us choose parameters: multiplier $a = 3$, increment $c = 1$, modulus $m = 8$, and set our starting **seed** $X_0 = 4$:
+\begin{enumerate}
+    \item \textbf{Step 1}:
+    \begin{equation*}
+    X_1 = (3 \times 4 + 1) \pmod 8 = (12 + 1) \pmod 8 = 13 \pmod 8 = \mathbf{5}
+    \end{equation*}
+    \item \textbf{Step 2}:
+    \begin{equation*}
+    X_2 = (3 \times 5 + 1) \pmod 8 = (15 + 1) \pmod 8 = 16 \pmod 8 = \mathbf{0}
+    \end{equation*}
+    \item \textbf{Step 3}:
+    \begin{equation*}
+    X_3 = (3 \times 0 + 1) \pmod 8 = (0 + 1) \pmod 8 = 1 \pmod 8 = \mathbf{1}
+    \end{equation*}
+    The pseudo-random sequence is: $[5, 0, 1]$.
+\end{enumerate}
+If someone in Tokyo, London, or San Francisco runs this formula with seed $X_0 = 4$, they will \textbf{always} obtain the exact sequence $[5, 0, 1]$.
+
+\paragraph{Python Code: The Unified Seed Harness}
+\begin{lstlisting}[language=Python]
+import os
+import random
+import numpy as np
+import torch
+
+def set_global_seed(seed: int = 42) -> None:
+    """Locks all pseudo-random number generators across all libraries."""
+    random.seed(seed)                        # 1. Python built-in random
+    os.environ["PYTHONHASHSEED"] = str(seed) # 2. Python hash seed
+    np.random.seed(seed)                     # 3. NumPy random engine
+    torch.manual_seed(seed)                  # 4. PyTorch CPU
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)     # 5. PyTorch GPU
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+# Demonstrate deterministic repeatability
+set_global_seed(42)
+weights_run1 = np.random.normal(size=3)
+
+set_global_seed(42)  # Reset to identical seed
+weights_run2 = np.random.normal(size=3)
+
+print("Run 1 Generated Weights:", weights_run1.round(5))
+print("Run 2 Generated Weights:", weights_run2.round(5))
+print(f"Identical down to last bit? {np.array_equal(weights_run1, weights_run2)}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Run 1 Generated Weights: [ 0.49671 -0.13826  0.64769]
+Run 2 Generated Weights: [ 0.49671 -0.13826  0.64769]
+Identical down to last bit? True
+\end{lstlisting}
+
+\paragraph{Environment Pinning via \code{requirements.txt}}
+Never leave package versions floating in production ML pipelines. Always pin explicit versions:
+\begin{lstlisting}[language=Python]
+# BAD: Non-deterministic environment (installs latest arbitrary version)
+numpy
+scikit-learn
+torch
+
+# GOOD: Fully pinned, reproducible environment
+numpy==1.24.3
+scikit-learn==1.3.0
+torch==2.0.1
+mlflow==2.6.0
+\end{lstlisting}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Pseudo-random number generators are deterministic mathematical functions controlled by initial seeds.
+    \item Lock seeds across Python, NumPy, and PyTorch at the very beginning of every training script.
+    \item Pin exact library versions in \code{requirements.txt} to prevent silent behavioral drift.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 4. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+Test your operational understanding of MLOps and experiment management:
+
+\begin{enumerate}
+    \item \textbf{Tracking Metrics on Microcontrollers}: In an experiment tracking dashboard for TinyML models, why is logging accuracy alone insufficient? What two physical hardware metrics must also be logged?
+
+    \item \textbf{Pseudo-Random Number Generation}: Using the Linear Congruential Generator $X_{n+1} = (4 X_n + 1) \pmod 9$ with seed $X_0 = 2$, calculate the next two pseudo-random integers $X_1$ and $X_2$ by hand.
+
+    \item \textbf{Model Registry Stages}: In an industrial predictive maintenance system, explain the operational difference between a model residing in the \texttt{Staging} phase versus the \texttt{Production} phase.
+
+    \item \textbf{Cryptographic Hashing for Datasets}: Why does changing a single float value in a 10 GB sensor CSV file from $12.4$ to $12.5$ cause its SHA-256 hash to completely change? What is this phenomenon called?
+
+    \item \textbf{Dependency Pinning Risks}: A teammate leaves an unpinned requirement \code{scikit-learn} in their environment file. Six months later, a cloud retraining pipeline automatically executes. What failure can occur even if the training script was untouched?
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Tracking Metrics on Microcontrollers}:
+    Accuracy measures only mathematical prediction quality, not physical viability. An edge model must fit inside strictly bounded physical silicon. An engineer must also log:
+    \begin{itemize}
+        \item \textbf{Flash Memory Footprint (KB)}: Measures the binary size of weights and code to ensure it fits inside non-volatile flash storage.
+        \item \textbf{Peak SRAM Consumption (KB) or Latency ($\mu\text{s}$)}: Measures active memory allocated during inference to guarantee the microcontroller does not crash with a stack overflow.
+    \end{itemize}
+
+    \item \textbf{Pseudo-Random Number Generation}:
+    Formula: $X_{n+1} = (4 X_n + 1) \pmod 9$, with seed $X_0 = 2$.
+    \begin{align*}
+    X_1 &= (4 \times 2 + 1) \pmod 9 = (8 + 1) \pmod 9 = 9 \pmod 9 = \mathbf{0} \\
+    X_2 &= (4 \times 0 + 1) \pmod 9 = (0 + 1) \pmod 9 = 1 \pmod 9 = \mathbf{1}
+    \end{align*}
+    The generated sequence is $[0, 1]$.
+
+    \item \textbf{Model Registry Stages}:
+    \begin{itemize}
+        \item \textbf{Staging}: The candidate model has completed initial training and is undergoing automated regression testing, hardware simulation, memory profiling, and edge benchmark validation on physical test benches. It is \textbf{not} deployed to customer devices.
+        \item \textbf{Production}: The model has passed all safety and memory benchmarks. It is the active, approved binary streamed via Over-the-Air (OTA) updates to live physical edge microcontrollers in the field.
+    \end{itemize}
+
+    \item \textbf{Cryptographic Hashing for Datasets}:
+    Cryptographic hash algorithms (such as SHA-256) are mathematically engineered with the \textbf{avalanche effect}: any modification to even a single bit of input flips the internal state of multiple compression rounds, causing the resulting 256-bit output digest to change completely and unpredictably. This guarantees that any dataset alteration is immediately detected.
+
+    \item \textbf{Dependency Pinning Risks}:
+    When the unpinned pipeline runs, \code{pip} will download the newest available version of \code{scikit-learn}. If the library authors released a breaking update (e.g., deprecated a parameter, altered the default convergence tolerance, or updated the solver algorithm), the automated retraining script will either crash or silently generate a model with completely different weights, breaking production deployment.
+\end{enumerate}

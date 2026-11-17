@@ -1,0 +1,473 @@
+% FILE: chapters/ch01_s6_git_sql.tex
+\section{Git and SQL}\label{sec:git_sql}
+
+In introductory tutorials, machine learning often feels like a solo activity conducted entirely inside a single Jupyter Notebook: you load a CSV file from your Desktop, train a model, and print metrics. 
+
+In industrial engineering and production systems, this isolated workflow does not exist. Machine learning engineers work in teams alongside embedded firmware developers, data engineers, and cloud architects. In this collaborative environment, two non-negotiable tools form the operational backbone of engineering:
+\begin{enumerate}
+    \item \textbf{Version Control with Git and GitHub}: How teams track code history, experiment on isolated branches without breaking production systems, review peer code via Pull Requests, and package reproducible projects with professional documentation.
+    \item \textbf{Structured Query Language (SQL)}: How production data is queried from relational databases. Real enterprise and sensor data does not live in static CSV files; it lives in production relational databases (PostgreSQL, SQLite, MySQL) containing hundreds of millions of records.
+\end{enumerate}
+
+In this section, we master both professional pillars: the full Git branching and collaboration lifecycle, creating production-grade GitHub repositories, and querying relational database tables using SQL from Python.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    box/.style={rectangle, draw=keyideablue, fill=keyideablue!10, rounded corners=2mm, thick, text width=2.4cm, align=center, minimum height=1.1cm, font=\scriptsize\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=keyideablue}
+]
+    % Git Lifecycle (Top)
+    \node[box] (work) {Working Dir\\(Edited Files)};
+    \node[box, right=0.8cm of work] (stage) {Staging Area\\(\code{git add})};
+    \node[box, right=0.8cm of stage] (commit) {Local Repo\\(\code{git commit})};
+    \node[box, right=0.8cm of commit] (remote) {Remote GitHub\\(\code{git push})};
+
+    % SQL Lifecycle (Bottom)
+    \node[box, below=1.2cm of work] (db) {Relational DB\\(SQL Tables)};
+    \node[box, right=0.8cm of db] (query) {SQL Query\\(\code{SELECT, JOIN})};
+    \node[box, right=0.8cm of query] (pandas) {pandas DataFrame\\(\code{pd.read_sql})};
+    \node[box, right=0.8cm of pandas] (model) {ML Pipeline\\(Training \& Edge)};
+
+    % Arrows
+    \draw[arrow] (work) -- (stage);
+    \draw[arrow] (stage) -- (commit);
+    \draw[arrow] (commit) -- (remote);
+
+    \draw[arrow] (db) -- (query);
+    \draw[arrow] (query) -- (pandas);
+    \draw[arrow] (pandas) -- (model);
+\end{tikzpicture}
+\caption{The dual pillars of production machine learning: Git for code lifecycle management and SQL for database feature extraction.}\label{fig:git_sql_pipeline}
+\end{figure}
+
+% ==============================================================================
+% 1. GIT VERSION CONTROL
+% ==============================================================================
+\subsection{Version Control with Git: Commits, Branches, and Merges}
+
+\begin{keyidea}[What is Git?]
+\textbf{Git} is a distributed version control system that tracks the complete cryptographic history of changes made to files in a project. Instead of creating messy folders named \texttt{code\_v1}, \texttt{code\_final}, and \texttt{code\_final\_FINAL2}, Git records a tree of immutable cryptographic snapshots called **commits**.
+\end{keyidea}
+
+\begin{analogy}[Video Game Save Points and Parallel Universes]
+Imagine playing an expansive role-playing video game. Before entering a perilous dungeon, you create a dedicated manual **Save Point** (a \code{git commit}). If your character perishes, you can roll back to that exact state without losing your progress. 
+
+Now imagine you can create a parallel timeline (a \code{git branch}) to test a radical combat strategy. If the experiment succeeds, you merge that timeline back into your main reality (\code{git merge}). If it fails, you discard the branch entirely, leaving your main game completely unharmed.
+\end{analogy}
+
+\paragraph{The Three Areas of Git}
+To understand Git, you must understand how files transition between three distinct physical areas on your computer:
+\begin{enumerate}
+    \item \textbf{Working Directory}: The actual files you see and edit in your text editor (VS Code).
+    \item \textbf{Staging Area (Index)}: A preparation area where you select specific file modifications that belong together in the next logical snapshot (\code{git add}).
+    \item \textbf{Repository (\code{.git})}: The permanent database where snapshots are cryptographically sealed with a SHA-1 hash and commit message (\code{git commit}).
+\end{enumerate}
+
+\paragraph{Essential Local Git Workflow}
+Let us walk through initializing and committing a new TinyML project:
+
+\begin{lstlisting}[language=bash]
+# 1. Initialize a new Git repository in the current folder
+git init
+
+# 2. Inspect the current status of files
+git status
+
+# 3. Stage specific files for the next commit
+git add train.py model.h
+
+# Or stage all modified files in the project
+git add .
+
+# 4. Commit staged changes with an explicit, descriptive message
+git commit -m "feat: implement INT8 quantization harness for accelerometer"
+
+# 5. View the linear commit history
+git log --oneline --graph
+\end{lstlisting}
+
+\paragraph{Branching and Merging: Working Without Fear}
+In production engineering, \textbf{never commit directly to the \code{main} branch}. The \code{main} branch represents stable, deployable code running on physical hardware or cloud servers. All experimental features, new models, or bug fixes are developed on isolated branches.
+
+\begin{lstlisting}[language=bash]
+# 1. Create and switch to a new feature branch
+git checkout -b feature/esp32-kalman-filter
+# (Modern alternative: git switch -c feature/esp32-kalman-filter)
+
+# 2. Edit files, train models, and commit changes on the branch
+git add filter.py
+git commit -m "feat: add discrete Kalman filter for vibration noise"
+
+# 3. Switch back to the stable main branch
+git checkout main
+
+# 4. Merge the completed feature branch into main
+git merge feature/esp32-kalman-filter
+
+# 5. Delete the feature branch after successful integration
+git branch -d feature/esp32-kalman-filter
+\end{lstlisting}
+
+\paragraph{Handling Merge Conflicts}
+When two engineers modify the exact same line of code in different branches, Git cannot guess which version is correct. It pauses the merge and marks the conflict directly in the file:
+
+\begin{lstlisting}[language=Python]
+<<<<<<< HEAD
+learning_rate = 0.001  # Main branch setting
+=======
+learning_rate = 0.005  # Feature branch setting
+>>>>>>> feature/tuning
+\end{lstlisting}
+To resolve the conflict:
+\begin{enumerate}
+    \item Open the file in VS Code, inspect both options, and delete the marker lines (\code{<<<<<<<}, \code{=======}, \code{>>>>>>>}).
+    \item Keep the correct value (e.g., \code{learning_rate = 0.005}).
+    \item Stage and commit the resolved file:
+\begin{lstlisting}[language=bash]
+git add model.py
+git commit -m "fix: resolve learning rate conflict between main and tuning"
+\end{lstlisting}
+\end{enumerate}
+
+% ==============================================================================
+% 2. GITHUB COLLABORATION & README
+% ==============================================================================
+\subsection{GitHub Collaboration and Professional Project Structure}
+
+\begin{keyidea}[Git vs. GitHub]
+\textbf{Git} is the local command-line tool running on your personal computer. \textbf{GitHub} is a cloud hosting platform for Git repositories that enables team collaboration, code reviews, issue tracking, and automated testing.
+\end{keyidea}
+
+\paragraph{Pushing to a Remote GitHub Repository}
+\begin{lstlisting}[language=bash]
+# 1. Link your local repository to a remote GitHub URL
+git remote add origin https://github.com/your-username/tinyml-vibration-detector.git
+
+# 2. Set the default branch name to 'main'
+git branch -M main
+
+# 3. Push your commits and establish upstream tracking
+git push -u origin main
+
+# 4. Pull fresh changes committed by teammates
+git pull origin main
+\end{lstlisting}
+
+\paragraph{The Pull Request (PR) Lifecycle}
+In professional software teams, code is merged into \code{main} via a **Pull Request (PR)**:
+\begin{enumerate}
+    \item You push your feature branch to GitHub: \code{git push origin feature/new-model}.
+    \item You open a **Pull Request** on the GitHub web interface, requesting to merge your branch into \code{main}.
+    \item Teammates review your code, leave line-by-line comments, and request changes.
+    \item Automated CI/CD (Continuous Integration) bots run unit tests and verify whether the model passes accuracy thresholds.
+    \item Once approved, the PR is merged into \code{main}.
+\end{enumerate}
+
+\paragraph{The Non-Negotiable \code{.gitignore} File}
+Never commit temporary files, massive datasets, or secrets into a Git repository. A \code{.gitignore} file tells Git which files to intentionally ignore:
+
+\begin{lstlisting}[language=bash]
+# Python byte-code and caches
+__pycache__/
+*.pyc
+
+# Virtual environments (NEVER commit libraries!)
+.venv/
+env/
+
+# Massive raw sensor datasets (store via DVC or S3, not Git!)
+data/raw/*.csv
+*.h5
+*.bin
+
+# Secrets, passwords, and private API keys
+.env
+secrets.json
+\end{lstlisting}
+
+\paragraph{Professional Project Structure and the \code{README.md}}
+A machine learning repository without documentation is useless to other engineers. Every project must contain a standard \code{README.md} file following the five-part structure:
+
+\begin{lstlisting}[language=bash]
+# Industrial Motor Vibration Anomaly Detection (TinyML)
+
+## 1. Problem Statement
+Detects early bearing failures on industrial CNC milling machines using 
+3-axis accelerometer telemetry. Deployed to ESP32 microcontrollers.
+
+## 2. System Architecture
+- Sensors: MPU6050 Accelerometer (100 Hz I2C)
+- Processing: Time-domain RMS & Peak-to-Peak feature extraction
+- Model: Quantized INT8 Decision Tree (< 1 KB Flash, < 2 us latency)
+
+## 3. Quickstart & Installation
+```bash
+git clone https://github.com/username/tinyml-vibration.git
+cd tinyml-vibration
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## 4. Training & Export
+To retrain the model and generate the embedded C header `model.h`:
+```bash
+python src/train.py --dataset data/sensor_log.csv
+```
+
+## 5. License & Authors
+Maintained by the Edge ML Engineering Team. MIT License.
+\end{lstlisting}
+
+% ==============================================================================
+% 3. SQL FOR MACHINE LEARNING
+% ==============================================================================
+\subsection{SQL: Structured Query Language for Data Extraction}
+
+\begin{keyidea}[Why Machine Learning Engineers Must Know SQL]
+In commercial companies, raw sensor telemetry and customer transactions are stored inside relational database engines (such as PostgreSQL, MySQL, and SQLite). 
+
+Attempting to export a 500-gigabyte database into a CSV file and loading it into pandas will instantly crash your computer's RAM. With **SQL**, you execute filtering, joins, and aggregations directly on the powerful database server, transferring only the clean, compact analytical feature set into Python.
+\end{keyidea}
+
+\paragraph{The Relational Database Mental Model}
+A relational database organizes data into **Tables** containing rows and columns:
+\begin{itemize}
+    \item \textbf{Primary Key}: A unique identifier for every row in a table (e.g., \code{device_id} in a hardware registry).
+    \item \textbf{Foreign Key}: A column in one table that references the primary key of another table, creating a relational link (e.g., \code{device_id} inside a live telemetry log table).
+\end{itemize}
+
+\paragraph{Core SQL Query Structure}
+Every fundamental data extraction query follows a strict grammatical order:
+\begin{lstlisting}[language=SQL]
+SELECT columns
+FROM table
+WHERE row_conditions
+GROUP BY grouping_columns
+HAVING group_conditions
+ORDER BY sort_column DESC
+LIMIT row_count;
+\end{lstlisting}
+
+\paragraph{Step-by-Step Hand-Worked SQL Query Trace}
+Consider two relational tables inside a factory database:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{ccc}
+\toprule
+\multicolumn{3}{c}{\textbf{Table 1: \code{devices}}} \\
+\midrule
+\textbf{device\_id} & \textbf{factory\_line} & \textbf{status} \\
+\midrule
+ESP32\_01 & Line\_1\_Press & Active \\
+ESP32\_02 & Line\_2\_Milling & Active \\
+ESP32\_03 & Line\_3\_Welding & Maintenance \\
+\bottomrule
+\end{tabular}
+\quad
+\begin{tabular}{cccc}
+\toprule
+\multicolumn{4}{c}{\textbf{Table 2: \code{telemetry}}} \\
+\midrule
+\textbf{reading\_id} & \textbf{device\_id} & \textbf{temperature} & \textbf{vibration} \\
+\midrule
+1 & ESP32\_01 & 24.2 & 0.05 \\
+2 & ESP32\_01 & 25.1 & 0.08 \\
+3 & ESP32\_02 & 42.5 & 0.45 \\
+4 & ESP32\_02 & 45.0 & 0.62 \\
+5 & ESP32\_01 & 24.8 & 0.06 \\
+\bottomrule
+\end{tabular}
+\caption{The relational database tables: device metadata and continuous telemetry.}\label{tab:sql_tables}
+\end{table}
+
+We wish to execute the following analytical SQL query:
+\begin{lstlisting}[language=SQL]
+SELECT 
+    d.factory_line,
+    COUNT(t.reading_id) AS total_readings,
+    ROUND(AVG(t.temperature), 2) AS avg_temp,
+    MAX(t.vibration) AS peak_vibration
+FROM devices d
+INNER JOIN telemetry t ON d.device_id = t.device_id
+WHERE d.status = 'Active'
+GROUP BY d.factory_line
+HAVING AVG(t.temperature) > 20.0
+ORDER BY avg_temp DESC;
+\end{lstlisting}
+
+Let us trace the database execution steps by hand:
+\begin{enumerate}
+    \item \textbf{\code{FROM} and \code{INNER JOIN}}: Matches rows where \code{d.device_id == t.device_id}. 
+    Readings 1, 2, 5 join with \code{ESP32_01}; readings 3, 4 join with \code{ESP32_02}. Device \code{ESP32_03} has no telemetry records and is excluded.
+    \item \textbf{\code{WHERE d.status = 'Active'}}: Both \code{ESP32_01} and \code{ESP32_02} are \code{'Active'}. All 5 joined rows pass this filter.
+    \item \textbf{\code{GROUP BY d.factory_line}}:
+    \begin{itemize}
+        \item Group 1 (\code{Line_1_Press}): Readings 1, 2, 5. Temperatures: $[24.2, 25.1, 24.8]$. Vibrations: $[0.05, 0.08, 0.06]$.
+        \item Group 2 (\code{Line_2_Milling}): Readings 3, 4. Temperatures: $[42.5, 45.0]$. Vibrations: $[0.45, 0.62]$.
+    \end{itemize}
+    \item \textbf{Aggregations}:
+    \begin{align*}
+    \text{Line\_1: } & \text{Count} = 3, \quad \text{Avg Temp} = \frac{24.2 + 25.1 + 24.8}{3} = \frac{74.1}{3} = \mathbf{24.70}, \quad \text{Peak Vib} = \mathbf{0.08} \\
+    \text{Line\_2: } & \text{Count} = 2, \quad \text{Avg Temp} = \frac{42.5 + 45.0}{2} = \frac{87.5}{2} = \mathbf{43.75}, \quad \text{Peak Vib} = \mathbf{0.62}
+    \end{align*}
+    \item \textbf{\code{HAVING AVG(t.temperature) > 20.0}}: Both lines ($24.70$ and $43.75$) exceed $20.0^\circ\text{C}$; both groups remain.
+    \item \textbf{\code{ORDER BY avg_temp DESC}}: Orders \code{Line_2_Milling} ($43.75$) first, followed by \code{Line_1_Press} ($24.70$).
+\end{enumerate}
+
+\paragraph{Python Code: Querying SQL Directly into pandas}
+In Python, you can connect to SQL databases seamlessly using \code{sqlite3} (or \code{sqlalchemy} for enterprise PostgreSQL) and stream the query results directly into a DataFrame:
+
+\begin{lstlisting}[language=Python]
+import sqlite3
+import pandas as pd
+
+# Connect to the local SQLite database
+conn = sqlite3.connect("factory_edge.db")
+
+# Execute analytical query and load directly into a pandas DataFrame
+sql_query = """
+SELECT 
+    d.factory_line,
+    COUNT(t.reading_id) AS total_readings,
+    ROUND(AVG(t.temperature), 2) AS avg_temp,
+    MAX(t.vibration) AS peak_vibration
+FROM devices d
+INNER JOIN telemetry t ON d.device_id = t.device_id
+WHERE d.status = 'Active'
+GROUP BY d.factory_line
+HAVING AVG(t.temperature) > 20.0
+ORDER BY avg_temp DESC;
+"""
+
+df_features = pd.read_sql_query(sql_query, conn)
+conn.close()
+
+print("--- SQL Extracted Feature Table ---")
+print(df_features)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- SQL Extracted Feature Table ---
+     factory_line  total_readings  avg_temp  peak_vibration
+0  Line_2_Milling               2     43.75            0.62
+1    Line_1_Press               3     24.70            0.08
+\end{lstlisting}
+
+\begin{iotbox}[Embedded Databases on Edge Gateways]
+On an edge IoT gateway (such as a Raspberry Pi on a factory floor), running a heavy cloud database is impractical. Instead, edge gateways run **SQLite**: a lightweight, serverless, zero-configuration SQL database engine contained within a single file on disk. 
+
+Incoming MQTT sensor frames from wireless ESP32 nodes are inserted directly into SQLite tables at $1{,}000\text{ writes/sec}$. When the local machine learning model needs to make an inference, a simple SQL query aggregates the last 30 seconds of telemetry and delivers it to Python in under $5\text{ milliseconds}$.
+\end{iotbox}
+
+\begin{warning}[Common Git and SQL Pitfalls]
+\begin{itemize}
+    \item \textbf{Committing Datasets to Git}: Never use \code{git add} on large CSV or binary model files ($> 50\text{ MB}$). Git stores every version of every file forever; committing datasets will bloat your repository to tens of gigabytes and lock your team out of GitHub. Use **DVC (Data Version Control)** or external storage buckets.
+    \item \textbf{The \code{SELECT *} Anti-Pattern}: Never run \code{SELECT *} on a table with 50,000,000 rows. Always specify the exact columns you need (\code{SELECT temp, vibration}) and use \code{LIMIT} during exploration.
+    \item \textbf{Confusing \code{WHERE} and \code{HAVING}}: Remember: \code{WHERE} filters individual raw rows \textit{before} grouping occurs; \code{HAVING} filters aggregated group buckets \textit{after} grouping occurs.
+\end{itemize}
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Git records immutable cryptographic snapshots of project files across Working Directory, Staging Area, and Repository.
+    \item Always develop new machine learning features on isolated branches (\code{git checkout -b feature-name}) and merge via Pull Requests.
+    \item Keep repositories clean by excluding virtual environments, secrets, and large datasets inside \code{.gitignore}.
+    \item Every project requires a clear \code{README.md} explaining the problem, architecture, installation, and usage.
+    \item SQL allows you to filter, join, and aggregate massive production databases at the server layer before loading clean feature sets into pandas via \code{pd.read_sql_query()}.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 4. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+\begin{enumerate}
+    \item \textbf{Git Staging vs. Committing}: What is the exact difference between running \code{git add model.py} and running \code{git commit -m "train model"}? What state does the file enter after each command?
+
+    \item \textbf{The \code{.gitignore} Guard}: A beginner engineer adds a 10 GB raw sensor CSV file into their project folder and runs \code{git add .} followed by \code{git commit}. What mistake did they make, and how does a \code{.gitignore} file prevent this?
+
+    \item \textbf{SQL Clause Execution Order}: In what logical order does a database engine process the following SQL clauses: \code{SELECT}, \code{FROM}, \code{WHERE}, \code{GROUP BY}, \code{HAVING}?
+
+    \item \textbf{Hand-Worked SQL Calculation}: You have a table \code{sensor_logs}:
+    \begin{itemize}
+        \item Row 1: \code{sensor_type: 'temp'}, \code{reading: 30.0}
+        \item Row 2: \code{sensor_type: 'temp'}, \code{reading: 40.0}
+        \item Row 3: \code{sensor_type: 'vibe'}, \code{reading: 2.0}
+        \item Row 4: \code{sensor_type: 'temp'}, \code{reading: 20.0}
+        \item Row 5: \code{sensor_type: 'vibe'}, \code{reading: 4.0}
+    \end{itemize}
+    What is the exact result table of the query:
+\begin{lstlisting}[language=SQL]
+SELECT sensor_type, AVG(reading) AS mean_val, COUNT(*) AS n
+FROM sensor_logs
+WHERE reading >= 20.0
+GROUP BY sensor_type
+HAVING COUNT(*) > 1;
+\end{lstlisting}
+
+    \item \textbf{Inner vs. Left Join}: If Table A has 100 rows and Table B has 50 rows, what is the maximum and minimum possible number of rows returned by an \code{INNER JOIN} (assuming each row in Table A matches at most one row in Table B)?
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Git Staging vs. Committing}:
+    \begin{itemize}
+        \item \code{git add model.py}: Moves the file modifications from the **Working Directory** to the **Staging Area (Index)**. The changes are marked as ready to be included in the next snapshot, but no permanent commit has been recorded.
+        \item \code{git commit -m "..."}: Takes all changes currently sitting in the Staging Area, seals them into an immutable cryptographic snapshot with a SHA hash and message, and stores them permanently in the **Repository** history (\code{.git} database).
+    \end{itemize}
+
+    \item \textbf{The \code{.gitignore} Guard}:
+    Git is designed for text source code, not gigabyte-scale binary datasets. Committing a 10 GB file bloats the hidden \code{.git} history database, making pushing to GitHub impossible (GitHub rejects files over $100\text{ MB}$). 
+    A \code{.gitignore} file containing the line \code{*.csv} or \code{data/raw/} explicitly instructs Git to ignore large files, preventing them from being tracked even if \code{git add .} is executed.
+
+    \item \textbf{SQL Clause Execution Order}:
+    A database executes clauses in the following order:
+    \begin{enumerate}
+        \item \textbf{\code{FROM}} (identifies and joins the source tables).
+        \item \textbf{\code{WHERE}} (filters individual rows before aggregation).
+        \item \textbf{\code{GROUP BY}} (groups the remaining rows into subsets).
+        \item \textbf{\code{HAVING}} (filters aggregated groups).
+        \item \textbf{\code{SELECT}} (extracts, computes, and aliases the specified columns).
+    \end{enumerate}
+
+    \item \textbf{Hand-Worked SQL Calculation}:
+    \begin{enumerate}
+        \item \textbf{\code{WHERE reading >= 20.0}}: Rows 1 (30.0), 2 (40.0), and 4 (20.0) pass. Rows 3 (2.0) and 5 (4.0) are discarded because their readings are $< 20.0$.
+        \item \textbf{\code{GROUP BY sensor_type}}:
+        \begin{itemize}
+            \item \code{'temp'}: 3 readings ($[30.0, 40.0, 20.0]$).
+            \item \code{'vibe'}: 0 readings remain.
+        \end{itemize}
+        \item \textbf{Aggregations}: For \code{'temp'}:
+        \begin{align*}
+        \text{Mean} &= \frac{30.0 + 40.0 + 20.0}{3} = \frac{90.0}{3} = \mathbf{30.0} \\
+        n &= \mathbf{3}
+        \end{align*}
+        \item \textbf{\code{HAVING COUNT(*) > 1}}: \code{'temp'} has count $3 > 1$, so it passes.
+    \end{enumerate}
+    Result Table:
+    \begin{equation*}
+    \begin{array}{lcc}
+    \toprule
+    \textbf{sensor\_type} & \textbf{mean\_val} & \textbf{n} \\
+    \midrule
+    \text{temp} & 30.0 & 3 \\
+    \bottomrule
+    \end{array}
+    \end{equation*}
+
+    \item \textbf{Inner vs. Left Join}:
+    \begin{itemize}
+        \item \textbf{Maximum Rows}: $\mathbf{50}$ rows (if all 50 rows in Table B match 50 distinct rows in Table A).
+        \item \textbf{Minimum Rows}: $\mathbf{0}$ rows (if zero keys match between Table A and Table B).
+    \end{itemize}
+\end{enumerate}

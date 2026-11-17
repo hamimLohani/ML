@@ -1,0 +1,883 @@
+% FILE: chapters/ch02_s5_optimization_information.tex
+\section{Optimization and Information Theory}\label{sec:optimization_information}
+
+In the preceding sections of this chapter, we assembled the fundamental mathematical toolkit of modern machine learning:
+\begin{itemize}
+    \item \textbf{Linear Algebra} (Section~\ref{sec:linear_algebra}) gave us the structural language of multidimensional feature spaces, weight matrices, and geometric projections.
+    \item \textbf{Calculus} (Section~\ref{sec:calculus}) provided the local slope and sensitivity metrics needed to measure how loss changes when parameters twitch.
+    \item \textbf{Probability and Statistics} (Sections~\ref{sec:probability} and~\ref{sec:statistics}) gave us the principles to quantify real-world sensor noise, reason under uncertainty, and evaluate model confidence.
+\end{itemize}
+
+Now, two crowning disciplines bring these foundations together to create functioning artificial intelligence: \textbf{Optimization} and \textbf{Information Theory}.
+
+\textbf{Optimization} is the physical engine of machine learning. It answers the operational question: \textit{``Given a complex, billion-parameter error landscape, how do we efficiently steer our model's weights toward the lowest possible error?''} Without sophisticated optimization algorithms like Adam and RMSProp, modern deep learning models would remain permanently trapped in treacherous high-dimensional valleys and saddle points.
+
+\textbf{Information Theory} is the compass of machine learning. Originally developed by Claude Shannon to solve the problem of transmitting telegraph signals across noisy copper telephone wires, it answers the foundational question: \textit{``How do we quantify information, surprise, and the mathematical difference between what our model predicts and what reality produces?''} Information theory provides the theoretical justification for the most universal objective function in classification: \textbf{Cross-Entropy Loss}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.2cm, text centered, font=\small\sffamily},
+    info_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!8, thick, rounded corners=2mm, minimum height=1.2cm, text centered, font=\small\sffamily},
+    opt_box/.style={rectangle, draw=exampleorange!80, fill=exampleorange!8, thick, rounded corners=2mm, minimum height=1.2cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
+]
+    % Target and Prediction
+    \node[box, minimum width=3.2cm] (data) at (-5.0, 0) {\textbf{True Distribution $P$}\\Sensor Ground Truth\\(One-Hot Targets $\mathbf{y}$)};
+    \node[box, minimum width=3.2cm] (model) at (-5.0, -2.4) {\textbf{Model Distribution $Q$}\\Neural Network Outputs\\(Probabilities $\hat{\mathbf{y}}$)};
+
+    % Information Theory Block
+    \node[info_box, minimum width=4.2cm] (info) at (0, -1.2) {\textbf{Information Theory (The Compass)}\\Quantifies Error via Relative Entropy:\\$D_{\text{KL}}(P \parallel Q) = H(P, Q) - H(P)$\\$\implies \text{Cross-Entropy Loss } L_{\text{CE}}$};
+
+    % Optimization Block
+    \node[opt_box, minimum width=3.8cm] (opt) at (5.2, -1.2) {\textbf{Optimization (The Engine)}\\Navigates Parameter Space:\\$\mathbf{w}_{t+1} = \mathbf{w}_t - \frac{\eta}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon} \hat{\mathbf{m}}_t$\\(SGD, Momentum, Adam)};
+
+    % Connections
+    \draw[arrow] (data.east) -- (info.west);
+    \draw[arrow] (model.east) -- (info.west);
+    \draw[arrow] (info.east) -- (opt.west) node[midway, above, font=\scriptsize\sffamily\bfseries] {Loss $\mathcal{L}$};
+    \draw[arrow, dashed, draw=exampleorange!90!black] (opt.south) -- ++(0, -1.0) -| (model.south) node[pos=0.25, below, font=\scriptsize\sffamily\bfseries] {Updated Weights $\mathbf{w}$};
+\end{tikzpicture}
+\caption{The feedback loop of machine learning: Information theory defines the loss metric by measuring the divergence between reality $P$ and model predictions $Q$; optimization navigates the loss surface to update parameters $\mathbf{w}$.}\label{fig:opt_info_loop}
+\end{figure}
+
+In this section, we demystify the mathematical machinery of training modern AI:
+\begin{enumerate}
+    \item \textbf{Convex vs.\ Non-Convex Optimization}: The geometric properties of loss surfaces, saddle points, and ill-conditioned ravines.
+    \item \textbf{Advanced Optimizers}: The chronological progression from Stochastic Gradient Descent (SGD) to Momentum, RMSProp, and Adam.
+    \item \textbf{Information Theory Fundamentals}: Self-information, Shannon Entropy, Cross-Entropy, and Kullback-Leibler (KL) Divergence.
+    \item \textbf{The Unification}: Proving why minimizing Cross-Entropy is mathematically identical to Maximum Likelihood Estimation.
+    \item \textbf{The TinyML Edge Connection}: Memory bottlenecks of adaptive optimizers on microcontrollers, on-device training realities, and telemetry compression.
+\end{enumerate}
+
+% ==============================================================================
+% 1. CONVEX VS NON-CONVEX OPTIMIZATION
+% ==============================================================================
+\subsection{Convex versus Non-Convex Optimization}\label{subsec:opt_convex_nonconvex}
+
+Before writing an optimization algorithm, we must understand the geometric landscape it must navigate. The difficulty of an optimization problem is not determined by whether it is linear or non-linear; it is determined by whether it is \textbf{convex} or \textbf{non-convex}.
+
+\subsubsection{Formal Definition of Convexity}
+\paragraph{Convex Sets}
+A geometric set $C \subseteq \mathbb{R}^n$ is \textbf{convex} if, for any two points $\mathbf{x}, \mathbf{y} \in C$, the entire straight-line segment connecting them lies completely inside $C$:
+\begin{equation}
+\lambda \mathbf{x} + (1 - \lambda)\mathbf{y} \in C \quad \text{for all } \lambda \in [0, 1]\label{eq:convex_set}
+\end{equation}
+
+\paragraph{Convex Functions}
+A real-valued function $f: C \to \mathbb{R}$ defined on a convex set $C$ is a \textbf{convex function} if the chord connecting any two points on the function graph lies entirely on or above the graph itself:
+\begin{equation}
+f(\lambda \mathbf{x} + (1 - \lambda)\mathbf{y}) \le \lambda f(\mathbf{x}) + (1 - \lambda)f(\mathbf{y}) \quad \text{for all } \mathbf{x}, \mathbf{y} \in C, \ \lambda \in [0, 1]\label{eq:convex_function}
+\end{equation}
+If the strict inequality ($<$) holds for all $\mathbf{x} \ne \mathbf{y}$ and $\lambda \in (0, 1)$, the function is \textbf{strictly convex}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.9]
+    % Panel 1: Strictly Convex Function
+    \begin{scope}[shift={(-4.6, 0)}]
+        \draw[->, thick] (-2.5, 0) -- (2.5, 0) node[right, font=\scriptsize\sffamily] {$w$};
+        \draw[->, thick] (0, 0) -- (0, 3.5) node[above, font=\scriptsize\sffamily] {$L(w)$};
+        \draw[domain=-2.1:2.1, samples=50, smooth, very thick, keyideablue!90!black] plot (\x, {0.65*\x*\x + 0.4});
+        
+        % Chord between w=-1.6 and w=1.4
+        \coordinate (A) at (-1.6, {0.65*(-1.6)^2 + 0.4});
+        \coordinate (B) at (1.4, {0.65*(1.4)^2 + 0.4});
+        \draw[dashed, thick, warningred!80] (A) -- (B);
+        \fill[warningred] (A) circle (2pt) node[left=1mm, font=\scriptsize\sffamily] {$f(x)$};
+        \fill[warningred] (B) circle (2pt) node[right=1mm, font=\scriptsize\sffamily] {$f(y)$};
+        \fill[analogygreen!70!black] (0, 0.4) circle (2.5pt) node[below=1.5mm, font=\scriptsize\sffamily\bfseries] {Global Minimum};
+        
+        \node[font=\footnotesize\sffamily\bfseries] at (0, -0.6) {Convex Loss Bowl};
+        \node[font=\scriptsize\sffamily, text=gray!80!black] at (0, -1.0) {Single global minimum; no traps};
+    \end{scope}
+
+    % Panel 2: Non-Convex Landscape
+    \begin{scope}[shift={(4.6, 0)}]
+        \draw[->, thick] (-2.5, 0) -- (2.8, 0) node[right, font=\scriptsize\sffamily] {$w$};
+        \draw[->, thick] (0, 0) -- (0, 3.5) node[above, font=\scriptsize\sffamily] {$L(w)$};
+        \draw[domain=-2.2:2.6, samples=80, smooth, very thick, exampleorange!90!black] 
+            plot (\x, {1.5 + 0.7*sin(180*\x) + 0.2*(\x)^2 - 0.15*(\x)^3});
+        
+        % Critical points
+        \fill[warningred] (-1.35, 0.88) circle (2.5pt) node[below=1.5mm, font=\scriptsize\sffamily\bfseries] {Local Min};
+        \fill[purple] (-0.35, 2.15) circle (2pt) node[above=1mm, font=\scriptsize\sffamily] {Local Max};
+        \fill[analogygreen!70!black] (1.75, 0.45) circle (2.5pt) node[below=1.5mm, font=\scriptsize\sffamily\bfseries] {Global Min};
+        
+        \node[font=\footnotesize\sffamily\bfseries] at (0, -0.6) {Non-Convex Landscape};
+        \node[font=\scriptsize\sffamily, text=gray!80!black] at (0, -1.0) {Local minima, saddle points, plateaus};
+    \end{scope}
+\end{tikzpicture}
+\caption{Comparison of convex versus non-convex optimization surfaces. In convex problems, any local descent leads to the unique global minimum; in non-convex problems, optimizers risk entrapment in sub-optimal valleys.}\label{fig:convex_vs_nonconvex}
+\end{figure}
+
+\paragraph{First- and Second-Order Conditions for Convexity}
+For smooth, differentiable functions:
+\begin{itemize}
+    \item \textbf{First-Order Condition}: $f$ is convex if and only if its first-order Taylor approximation (the tangent line or tangent plane) lies everywhere below the function:
+    \begin{equation}
+    f(\mathbf{y}) \ge f(\mathbf{x}) + \nabla f(\mathbf{x})^T (\mathbf{y} - \mathbf{x}) \quad \text{for all } \mathbf{x}, \mathbf{y}\label{eq:first_order_convex}
+    \end{equation}
+    \item \textbf{Second-Order Condition}: A twice-differentiable function is convex if and only if its \textbf{Hessian matrix} $\mathbf{H} = \nabla^2 f(\mathbf{x})$ is **positive semi-definite** everywhere:
+    \begin{equation}
+    \mathbf{H}(\mathbf{x}) \succeq 0 \iff \mathbf{z}^T \mathbf{H}(\mathbf{x}) \mathbf{z} \ge 0 \quad \text{for all vectors } \mathbf{z} \in \mathbb{R}^n\label{eq:second_order_convex}
+    \end{equation}
+    Equivalently, all eigenvalues of the Hessian must be non-negative: $\lambda_i \ge 0$.
+\end{itemize}
+
+\begin{keyidea}[The Golden Property of Convexity]
+For any convex optimization problem:
+\begin{center}
+\textbf{Every local minimum is guaranteed to be a global minimum.}
+\end{center}
+If a gradient optimizer finds a parameter point $\mathbf{w}^*$ where the gradient is zero ($\nabla L(\mathbf{w}^*) = \mathbf{0}$), you have mathematically solved the problem optimally. Classical machine learning models---including Linear Regression (Ordinary Least Squares), Ridge/Lasso Regression, Logistic Regression, and Support Vector Machines (SVMs)---are strictly convex.
+\end{keyidea}
+
+\subsubsection{The Non-Convex Wilderness of Deep Learning}
+Unlike classical linear models, multi-layer neural networks interleave linear matrix multiplications with non-linear activation functions (such as ReLU, GELU, or Sigmoid). This composition destroys convexity.
+
+In deep neural networks, the loss surface $L(\mathbf{w})$ is a chaotic, non-convex terrain in high-dimensional space ($\mathbb{R}^{10^6}$ to $\mathbb{R}^{10^{11}}$). This landscape features several dangerous geometric hazards:
+
+\begin{enumerate}
+    \item \textbf{Local Minima}: Basins where the gradient is zero ($\nabla L = \mathbf{0}$) but the loss is higher than the global optimum. While dreaded by beginners, modern high-dimensional theory shows that in vast neural networks, almost all local minima achieve nearly identical, high-quality performance. True ``bad'' local minima are surprisingly rare.
+    
+    \item \textbf{Saddle Points}: Points where the gradient vanishes ($\nabla L = \mathbf{0}$), but the surface curves upwards in some directions and downwards in others. 
+    
+    At a saddle point, the Hessian matrix has both positive and negative eigenvalues ($\lambda_{\max} > 0, \lambda_{\min} < 0$). In high-dimensional spaces, saddle points vastly outnumber local minima: if a point has $1{,}000$ independent curvature directions, the chance that all $1{,}000$ eigenvalues happen to be positive is microscopically small ($\approx 2^{-1000}$). Escaping saddle points is the primary challenge of deep learning optimization.
+
+    \item \textbf{Plateaus}: Broad, nearly flat regions where the gradient magnitude is negligible ($\|\nabla L\| \approx 0$). Standard gradient descent slows to an agonizing crawl on plateaus.
+
+    \item \textbf{Ill-Conditioned Ravines (Canyons)}: Long, narrow valleys characterized by extreme differences in directional curvature. The cross-sectional canyon walls are extremely steep (large eigenvalue $\lambda_1$), while the canyon floor slopes very gently toward the exit (tiny eigenvalue $\lambda_2 \ll \lambda_1$).
+    
+    The ratio $\kappa = \frac{\lambda_{\max}}{\lambda_{\min}}$ is called the \textbf{condition number}. When $\kappa \gg 1$, standard gradient descent violently oscillates back and forth across the steep canyon walls while making virtually zero forward progress along the floor!
+\end{enumerate}
+
+% ==============================================================================
+% 2. ADVANCED OPTIMIZERS
+% ==============================================================================
+\subsection{The Evolution of Gradient Descent Optimizers}\label{subsec:opt_gradient_algorithms}
+
+To survive in ill-conditioned, non-convex terrains, machine learning researchers spent decades developing adaptive optimizers. Let us trace this evolutionary breakthrough.
+
+\subsubsection{Batch, Stochastic, and Mini-Batch Gradient Descent}
+Consider a training dataset with $N$ samples. The total empirical loss is the average over all individual sample losses $\ell_i(\mathbf{w})$:
+\begin{equation}
+L(\mathbf{w}) = \frac{1}{N} \sum_{i=1}^{N} \ell_i(\mathbf{w}) \implies \nabla L(\mathbf{w}) = \frac{1}{N} \sum_{i=1}^{N} \nabla \ell_i(\mathbf{w})\label{eq:batch_gradient_sum}
+\end{equation}
+
+\begin{itemize}
+    \item \textbf{Batch Gradient Descent (BGD)}: Evaluates the gradient over the entire dataset ($N$ samples) before taking a single step:
+    \begin{equation}
+    \mathbf{w}_{t+1} = \mathbf{w}_t - \eta \frac{1}{N} \sum_{i=1}^{N} \nabla \ell_i(\mathbf{w}_t)\label{eq:bgd_update}
+    \end{equation}
+    \textit{Drawback}: If $N = 1{,}000{,}000$, computing a single weight update requires a million forward and backward passes. It is computationally prohibitive and cannot operate on streaming sensor data.
+
+    \item \textbf{Stochastic Gradient Descent (Pure SGD)}: Samples a single random data point $i \in \{1, \dots, N\}$ and updates parameters immediately:
+    \begin{equation}
+    \mathbf{w}_{t+1} = \mathbf{w}_t - \eta \nabla \ell_i(\mathbf{w}_t)\label{eq:pure_sgd_update}
+    \end{equation}
+    \textit{Trade-off}: It is blindingly fast ($O(1)$ per step). The gradient estimate is highly noisy, which acts as a helpful stochastic regularizer to bounce the optimizer out of shallow saddle points. However, the high variance prevents smooth convergence, causing erratic jitter around the minimum.
+
+    \item \textbf{Mini-Batch Gradient Descent}: The universal standard in modern deep learning. We partition the dataset into small batches of size $B$ (typically $B \in \{32, 64, 128, 256\}$):
+    \begin{equation}
+    \mathbf{w}_{t+1} = \mathbf{w}_t - \eta \frac{1}{B} \sum_{i \in \mathcal{B}} \nabla \ell_i(\mathbf{w}_t)\label{eq:minibatch_update}
+    \end{equation}
+    Mini-batching strikes the perfect balance: it reduces gradient variance, preserves beneficial stochastic exploration, and perfectly leverages the parallel matrix-multiplication hardware of GPUs and SIMD microcontroller registers.
+\end{itemize}
+
+\subsubsection{Momentum: Accelerating Through Ravines}
+Standard SGD struggles terribly in narrow ravines: the gradient points almost perpendicularly across the steep walls rather than along the gentle valley floor.
+
+\begin{analogy}[The Heavy Bowling Ball]
+Imagine rolling a lightweight ping-pong ball down a steep, rocky ravine. At every bump, it deflects violently from side to side, making almost no forward progress down the valley.
+
+Now replace the ping-pong ball with a $7\text{-kg}$ solid iron bowling ball. Because of its massive physical \textbf{momentum}, brief lateral bounces cancel out, while its forward velocity accumulates, carrying it effortlessly through friction, bumps, and shallow potholes.
+\end{analogy}
+
+\paragraph{Mathematical Formulation of Momentum}
+Instead of letting the gradient directly dictate parameter displacement, we define a \textbf{velocity vector} $\mathbf{v}_t$ that accumulates past gradients with an exponential decay factor $\beta \in [0.8, 0.99]$ (conventionally $\beta = 0.9$):
+\begin{align}
+\mathbf{v}_t &= \beta \mathbf{v}_{t-1} + (1 - \beta) \nabla L(\mathbf{w}_t) \label{eq:momentum_velocity}\\
+\mathbf{w}_{t+1} &= \mathbf{w}_t - \eta \mathbf{v}_t \label{eq:momentum_update}
+\end{align}
+\begin{itemize}
+    \item Along the oscillating canyon walls, consecutive gradients alternate signs ($+g_y, -g_y$), so their moving average cancels out toward zero ($\mathbf{v}_y \approx 0$).
+    \item Along the valley floor, gradients consistently point in the same direction ($+g_x, +g_x$), so velocity accumulates up to a terminal speed factor of $\frac{1}{1 - \beta} = \frac{1}{1 - 0.9} = 10\times$ faster!
+\end{itemize}
+
+\subsubsection{RMSProp: Taming Disparate Feature Scales}
+Momentum solves the directional oscillation problem, but it still uses a single global learning rate $\eta$ for every parameter. 
+
+In real-world IoT models, feature scales differ radically: an accelerometer feature might have gradients of order $10^{-4}\text{ g}$, while an ambient pressure feature has gradients of order $10^{3}\text{ Pa}$. A learning rate that is safe for pressure will cause the accelerometer weights to freeze; a learning rate tuned for the accelerometer will blow up the pressure weights!
+
+Proposed by Geoffrey Hinton, \textbf{RMSProp (Root Mean Square Propagation)} maintains an exponentially decaying average of the \textbf{squared gradients} (the second moment) for each individual parameter:
+\begin{align}
+\mathbf{s}_t &= \beta \mathbf{s}_{t-1} + (1 - \beta) \left( \nabla L(\mathbf{w}_t) \right)^2 \label{eq:rmsprop_second_moment}\\
+\mathbf{w}_{t+1} &= \mathbf{w}_t - \frac{\eta}{\sqrt{\mathbf{s}_t} + \epsilon} \odot \nabla L(\mathbf{w}_t) \label{eq:rmsprop_update}
+\end{align}
+where $\odot$ denotes element-wise multiplication, $\beta \approx 0.99$, and $\epsilon \approx 10^{-8}$ is a tiny smoothing term preventing division by zero.
+
+\paragraph{Why RMSProp is Brilliant}
+\begin{itemize}
+    \item If a parameter experiences historically gigantic gradients ($\mathbf{s}_{t, i} \gg 1$), RMSProp divides by $\sqrt{\mathbf{s}_{t, i}}$, automatically shrinking its effective learning rate to prevent explosive instability.
+    \item If a parameter experiences tiny, infrequent gradients ($\mathbf{s}_{t, i} \ll 1$), RMSProp divides by a small number, boosting its effective step size so it learns rapidly!
+\end{itemize}
+
+\subsubsection{Adam: Adaptive Moment Estimation}
+Published by Diederik Kingma and Jimmy Ba in 2014, **Adam** is the uncontested champion of modern deep learning optimizers. It elegantly fuses the principles of Momentum (estimating the mean of gradients, the first moment) and RMSProp (estimating the uncentered variance of gradients, the second moment).
+
+\paragraph{The Complete Adam Algorithm}
+At each optimization step $t = 1, 2, 3, \dots$:
+\begin{enumerate}
+    \item Compute current mini-batch gradient:
+    \begin{equation}
+    \mathbf{g}_t = \nabla L(\mathbf{w}_{t-1})
+    \end{equation}
+    \item Update biased first moment vector (Momentum):
+    \begin{equation}
+    \mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1 - \beta_1) \mathbf{g}_t \quad (\text{default } \beta_1 = 0.9)
+    \end{equation}
+    \item Update biased second raw moment vector (RMSProp):
+    \begin{equation}
+    \mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1 - \beta_2) \mathbf{g}_t^2 \quad (\text{default } \beta_2 = 0.999)
+    \end{equation}
+    \item \textbf{Compute Bias-Corrected Moments}: Because $\mathbf{m}_0$ and $\mathbf{v}_0$ are initialized to zero vectors, during the early iterations ($t = 1, 2, \dots$) both $\mathbf{m}_t$ and $\mathbf{v}_t$ are heavily biased toward zero. Adam corrects this bias analytically:
+    \begin{equation}
+    \hat{\mathbf{m}}_t = \frac{\mathbf{m}_t}{1 - \beta_1^t}, \quad \hat{\mathbf{v}}_t = \frac{\mathbf{v}_t}{1 - \beta_2^t}\label{eq:adam_bias_correction}
+    \end{equation}
+    Notice that as $t \to \infty$, $\beta_1^t \to 0$ and $\beta_2^t \to 0$, so $1 - \beta^t \to 1$ and the correction naturally vanishes.
+    \item \textbf{Apply Parameter Update}:
+    \begin{equation}
+    \mathbf{w}_t = \mathbf{w}_{t-1} - \frac{\eta}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon} \odot \hat{\mathbf{m}}_t\label{eq:adam_final_update}
+    \end{equation}
+    with recommended hyperparameter settings $\eta = 0.001$, $\beta_1 = 0.9$, $\beta_2 = 0.999$, and $\epsilon = 10^{-8}$.
+\end{enumerate}
+
+\begin{example}[Hand-Worked Calculation: 2 Steps of SGD vs.\ Adam]
+To see the internal mechanics of Adam, let us minimize the simple 1D quadratic function $L(w) = w^2$ starting from initial parameter $w_0 = 4.0$ with learning rate $\eta = 0.1$.
+Its gradient is $g(w) = \frac{dL}{dw} = 2w$.
+
+\paragraph{Part A: Standard SGD}
+\begin{itemize}
+    \item \textbf{Step 1 ($t = 1$)}:
+    \begin{align*}
+    g_1 &= 2(w_0) = 2(4.0) = 8.0 \\
+    w_1 &= w_0 - \eta g_1 = 4.0 - (0.1 \times 8.0) = 4.0 - 0.8 = \mathbf{3.2000}
+    \end{align*}
+    \item \textbf{Step 2 ($t = 2$)}:
+    \begin{align*}
+    g_2 &= 2(w_1) = 2(3.2) = 6.4 \\
+    w_2 &= w_1 - \eta g_2 = 3.2 - (0.1 \times 6.4) = 3.2 - 0.64 = \mathbf{2.5600}
+    \end{align*}
+\end{itemize}
+
+\paragraph{Part B: Adam Optimizer ($\beta_1 = 0.9, \beta_2 = 0.999, \epsilon = 10^{-8}$)}
+Initialize $m_0 = 0, v_0 = 0$.
+\begin{itemize}
+    \item \textbf{Step 1 ($t = 1$)}:
+    \begin{align*}
+    g_1 &= 8.0 \\
+    m_1 &= \beta_1 m_0 + (1 - \beta_1)g_1 = 0.9(0) + 0.1(8.0) = \mathbf{0.8000} \\
+    v_1 &= \beta_2 v_0 + (1 - \beta_2)g_1^2 = 0.999(0) + 0.001(8.0^2) = 0.001(64.0) = \mathbf{0.0640} \\
+    \hat{m}_1 &= \frac{m_1}{1 - \beta_1^1} = \frac{0.8000}{1 - 0.9} = \frac{0.8000}{0.10} = \mathbf{8.0000} \\
+    \hat{v}_1 &= \frac{v_1}{1 - \beta_2^1} = \frac{0.0640}{1 - 0.999} = \frac{0.0640}{0.001} = \mathbf{64.0000} \\
+    w_1 &= w_0 - \frac{\eta}{\sqrt{\hat{v}_1} + \epsilon} \hat{m}_1 = 4.0 - \frac{0.1}{\sqrt{64.0}} (8.0) = 4.0 - \frac{0.1}{8.0}(8.0) = 4.0 - 0.1 = \mathbf{3.9000}
+    \end{align*}
+    \item \textbf{Step 2 ($t = 2$)}:
+    \begin{align*}
+    g_2 &= 2(w_1) = 2(3.9) = 7.8 \\
+    m_2 &= 0.9(0.8000) + 0.1(7.8) = 0.7200 + 0.7800 = \mathbf{1.5000} \\
+    v_2 &= 0.999(0.0640) + 0.001(7.8^2) = 0.063936 + 0.001(60.84) = 0.063936 + 0.06084 = \mathbf{0.12478} \\
+    \hat{m}_2 &= \frac{1.5000}{1 - 0.9^2} = \frac{1.5000}{1 - 0.81} = \frac{1.5000}{0.19} \approx \mathbf{7.8947} \\
+    \hat{v}_2 &= \frac{0.12478}{1 - 0.999^2} = \frac{0.12478}{1 - 0.998001} = \frac{0.12478}{0.001999} \approx \mathbf{62.4212} \\
+    w_2 &= 3.9000 - \frac{0.1}{\sqrt{62.4212}} (7.8947) \approx 3.9000 - \frac{0.1}{7.9007}(7.8947) \approx 3.9000 - 0.0999 = \mathbf{3.8001}
+    \end{align*}
+\end{itemize}
+\textbf{Insight}: Notice how Adam automatically normalizes the effective step size: $\frac{\hat{m}_t}{\sqrt{\hat{v}_t}} \approx \frac{g}{|g|} = \text{sign}(g) \approx \pm 1$. The step magnitude is strictly governed by the learning rate $\eta = 0.10$, completely shielding the optimizer from exploding gradient spikes!
+\end{example}
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of primary gradient descent optimization algorithms.}\label{tab:optimizer_summary}
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Optimizer} & \textbf{State Memory} & \textbf{Learning Rate} & \textbf{Saddle Handling} & \textbf{Primary Use Case} \\
+\midrule
+\textbf{SGD} & None ($0$) & Fixed Global & Poor (can stall) & Simple models, Edge devices \\
+\textbf{Momentum} & $1 \times \text{Params}$ ($\mathbf{v}$) & Fixed Global & Good (momentum carries) & Computer Vision (ResNets) \\
+\textbf{RMSProp} & $1 \times \text{Params}$ ($\mathbf{s}$) & Per-parameter adaptive & Good (scales small steps) & Recurrent Neural Networks (RNNs) \\
+\textbf{Adam} & $2 \times \text{Params}$ ($\mathbf{m}, \mathbf{v}$) & Per-parameter adaptive & Excellent (robust default) & Transformers, General Deep Learning \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ==============================================================================
+% 3. INFORMATION THEORY
+% ==============================================================================
+\subsection{Information Theory: Quantifying Surprise and Uncertainty}\label{subsec:opt_information_theory}
+
+Now that we understand how optimizers navigate, we must answer: \textit{What objective function should they minimize?} To design optimal loss functions for classification and generative modeling, we must study the mathematical physics of information itself.
+
+\subsubsection{Self-Information: The Quantification of Surprise}
+In 1948, Claude Shannon established modern digital communications by formalizing the concept of **information**. His core intuition was profound:
+\begin{center}
+\textit{Information is the resolution of uncertainty. The less likely an event is, the more information its occurrence provides.}
+\end{center}
+
+If someone tells you: \textit{``The sun rose in the east this morning,''} they have communicated essentially zero information, because the event had probability $P = 1.0$. But if an edge earthquake sensor in London detects a massive magnitude $7.2$ seismic shock ($P = 10^{-8}$), that single message carries immense information.
+
+\paragraph{Mathematical Definition: Self-Information}
+For an event $x$ with occurrence probability $P(x)$, its \textbf{Self-Information} (or \textbf{surprisal}) is defined as:
+\begin{equation}
+I(x) = -\log_2 P(x) = \log_2 \left(\frac{1}{P(x)}\right)\label{eq:self_information}
+\end{equation}
+\begin{itemize}
+    \item When using base-$2$ logarithms ($\log_2$), information is measured in **bits** (binary digits) or **Shannons**.
+    \item When using natural logarithms ($\ln$), information is measured in **nats** ($1\text{ nat} = \frac{1}{\ln 2} \approx 1.443\text{ bits}$).
+\end{itemize}
+
+\paragraph{Why the Logarithm?}
+Why did Shannon choose the negative logarithm rather than a linear or polynomial function? 
+Because information must be **additive for independent events**. If event $A$ (coin flip heads, $P(A) = 0.5$) and event $B$ (die roll a six, $P(B) = \frac{1}{6}$) occur independently, their joint probability is $P(A \cap B) = P(A)P(B)$. The total information conveyed by observing both must be the sum of their individual surprises:
+\begin{equation}
+I(A \cap B) = -\log_2(P(A)P(B)) = -\log_2 P(A) - \log_2 P(B) = I(A) + I(B)
+\end{equation}
+The logarithm is the only continuous mathematical function that transforms multiplication of probabilities into addition of information!
+
+\subsubsection{Shannon Entropy: The Average Uncertainty}
+Self-information measures the surprise of a single isolated outcome. What is the expected surprise across \textit{all} possible outcomes of a random variable?
+
+\paragraph{Formal Definition: Shannon Entropy}
+The \textbf{Shannon Entropy} $H(P)$ of a discrete random variable $X$ with probability distribution $P$ is the expected value of its self-information:
+\begin{equation}
+H(P) = \mathbb{E}_{x \sim P}[I(x)] = -\sum_{x \in \mathcal{X}} P(x) \log_2 P(x)\label{eq:shannon_entropy}
+\end{equation}
+(By continuous extension, we define $0 \log_2 0 = 0$, since $\lim_{p \to 0^+} p \log_2 p = 0$).
+
+\paragraph{Physical and Computational Interpretations of Entropy}
+\begin{enumerate}
+    \item \textbf{Measure of Chaos / Disorder}: Entropy reaches its absolute minimum ($H = 0$) when a distribution is completely deterministic ($P(x_1) = 1.0, P(x_{i \ne 1}) = 0$). There is zero uncertainty.
+    \item \textbf{Maximum Uncertainty}: For a discrete system with $K$ states, entropy is maximized when the distribution is **Uniform** ($P(x) = \frac{1}{K}$ for all $x$):
+    \begin{equation}
+    H_{\max} = -\sum_{k=1}^{K} \frac{1}{K} \log_2 \left(\frac{1}{K}\right) = \log_2 K\label{eq:max_entropy}
+    \end{equation}
+    \item \textbf{Theoretical Data Compression Limit}: Shannon's Source Coding Theorem proves that $H(P)$ is the absolute theoretical minimum average number of lossless binary bits required to transmit a single symbol emitted by source $P$.
+\end{enumerate}
+
+\subsubsection{Cross-Entropy: Mismatched Encodings}
+Suppose data is physically generated by a true, unknown distribution $P(x)$. However, we design an encoding scheme (or train a machine learning model) that assumes the data follows an approximate distribution $Q(x)$.
+
+\paragraph{Formal Definition: Cross-Entropy}
+The \textbf{Cross-Entropy} between true distribution $P$ and approximating model distribution $Q$ is:
+\begin{equation}
+H(P, Q) = \mathbb{E}_{x \sim P}[-\log_2 Q(x)] = -\sum_{x \in \mathcal{X}} P(x) \log_2 Q(x)\label{eq:cross_entropy_def}
+\end{equation}
+\textbf{Intuition}: Cross-entropy measures the average number of bits required to identify symbols from physical reality $P$ when using an optimized codebook constructed for model $Q$. 
+Because the codebook is suboptimal, \textbf{cross-entropy is always greater than or equal to true entropy}:
+\begin{equation}
+H(P, Q) \ge H(P)
+\end{equation}
+
+\subsubsection{Kullback-Leibler (KL) Divergence: Relative Entropy}
+The difference between the cross-entropy $H(P, Q)$ and the true underlying entropy $H(P)$ represents the \textbf{information penalty} (waste) caused by using model $Q$ instead of true reality $P$.
+
+\paragraph{Formal Definition: KL Divergence}
+The \textbf{Kullback-Leibler (KL) Divergence} from distribution $Q$ to distribution $P$ is:
+\begin{equation}
+D_{\text{KL}}(P \parallel Q) = \sum_{x \in \mathcal{X}} P(x) \log_2 \left( \frac{P(x)}{Q(x)} \right)\label{eq:kl_divergence_def}
+\end{equation}
+Expanding the logarithm reveals the fundamental tri-fold identity of information theory:
+\begin{align}
+D_{\text{KL}}(P \parallel Q) &= \sum_{x} P(x) \log_2 P(x) - \sum_{x} P(x) \log_2 Q(x) \notag\\
+&= -H(P) + H(P, Q) \notag\\
+&= \mathbf{H(P, Q) - H(P)}\label{eq:kl_identity}
+\end{align}
+
+\begin{keyidea}[Properties of KL Divergence]
+\begin{enumerate}
+    \item \textbf{Non-Negativity (Gibbs' Inequality)}:
+    \begin{equation}
+    D_{\text{KL}}(P \parallel Q) \ge 0 \quad \text{with } D_{\text{KL}}(P \parallel Q) = 0 \iff P(x) = Q(x) \ \forall x
+    \end{equation}
+    \item \textbf{Asymmetry (Not a True Metric)}:
+    \begin{equation}
+    D_{\text{KL}}(P \parallel Q) \ne D_{\text{KL}}(Q \parallel P)
+    \end{equation}
+    Because it violates symmetry ($D(P \parallel Q) \ne D(Q \parallel P)$) and the triangle inequality, KL divergence is a directed \textit{divergence}, not a mathematical distance.
+    \begin{itemize}
+        \item $D_{\text{KL}}(P \parallel Q)$ is \textbf{mode-covering}: $P(x) > 0 \implies Q(x) > 0$ to avoid infinite penalty.
+        \item $D_{\text{KL}}(Q \parallel P)$ is \textbf{mode-seeking}: $Q(x)$ focuses only on the peaks of $P(x)$, ignoring minor modes.
+    \end{itemize}
+\end{enumerate}
+\end{keyidea}
+
+\begin{example}[Complete Hand Calculation of Information Metrics]
+An industrial IoT acoustic sensor classifies a machine spindle into three operational health states:
+\begin{equation*}
+\text{States: } \{0: \text{Normal}, \ 1: \text{Warning}, \ 2: \text{Critical Failure}\}
+\end{equation*}
+Extensive factory ground-truth data shows the true physical distribution is:
+\begin{equation*}
+P = [0.70, \ 0.20, \ 0.10]
+\end{equation*}
+A newly trained edge neural network predicts the class probabilities:
+\begin{equation*}
+Q = [0.60, \ 0.25, \ 0.15]
+\end{equation*}
+Compute the Shannon Entropy $H(P)$, Cross-Entropy $H(P, Q)$, and KL Divergence $D_{\text{KL}}(P \parallel Q)$ in bits (using $\log_2$).
+
+\paragraph{Step 1: Compute Base-2 Logarithms}
+\begin{align*}
+\log_2(0.70) &\approx -0.5146, \quad \log_2(0.20) \approx -2.3219, \quad \log_2(0.10) \approx -3.3219 \\
+\log_2(0.60) &\approx -0.7370, \quad \log_2(0.25) = -2.0000, \quad \log_2(0.15) \approx -2.7370
+\end{align*}
+
+\paragraph{Step 2: Compute Shannon Entropy $H(P)$}
+\begin{align*}
+H(P) &= -\left[ 0.70 \log_2(0.70) + 0.20 \log_2(0.20) + 0.10 \log_2(0.10) \right] \\
+&= -\left[ 0.70(-0.5146) + 0.20(-2.3219) + 0.10(-3.3219) \right] \\
+&= -\left[ -0.3602 - 0.4644 - 0.3322 \right] = -[-1.1568] = \mathbf{1.1568\text{ bits}}
+\end{align*}
+
+\paragraph{Step 3: Compute Cross-Entropy $H(P, Q)$}
+\begin{align*}
+H(P, Q) &= -\left[ 0.70 \log_2(0.60) + 0.20 \log_2(0.25) + 0.10 \log_2(0.15) \right] \\
+&= -\left[ 0.70(-0.7370) + 0.20(-2.0000) + 0.10(-2.7370) \right] \\
+&= -\left[ -0.5159 - 0.4000 - 0.2737 \right] = -[-1.1896] = \mathbf{1.1896\text{ bits}}
+\end{align*}
+
+\paragraph{Step 4: Compute KL Divergence $D_{\text{KL}}(P \parallel Q)$}
+Using the fundamental identity $D_{\text{KL}} = H(P, Q) - H(P)$:
+\begin{equation*}
+D_{\text{KL}}(P \parallel Q) = 1.1896 - 1.1568 = \mathbf{0.0328\text{ bits}}
+\end{equation*}
+\textbf{Interpretation}: True spindle vibrations have $1.1568$ bits of inherent entropy. Using our neural network's approximate probability distribution $Q$ costs an extra $0.0328$ bits of wasted coding penalty per classification.
+\end{example}
+
+% ==============================================================================
+% 4. UNIFICATION: CROSS-ENTROPY LOSS AND MLE
+% ==============================================================================
+\subsection{The Grand Unification: Cross-Entropy Loss and Maximum Likelihood}\label{subsec:opt_cross_entropy_mle}
+
+We are now ready to establish the grand theoretical bridge connecting Information Theory, Probability, and Deep Learning.
+
+In supervised classification, our training dataset consists of input features $\mathbf{x}_i$ and true discrete labels $y_i \in \{1, 2, \dots, K\}$.
+The true distribution $P(\mathbf{y} \mid \mathbf{x})$ is a **one-hot encoded vector** where the true class index has probability $1$ and all other $K - 1$ classes have probability $0$:
+\begin{equation}
+P(y = k \mid \mathbf{x}) = \begin{cases} 1 & \text{if } k = y_{\text{true}} \\ 0 & \text{otherwise} \end{cases}
+\end{equation}
+Our neural network outputs a vector of predicted class probabilities $\hat{\mathbf{y}} = Q(\mathbf{y} \mid \mathbf{x}) = \text{Softmax}(\mathbf{z})$, where $\sum_{k=1}^K \hat{y}_k = 1$.
+
+What happens when we evaluate Cross-Entropy between the true one-hot distribution $P$ and model prediction $Q$?
+\begin{equation}
+H(P, Q) = -\sum_{k=1}^{K} P(k) \ln Q(k) = -1 \cdot \ln \hat{y}_{\text{true}} - \sum_{k \ne \text{true}} 0 \cdot \ln \hat{y}_k = \mathbf{-\ln \hat{y}_{\text{true}}}\label{eq:categorical_ce_loss}
+\end{equation}
+
+\begin{keyidea}[Cross-Entropy Loss IS Maximum Likelihood Estimation]
+Recall from Section~\ref{sec:probability} that the Maximum Likelihood principle maximizes the joint probability of observing the true training data:
+\begin{equation}
+\mathcal{L}(\mathbf{w}) = \prod_{i=1}^{N} P(y_i \mid \mathbf{x}_i; \mathbf{w})
+\end{equation}
+Taking the negative log-likelihood (NLL) to convert multiplication into a minimization sum:
+\begin{equation}
+\text{NLL}(\mathbf{w}) = -\sum_{i=1}^{N} \ln P(y_i \mid \mathbf{x}_i; \mathbf{w}) = -\sum_{i=1}^{N} \ln \hat{y}_{i, \text{true}} \equiv \mathbf{\sum_{i=1}^{N} H(P_i, Q_i)}
+\end{equation}
+Furthermore, recall from Equation~\eqref{eq:kl_identity} that $H(P, Q) = H(P) + D_{\text{KL}}(P \parallel Q)$. Since the true training labels $P$ are fixed by reality, their entropy $H(P) = 0$ is a constant. Therefore:
+\begin{equation}
+\arg\min_{\mathbf{w}} H(P, Q) \equiv \arg\min_{\mathbf{w}} D_{\text{KL}}(P \parallel Q) \equiv \arg\min_{\mathbf{w}} \text{Negative Log-Likelihood}
+\end{equation}
+\end{keyidea}
+
+Every time you train a neural network using Cross-Entropy Loss:
+\begin{itemize}
+    \item You are minimizing the **Kullback-Leibler Divergence** between reality and your model.
+    \item You are minimizing the **Shannon information transmission penalty**.
+    \item You are finding the **Maximum Likelihood Estimator** of the parameters!
+\end{itemize}
+
+% ==============================================================================
+% 5. PYTHON IMPLEMENTATION
+% ==============================================================================
+\subsection{Hands-On Python: Optimizers and Information Metrics}\label{subsec:opt_python}
+
+To cement these concepts, let us implement a clean Python simulation comparing optimizer performance across an ill-conditioned quadratic ravine, followed by an information-theoretic verification script.
+
+\begin{lstlisting}[style=pythonstyle]
+import numpy as np
+
+# 1. Compare Optimizers on Ill-Conditioned Ravine: f(x, y) = 0.5 * (0.1*x^2 + 2.0*y^2)
+# Gradients: df/dx = 0.1*x (flat floor), df/dy = 2.0*y (steep wall)
+# Global minimum is at (0, 0)
+def f(x, y):
+    return 0.5 * (0.1 * x**2 + 2.0 * y**2)
+
+def grad(x, y):
+    return np.array([0.1 * x, 2.0 * y])
+
+start_pos = np.array([10.0, 10.0])
+lr = 0.4
+n_steps = 20
+
+# (a) Standard SGD
+w_sgd = start_pos.copy()
+for _ in range(n_steps):
+    g = grad(w_sgd[0], w_sgd[1])
+    w_sgd -= lr * g
+
+# (b) Momentum (beta = 0.9)
+w_mom = start_pos.copy()
+v_mom = np.zeros(2)
+beta_mom = 0.9
+for _ in range(n_steps):
+    g = grad(w_mom[0], w_mom[1])
+    v_mom = beta_mom * v_mom + (1.0 - beta_mom) * g
+    w_mom -= lr * v_mom
+
+# (c) RMSProp (beta = 0.99, eps = 1e-8)
+w_rms = start_pos.copy()
+s_rms = np.zeros(2)
+beta_rms = 0.99
+eps = 1e-8
+for _ in range(n_steps):
+    g = grad(w_rms[0], w_rms[1])
+    s_rms = beta_rms * s_rms + (1.0 - beta_rms) * (g**2)
+    w_rms -= (lr / (np.sqrt(s_rms) + eps)) * g
+
+# (d) Adam (beta1 = 0.9, beta2 = 0.999, eps = 1e-8)
+w_adam = start_pos.copy()
+m_adam = np.zeros(2)
+v_adam = np.zeros(2)
+beta1, beta2 = 0.9, 0.999
+for t in range(1, n_steps + 1):
+    g = grad(w_adam[0], w_adam[1])
+    m_adam = beta1 * m_adam + (1.0 - beta1) * g
+    v_adam = beta2 * v_adam + (1.0 - beta2) * (g**2)
+    m_hat = m_adam / (1.0 - beta1**t)
+    v_hat = v_adam / (1.0 - beta2**t)
+    w_adam -= (lr / (np.sqrt(v_hat) + eps)) * m_hat
+
+# 2. Information Theory Metrics Computation
+P = np.array([0.70, 0.20, 0.10])  # True sensor health state distribution
+Q = np.array([0.60, 0.25, 0.15])  # Model predicted distribution
+
+# Shannon Entropy H(P)
+H_P_bits = -np.sum(P * np.log2(P))
+H_P_nats = -np.sum(P * np.log(P))
+
+# Cross Entropy H(P, Q)
+H_PQ_bits = -np.sum(P * np.log2(Q))
+H_PQ_nats = -np.sum(P * np.log(Q))
+
+# KL Divergence D_KL(P || Q)
+D_KL_bits = np.sum(P * np.log2(P / Q))
+D_KL_nats = np.sum(P * np.log(P / Q))
+
+# Output Results
+print("--- Optimizer Position after 20 steps (Start=[10.0, 10.0]) ---")
+print(f"SGD:      x = {w_sgd[0]:.4f}, y = {w_sgd[1]:.4f}, loss = {f(w_sgd[0], w_sgd[1]):.6f}")
+print(f"Momentum: x = {w_mom[0]:.4f}, y = {w_mom[1]:.4f}, loss = {f(w_mom[0], w_mom[1]):.6f}")
+print(f"RMSProp:  x = {w_rms[0]:.4f}, y = {w_rms[1]:.4f}, loss = {f(w_rms[0], w_rms[1]):.6f}")
+print(f"Adam:     x = {w_adam[0]:.4f}, y = {w_adam[1]:.4f}, loss = {f(w_adam[0], w_adam[1]):.6f}")
+
+print("\n--- Information Theory Metrics ---")
+print(f"True Distribution P:      {P}")
+print(f"Model Prediction Q:       {Q}")
+print(f"Shannon Entropy H(P):     {H_P_bits:.4f} bits  ({H_P_nats:.4f} nats)")
+print(f"Cross-Entropy H(P, Q):    {H_PQ_bits:.4f} bits  ({H_PQ_nats:.4f} nats)")
+print(f"KL Divergence D_KL(P||Q): {D_KL_bits:.4f} bits  ({D_KL_nats:.4f} nats)")
+print(f"Identity Check: H(P,Q) - H(P) = {H_PQ_bits - H_P_bits:.4f} bits (Matches D_KL)")
+\end{lstlisting}
+
+Executing this script produces the exact output below:
+\begin{lstlisting}[style=outputstyle]
+--- Optimizer Position after 20 steps (Start=[10.0, 10.0]) ---
+SGD:      x = 4.4200, y = 0.0000, loss = 0.976831
+Momentum: x = 5.7293, y = 2.9004, loss = 10.053789
+RMSProp:  x = 0.0030, y = 0.0030, loss = 0.000009
+Adam:     x = 2.6251, y = 2.6251, loss = 7.235782
+
+--- Information Theory Metrics ---
+True Distribution P:      [0.7 0.2 0.1]
+Model Prediction Q:       [0.6  0.25 0.15]
+Shannon Entropy H(P):     1.1568 bits  (0.8018 nats)
+Cross-Entropy H(P, Q):    1.1896 bits  (0.8245 nats)
+KL Divergence D_KL(P||Q): 0.0328 bits  (0.0227 nats)
+Identity Check: H(P,Q) - H(P) = 0.0328 bits (Matches D_KL)
+\end{lstlisting}
+
+\paragraph{Detailed Code Walkthrough:}
+\begin{itemize}
+    \item \textbf{Lines 6--11}: We define an ill-conditioned quadratic function where the $y$-axis is $20$ times steeper than the $x$-axis ($\frac{2.0}{0.1} = 20$).
+    \item \textbf{Lines 16--21}: Standard SGD drives the steep $y$-coordinate to zero instantly ($y = 0.0000$), but crawls along the flat $x$-coordinate, remaining stranded at $x = 4.4200$ after $20$ steps.
+    \item \textbf{Lines 33--40}: RMSProp adapts the per-parameter step size, automatically boosting the slow $x$-dimension while damping $y$, reaching near-perfection ($x = 0.0030, y = 0.0030, \text{loss} \approx 10^{-5}$).
+    \item \textbf{Lines 55--69}: The information metrics calculate Shannon entropy ($1.1568\text{ bits}$), cross-entropy ($1.1896\text{ bits}$), and KL divergence ($0.0328\text{ bits}$), verifying the mathematical identity $H(P, Q) - H(P) = D_{\text{KL}}(P \parallel Q)$.
+\end{itemize}
+
+% ==============================================================================
+% 6. IOT AND TINYML CONNECTION
+% ==============================================================================
+\subsection{IoT and TinyML: Optimization Constraints and Telemetry Compression}\label{subsec:opt_iot}
+
+\begin{iotbox}[The Memory Bottleneck of Edge Training and Telemetry Compression]
+While Adam dominates cloud server training, edge microcontrollers operate under severe physical hardware constraints that completely reshape optimization and communication.
+
+\paragraph{1. Why Adam is Unusable for Microcontroller On-Device Training}
+In cloud environments, memory is abundant. But on an ESP32 ($320\text{ KB}$ SRAM) or an ARM Cortex-M4 ($64\text{ KB}$ SRAM), running Adam for on-device personalization causes immediate memory exhaustion.
+
+Consider a compact convolutional neural network with $N = 100{,}000$ floating-point parameters ($32$-bit float $= 4$ bytes):
+\begin{itemize}
+    \item Model Weights $\mathbf{w}$: $100{,}000 \times 4\text{ bytes} = 400\text{ KB}$.
+    \item Gradient Buffers $\mathbf{g}$: $100{,}000 \times 4\text{ bytes} = 400\text{ KB}$.
+    \item Adam First Moment $\mathbf{m}$: $100{,}000 \times 4\text{ bytes} = 400\text{ KB}$.
+    \item Adam Second Moment $\mathbf{v}$: $100{,}000 \times 4\text{ bytes} = 400\text{ KB}$.
+    \item \textbf{Total SRAM Required by Adam}: $400 + 400 + 400 + 400 = \mathbf{1.60\text{ MB}}$!
+\end{itemize}
+Adam requires \textbf{four times the memory of the model itself}! It exceeds the total SRAM of an ESP32 five times over.
+
+\paragraph{The Edge Solution: Standard SGD with Momentum or Quantized States}
+To perform on-device transfer learning or adaptive sensor calibration on edge hardware, engineers discard Adam and deploy:
+\begin{enumerate}
+    \item \textbf{Standard SGD with In-Place Updates}: Eliminates momentum buffers entirely. Gradients update weights in-place, requiring only $400\text{ KB}$ of activation buffers.
+    \item \textbf{Layer-Wise Freezing}: Only the final classification head ($N = 1{,}000$ weights) is trained on the edge, while feature extractor backbones remain frozen in Flash ROM.
+    \item \textbf{8-Bit Quantized Optimizers}: Storing first and second moments as dynamic 8-bit integers, slashing optimizer overhead by $75\%$.
+\end{enumerate}
+
+\paragraph{2. Telemetry Compression via Shannon Entropy}
+In remote IoT networks running on LoRaWAN, NB-IoT, or satellite links, transmitting a single wireless packet consumes $100$ to $1{,}000$ times more battery energy than executing an onboard mathematical instruction. Furthermore, LoRaWAN regulatory duty cycles restrict devices to transmitting less than $1\%$ of the time.
+
+By calculating the Shannon entropy of sensor telemetry streams, engineers construct \textbf{Huffman Coding Trees} and **Delta-Compression algorithms**:
+\begin{itemize}
+    \item Instead of transmitting raw $16$-bit ADC readings ($16\text{ bits}$ per sample), the microcontroller transmits variable-length prefix codes.
+    \item Common sensor readings (e.g., small temperature deviations around the setpoint) are encoded with short $2$-bit codes, while rare extreme excursions receive $10$-bit codes.
+    \item This information-theoretic compression reduces payload size by $60\%$ to $80\%$, proportionally extending IoT battery lifetime from $1$ year to over $4$ years!
+\end{itemize}
+\end{iotbox}
+
+% ==============================================================================
+% 7. COMMON PITFALLS
+% ==============================================================================
+\subsection{Common Pitfalls in Optimization and Information Theory}\label{subsec:opt_pitfalls}
+
+\begin{warning}[Four Dangerous Traps in Loss Optimization]
+\begin{enumerate}
+    \item \textbf{The Learning Rate Catastrophe}:
+    No optimizer can save you from a catastrophic learning rate $\eta$:
+    \begin{itemize}
+        \item \textbf{Too Large ($\eta > \frac{2}{\lambda_{\max}}$)}: The optimizer overshoots the minimum, climbs the opposite canyon wall, and causes loss to violently explode to $\text{NaN}$ or $+\infty$.
+        \item \textbf{Too Small ($\eta \approx 10^{-6}$)}: The optimizer makes imperceptible progress, remaining effectively frozen on shallow plateaus.
+    \end{itemize}
+    \textbf{Remedy}: Use Learning Rate Schedulers (e.g., Cosine Annealing with Warmup) or perform a learning rate range test before training.
+
+    \item \textbf{The Numerical Zero Explosion in Cross-Entropy: $\log(0) = -\infty$}:
+    In custom implementations of Cross-Entropy loss:
+    \begin{equation*}
+    L = -\sum y_i \ln(\hat{y}_i)
+    \end{equation*}
+    If your model predicts $\hat{y}_k = 0.0000000$ for a class whose true label is $1$, computing $\ln(0)$ yields $-\infty$, causing gradient backpropagation to return $\text{NaN}$ (Not a Number), permanently corrupting all network weights.
+    
+    \textbf{Remedy}: Always clamp model output probabilities before taking logarithms:
+    \begin{lstlisting}[style=pythonstyle]
+# Stable cross-entropy clamping
+y_hat = np.clip(y_hat, 1e-15, 1.0 - 1e-15)
+loss = -np.sum(y_true * np.log(y_hat))
+    \end{lstlisting}
+
+    \item \textbf{Omitting Adam's Bias Correction}:
+    Beginners writing custom optimizers frequently forget the denominator $(1 - \beta^t)$ in Equation~\eqref{eq:adam_bias_correction}. Because $\mathbf{m}_0 = \mathbf{0}$ and $\mathbf{v}_0 = \mathbf{0}$, during step 1:
+    \begin{equation*}
+    m_1 = 0.1 g_1 \quad (\text{only } 10\% \text{ of true gradient!})
+    \end{equation*}
+    Without bias correction, initial optimization steps are artificially throttled, causing models to crawl during early epochs.
+
+    \item \textbf{Confusing the Direction of KL Divergence}:
+    Remember that $D_{\text{KL}}(P \parallel Q) \ne D_{\text{KL}}(Q \parallel P)$. 
+    \begin{itemize}
+        \item Minimizing $D_{\text{KL}}(P \parallel Q)$ (Forward KL) forces $Q$ to cover all regions where $P > 0$ (zero-avoiding).
+        \item Minimizing $D_{\text{KL}}(Q \parallel P)$ (Reverse KL) forces $Q$ to collapse onto a single mode of $P$ (zero-forcing), which is heavily used in Variational Autoencoders (VAEs) and variational inference.
+    \end{itemize}
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 8. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:opt_takeaways}
+
+\begin{takeaways}[Core Principles of Optimization and Information Theory]
+\begin{itemize}
+    \item \textbf{Convexity Guarantees Global Optimality}: In a convex function, every local minimum is a global minimum ($\mathbf{H} \succeq 0$). Deep neural networks are non-convex, presenting treacherous landscapes of saddle points, plateaus, and ill-conditioned ravines.
+    \item \textbf{Momentum Damps Ravine Oscillations}: By accumulating a decaying velocity vector $\mathbf{v}_t = \beta \mathbf{v}_{t-1} + (1 - \beta)\mathbf{g}_t$, momentum cancels lateral oscillations while accelerating progress along flat valley floors.
+    \item \textbf{RMSProp Adapts Per-Parameter Rates}: Dividing by the root of moving squared gradients ($\sqrt{\mathbf{s}_t} + \epsilon$) automatically scales down volatile parameters and boosts sluggish ones.
+    \item \textbf{Adam Fuses Momentum and RMSProp}: The modern gold standard for deep learning. It combines first moments ($\mathbf{m}_t$) and second moments ($\mathbf{v}_t$) with analytical bias corrections for early steps.
+    \item \textbf{Entropy Measures Fundamental Uncertainty}: Claude Shannon's entropy $H(P) = -\sum P(x) \log_2 P(x)$ defines the minimum lossless compression limit for data.
+    \item \textbf{Cross-Entropy IS Maximum Likelihood}: Minimizing cross-entropy loss $H(P, Q)$ is mathematically identical to minimizing the Kullback-Leibler divergence $D_{\text{KL}}(P \parallel Q)$ and maximizing the likelihood of observing true targets.
+    \item \textbf{On-Device Training Demands Lean Optimizers}: Adam quadruples model memory requirements ($16\text{ bytes/param}$), making it too heavy for microcontrollers. Edge training relies on SGD with layer-freezing or quantized states.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 9. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:opt_check_yourself}
+
+Test your grasp of convexity, advanced optimizers, Shannon entropy, cross-entropy, and KL divergence with the following problems. Detailed step-by-step solutions are provided at the end of this chapter.
+
+\begin{checkyourself}[Practice Problems]
+\begin{enumerate}
+    \item \textbf{Testing Mathematical Convexity}:
+    Consider the following two 1D loss functions:
+    \begin{align*}
+    f_1(w) &= 3w^2 - 12w + 17 \\
+    f_2(w) &= w^4 - 6w^2 + 2w
+    \end{align*}
+    Using the second-order derivative test ($f''(w)$), determine whether each function is convex, concave, or non-convex over the real line $\mathbb{R}$.
+
+    \item \textbf{Adam Bias Correction Calculations}:
+    An Adam optimizer with standard hyperparameters $\beta_1 = 0.90$ and $\beta_2 = 0.999$ completes its third training iteration ($t = 3$). 
+    Calculate the exact numerical bias correction multipliers $\frac{1}{1 - \beta_1^t}$ and $\frac{1}{1 - \beta_2^t}$ used to de-bias the first and second moment vectors.
+
+    \item \textbf{Shannon Entropy of a 4-State IoT Sensor}:
+    An optical edge sensor records four environmental light categories with the following historical probabilities:
+    \begin{equation*}
+    P(\text{Pitch Black}) = \frac{1}{2}, \quad P(\text{Dim}) = \frac{1}{4}, \quad P(\text{Daylight}) = \frac{1}{8}, \quad P(\text{Direct Glare}) = \frac{1}{8}
+    \end{equation*}
+    Calculate the Shannon Entropy $H(P)$ of this sensor in bits.
+
+    \item \textbf{Cross-Entropy and KL Divergence Calculation}:
+    Suppose a true binary classification target has distribution $P = [1.0, 0.0]$ (class $0$ is true). A logistic regression model outputs predicted probabilities $Q = [0.80, 0.20]$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the true entropy $H(P)$ in nats.
+        \item Compute the cross-entropy $H(P, Q)$ in nats.
+        \item Compute the KL divergence $D_{\text{KL}}(P \parallel Q)$ in nats.
+    \end{enumerate}
+
+    \item \textbf{Microcontroller Memory Sizing for Edge Training}:
+    An edge AI developer wants to fine-tune a TinyML vibration classification model directly on an ESP32 microcontroller with $320\text{ KB}$ of total available SRAM.
+    The model has $N = 30{,}000$ floating-point parameters ($32$-bit floats, $4\text{ bytes}$ each).
+    \begin{enumerate}[label=(\alph*)]
+        \item How many kilobytes of memory are required to store the model weights $\mathbf{w}$ and gradient buffers $\mathbf{g}$ combined?
+        \item How many total kilobytes are required if the developer trains using the **Adam** optimizer? Can this fit in the ESP32's available SRAM?
+        \item How many total kilobytes are required if the developer switches to **Standard SGD** without momentum?
+    \end{enumerate}
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 10. ANSWERS TO CHECK YOURSELF
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Testing Mathematical Convexity}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{For $f_1(w) = 3w^2 - 12w + 17$}:
+        Compute first and second derivatives:
+        \begin{align*}
+        f_1'(w) &= 6w - 12 \\
+        f_1''(w) &= \mathbf{6}
+        \end{align*}
+        Since $f_1''(w) = 6 > 0$ for all $w \in \mathbb{R}$, the second derivative is strictly positive everywhere. Therefore, $f_1(w)$ is **strictly convex**.
+        
+        \item \textbf{For $f_2(w) = w^4 - 6w^2 + 2w$}:
+        Compute first and second derivatives:
+        \begin{align*}
+        f_2'(w) &= 4w^3 - 12w + 2 \\
+        f_2''(w) &= 12w^2 - 12 = 12(w^2 - 1)
+        \end{align*}
+        Analyze the sign of $f_2''(w)$:
+        \begin{itemize}
+            \item For $|w| > 1$ (e.g., $w = 2$), $f_2''(2) = 12(4 - 1) = 36 > 0$ (convex region).
+            \item For $|w| < 1$ (e.g., $w = 0$), $f_2''(0) = 12(0 - 1) = -12 < 0$ (concave region).
+        \end{itemize}
+        Because the second derivative changes sign across the real line, $f_2(w)$ is **non-convex**. It possesses multiple local minima separated by an inflection barrier.
+    \end{enumerate}
+
+    \item \textbf{Adam Bias Correction Calculations}:
+    For iteration $t = 3$ with $\beta_1 = 0.90$ and $\beta_2 = 0.999$:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{First Moment Multiplier}:
+        \begin{equation*}
+        \beta_1^3 = (0.90)^3 = 0.729
+        \end{equation*}
+        \begin{equation*}
+        \frac{1}{1 - \beta_1^3} = \frac{1}{1 - 0.729} = \frac{1}{0.271} \approx \mathbf{3.6900}
+        \end{equation*}
+        The uncorrected momentum vector $m_3$ is scaled up by $\approx 3.69\times$ to correct for zero initialization.
+        
+        \item \textbf{Second Moment Multiplier}:
+        \begin{equation*}
+        \beta_2^3 = (0.999)^3 \approx 0.997003
+        \end{equation*}
+        \begin{equation*}
+        \frac{1}{1 - \beta_2^3} = \frac{1}{1 - 0.997003} = \frac{1}{0.002997} \approx \mathbf{333.667}
+        \end{equation*}
+        The raw second moment $v_3$ is scaled up by $\approx 333.7\times$ to compensate for the extreme zero bias.
+    \end{enumerate}
+
+    \item \textbf{Shannon Entropy of a 4-State IoT Sensor}:
+    Using Equation~\eqref{eq:shannon_entropy} with probabilities $P = [1/2, 1/4, 1/8, 1/8]$:
+    \begin{align*}
+    H(P) &= -\sum_{i=1}^{4} P(x_i) \log_2 P(x_i) \\
+    &= -\left[ \frac{1}{2} \log_2\left(\frac{1}{2}\right) + \frac{1}{4} \log_2\left(\frac{1}{4}\right) + \frac{1}{8} \log_2\left(\frac{1}{8}\right) + \frac{1}{8} \log_2\left(\frac{1}{8}\right) \right]
+    \end{align*}
+    Evaluating the exact powers of two:
+    \begin{equation*}
+    \log_2\left(\frac{1}{2}\right) = -1, \quad \log_2\left(\frac{1}{4}\right) = -2, \quad \log_2\left(\frac{1}{8}\right) = -3
+    \end{equation*}
+    Substitute:
+    \begin{align*}
+    H(P) &= -\left[ \frac{1}{2}(-1) + \frac{1}{4}(-2) + \frac{1}{8}(-3) + \frac{1}{8}(-3) \right] \\
+    &= -\left[ -0.50 - 0.50 - 0.375 - 0.375 \right] = -[-1.75] = \mathbf{1.75\text{ bits}}
+    \end{align*}
+    The average information content emitted by this sensor is exactly $1.75$ bits per reading.
+
+    \item \textbf{Cross-Entropy and KL Divergence Calculation}:
+    Given $P = [1.0, 0.0]$ and $Q = [0.80, 0.20]$:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{True Entropy $H(P)$}:
+        \begin{equation*}
+        H(P) = -(1.0 \ln 1.0 + 0 \ln 0) = -(0 + 0) = \mathbf{0.0000\text{ nats}}
+        \end{equation*}
+        A deterministic state has zero uncertainty.
+        \item \textbf{Cross-Entropy $H(P, Q)$}:
+        Using natural logarithms:
+        \begin{align*}
+        H(P, Q) &= -\sum P_i \ln Q_i = -\left[ 1.0 \ln(0.80) + 0.0 \ln(0.20) \right] \\
+        &= -\ln(0.80) \approx -(-0.22314) \approx \mathbf{0.2231\text{ nats}}
+        \end{align*}
+        \item \textbf{KL Divergence $D_{\text{KL}}(P \parallel Q)$}:
+        Using the identity $D_{\text{KL}}(P \parallel Q) = H(P, Q) - H(P)$:
+        \begin{equation*}
+        D_{\text{KL}}(P \parallel Q) = 0.2231 - 0.0000 = \mathbf{0.2231\text{ nats}}
+        \end{equation*}
+        When true labels are one-hot deterministic vectors, Cross-Entropy and KL Divergence are mathematically identical!
+    \end{enumerate}
+
+    \item \textbf{Microcontroller Memory Sizing for Edge Training}:
+    For $N = 30{,}000$ parameters at $4\text{ bytes}$ each:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Weights and Gradients}:
+        \begin{align*}
+        \text{Weight memory} &= 30{,}000 \times 4\text{ bytes} = 120{,}000\text{ bytes} \approx \mathbf{120\text{ KB}} \\
+        \text{Gradient memory} &= 30{,}000 \times 4\text{ bytes} = 120{,}000\text{ bytes} \approx \mathbf{120\text{ KB}} \\
+        \text{Combined} &= 120\text{ KB} + 120\text{ KB} = \mathbf{240\text{ KB}}
+        \end{align*}
+        
+        \item \textbf{Adam Total Memory}:
+        Adam requires storing two additional moment vectors ($\mathbf{m}$ and $\mathbf{v}$), each requiring $120\text{ KB}$:
+        \begin{align*}
+        \text{Total Adam Memory} &= \mathbf{w}\,(120\text{ KB}) + \mathbf{g}\,(120\text{ KB}) + \mathbf{m}\,(120\text{ KB}) + \mathbf{v}\,(120\text{ KB}) \\
+        &= \mathbf{480\text{ KB}}
+        \end{align*}
+        \textbf{Verdict}: $480\text{ KB}$ exceeds the ESP32's entire available SRAM ($320\text{ KB}$). The program will crash with an out-of-memory kernel panic.
+        
+        \item \textbf{Standard SGD Memory}:
+        Standard SGD without momentum updates parameters in-place without storing historical optimizer states:
+        \begin{equation*}
+        \text{Total SGD Memory} = \mathbf{w} (120\text{ KB}) + \mathbf{g} (120\text{ KB}) = \mathbf{240\text{ KB}}
+        \end{equation*}
+        \textbf{Verdict}: $240\text{ KB}$ fits inside the $320\text{ KB}$ SRAM budget with $80\text{ KB}$ remaining for FreeRTOS, Wi-Fi stack, and application logic. Switching from Adam to SGD makes on-device training physically possible!
+    \end{enumerate}
+\end{enumerate}

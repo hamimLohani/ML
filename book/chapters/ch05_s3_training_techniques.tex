@@ -1,0 +1,747 @@
+% FILE: chapters/ch05_s3_training_techniques.tex
+\section{Training Techniques}\label{sec:training_techniques}
+
+In Section~\ref{sec:pytorch}, we constructed our first deep neural networks using PyTorch, organizing data into pipelines and executing forward and backward passes across mini-batches. However, if you train a multi-layer neural network on raw physical sensor telemetry without specialized training techniques, you will almost certainly encounter acute failure modes:
+\begin{itemize}
+    \item The training loss may stall completely at epoch 1, refusing to decrease regardless of how many training iterations execute (the ``model will not learn'' dilemma).
+    \item The model may achieve $100\%$ training accuracy within three epochs by memorizing sensor serial noise, but suffer catastrophic $35\%$ accuracy on validation data (extreme overfitting).
+    \item Gradients may oscillate wildly between numerical zero (vanishing gradients) and \texttt{NaN} overflow (exploding gradients) as network depth increases.
+    \item The optimizer may bounce erratically across the loss surface, unable to settle into a sharp, well-generalizing minimum due to a rigid, poorly chosen learning rate.
+\end{itemize}
+
+Deep neural networks do not train reliably out-of-the-box. Successful training requires an integrated suite of \textbf{regularization, normalization, scheduling, and diagnostic techniques}. In this section, we study the core techniques that transform brittle architectures into robust, production-grade edge models: Dropout, Batch Normalization, Learning Rate Schedules, Early Stopping, Data Augmentation for physical signals, and a systematic 7-step diagnostic protocol for debugging non-convergent models.
+
+% ------------------------------------------------------------------------------
+\subsection{Dropout: Preventing Co-adaptation through Random Thinning}\label{subsec:dropout}
+% ------------------------------------------------------------------------------
+
+Deep neural networks possess immense representational capacity. With millions of adjustable parameters, individual neurons easily learn to compensate for the flaws or idiosyncrasies of other specific neurons during training. This phenomenon is termed \textbf{complex co-adaptation}. When neurons co-adapt, they act like a committee of specialists who each refuse to work unless their specific colleagues are present, rendering the network brittle when exposed to unseen noise.
+
+In 2012, Nitish Srivastava, Geoffrey Hinton, Alex Krizhevsky, Ilya Sutskever, and Ruslan Salakhutdinov introduced \textbf{Dropout}: a radically simple and potent regularization technique that disrupts co-adaptation by randomly deactivating neurons during training.
+
+\begin{analogy}[The Emergency Backup Flight Crew]
+Consider a commercial airliner flight deck. If the pilot and copilot always fly together on every flight, they may develop informal habits: the pilot never checks the altimeter because they assume the copilot always checks it, and the copilot never verifies fuel mixture because they assume the pilot handled it. A shared blind spot emerges.
+
+Now imagine the airline introduces a policy: on any random training simulator flight, crew members are randomly swapped or benched. The pilot must frequently fly alone or with an unfamiliar flight engineer. 
+
+To survive, every single flight officer must learn to read all instruments independently. They can no longer rely on another specific individual to cover their blind spots. The entire crew becomes resilient and generalized.
+\end{analogy}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    neuron/.style={circle, draw=keyideablue!80, fill=keyideablue!15, thick, minimum size=7.5mm, inner sep=0pt, font=\scriptsize\sffamily},
+    dropped/.style={circle, draw=gray!40, fill=gray!10, dashed, thick, minimum size=7.5mm, inner sep=0pt, font=\scriptsize\sffamily, text=gray!40},
+    layer_label/.style={font=\small\bfseries\sffamily, text centered}
+]
+    % Left side: Standard Network (Inference / Baseline)
+    \begin{scope}[shift={(0, 0)}]
+        % Input (3)
+        \foreach \i in {1,2,3} {
+            \node[neuron] (in\i) at (0, 3.2 - 1.1*\i) {$x_\i$};
+        }
+        % Hidden (4)
+        \foreach \j in {1,2,3,4} {
+            \node[neuron] (h\j) at (2.2, 3.75 - 1.1*\j) {$h_\j$};
+        }
+        % Output (2)
+        \foreach \k in {1,2} {
+            \node[neuron, fill=analogygreen!20, draw=analogygreen!80] (out\k) at (4.4, 2.65 - 1.1*\k) {$y_\k$};
+        }
+
+        % Connections
+        \foreach \i in {1,2,3} {
+            \foreach \j in {1,2,3,4} {
+                \draw[gray!40, thin] (in\i) -- (h\j);
+            }
+        }
+        \foreach \j in {1,2,3,4} {
+            \foreach \k in {1,2} {
+                \draw[gray!40, thin] (h\j) -- (out\k);
+            }
+        }
+
+        \node[font=\footnotesize\bfseries\sffamily] at (2.2, -1.4) {(a) Standard Dense Network};
+        \node[font=\tiny\sffamily, text=gray!80] at (2.2, -1.8) {All units active (Inference mode)};
+    \end{scope}
+
+    % Right side: Dropout Network (Training)
+    \begin{scope}[shift={(6.8, 0)}]
+        % Input (3) - x2 dropped
+        \node[neuron] (din1) at (0, 2.1) {$x_1$};
+        \node[dropped] (din2) at (0, 1.0) {$\times$};
+        \node[neuron] (din3) at (0, -0.1) {$x_3$};
+
+        % Hidden (4) - h1 and h4 dropped
+        \node[dropped] (dh1) at (2.2, 2.65) {$\times$};
+        \node[neuron] (dh2) at (2.2, 1.55) {$h_2$};
+        \node[neuron] (dh3) at (2.2, 0.45) {$h_3$};
+        \node[dropped] (dh4) at (2.2, -0.65) {$\times$};
+
+        % Output (2) - both active
+        \node[neuron, fill=analogygreen!20, draw=analogygreen!80] (dout1) at (4.4, 1.55) {$y_1$};
+        \node[neuron, fill=analogygreen!20, draw=analogygreen!80] (dout2) at (4.4, 0.45) {$y_2$};
+
+        % Active Connections only
+        \draw[keyideablue!80, thick] (din1) -- (dh2);
+        \draw[keyideablue!80, thick] (din1) -- (dh3);
+        \draw[keyideablue!80, thick] (din3) -- (dh2);
+        \draw[keyideablue!80, thick] (din3) -- (dh3);
+
+        \draw[analogygreen!90!black, thick] (dh2) -- (dout1);
+        \draw[analogygreen!90!black, thick] (dh2) -- (dout2);
+        \draw[analogygreen!90!black, thick] (dh3) -- (dout1);
+        \draw[analogygreen!90!black, thick] (dh3) -- (dout2);
+
+        \node[font=\footnotesize\bfseries\sffamily] at (2.2, -1.4) {(b) Thinned Sub-Network};
+        \node[font=\tiny\sffamily, text=warningred] at (2.2, -1.8) {Random units zeroed ($p=0.5$, Training)};
+    \end{scope}
+\end{tikzpicture}
+\caption{Dropout mechanism. During training, each neuron is independently zeroed with probability $p$. The network samples an exponential ensemble of $2^D$ thinned sub-architectures that share weights, preventing co-adaptation.}\label{fig:dropout_concept}
+\end{figure}
+
+\subsubsection{Mathematical Formulation: Inverted Dropout}
+
+Let $\mathbf{h} \in \mathbb{R}^D$ represent the activation vector emerging from a hidden layer. Under Dropout with drop probability $p \in (0, 1)$ (where $1 - p$ is the retention probability):
+\begin{enumerate}
+    \item Sample an independent random binary mask vector $\mathbf{m} \in \{0, 1\}^D$ from a Bernoulli distribution:
+    \begin{equation}
+    m_j \sim \text{Bernoulli}(1 - p), \qquad P(m_j = 1) = 1 - p\label{eq:bernoulli_mask}
+    \end{equation}
+    \item Apply \textbf{Inverted Dropout} to compute the regularized activation $\tilde{\mathbf{h}}$:
+    \begin{equation}
+    \tilde{\mathbf{h}} = \frac{1}{1 - p} \left( \mathbf{h} \odot \mathbf{m} \right)\label{eq:inverted_dropout}
+    \end{equation}
+    where $\odot$ denotes element-wise (Hadamard) multiplication.
+\end{enumerate}
+
+\paragraph{Why Scale by $\frac{1}{1 - p}$ During Training?}
+In the original 2012 formulation, activations were multiplied by $\mathbf{m}$ during training without scaling, requiring activations to be multiplied by $(1 - p)$ at test time. Modern frameworks (including PyTorch) implement \textbf{Inverted Dropout}, which divides by $(1 - p)$ during training:
+\begin{equation}
+\mathbb{E}[\tilde{h}_j] = \frac{1}{1 - p} \mathbb{E}[h_j \cdot m_j] = \frac{1}{1 - p} \left( h_j \cdot (1 - p) + 0 \cdot p \right) = h_j\label{eq:dropout_expectation}
+\end{equation}
+Because the expected activation during training matches the uncorrupted activation exactly, \textbf{no mathematical adjustments are required during inference}! At test time (\texttt{model.eval()}), the Dropout layer simply executes the identity operation $\tilde{\mathbf{h}} = \mathbf{h}$.
+
+\subsubsection{Dropout as an Implicit Ensemble}
+
+A layer with $D$ hidden neurons has $2^D$ possible binary mask configurations $\mathbf{m}$. Every single training mini-batch samples a different thinned sub-network. Because all $2^D$ sub-networks share the same underlying parameter weights $\mathbf{W}$, training with Dropout is mathematically equivalent to training an ensemble of $2^D$ distinct models and averaging their predictions geometrically at inference time!
+
+\paragraph{Monte Carlo Dropout: Estimating Predictive Uncertainty at the Edge}
+In 2016, Yarin Gal and Zoubin Ghahramani proved that Dropout can serve as a mathematically principled approximation to a \textbf{Bayesian Neural Network}.
+
+By intentionally keeping Dropout \textbf{active} during inference (passing the same sensor sample through the model $T = 20\text{ to }50$ times), the network outputs a distribution of predictions $\hat{y}^{(1)}, \hat{y}^{(2)}, \dots, \hat{y}^{(T)}$:
+\begin{align}
+\bar{\mu}_{\text{pred}} &= \frac{1}{T}\sum_{t=1}^T \hat{y}^{(t)}\label{eq:mc_mean} \\
+\sigma^2_{\text{epistemic}} &= \frac{1}{T}\sum_{t=1}^T \left( \hat{y}^{(t)} - \bar{\mu}_{\text{pred}} \right)^2\label{eq:mc_var}
+\end{align}
+The variance $\sigma^2_{\text{epistemic}}$ directly quantifies the model's \textbf{epistemic uncertainty} (model ignorance). In mission-critical edge robotics or automated medical actuators, if $\sigma^2_{\text{epistemic}} > \tau$, the edge device flags the decision as uncertain and hands control over to a human operator or safety fallback routine!
+
+\paragraph{Practical Hyperparameter Rules for IoT Sensors}
+\begin{itemize}
+    \item \textbf{Input Layer}: Set $p = 0.05\text{--}0.20$. Dropping too many raw sensor inputs destroys essential physical measurements.
+    \item \textbf{Dense Hidden Layers}: Set $p = 0.20\text{--}0.50$. Setting $p > 0.50$ restricts information flow excessively, inducing underfitting.
+    \item \textbf{Convolutional Layers}: Standard Dropout performs poorly on spatial feature maps because adjacent pixels are highly correlated. Instead, deploy \texttt{nn.Dropout2d} (\textbf{Spatial Dropout}), which zeroes out entire feature maps simultaneously.
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+\subsection{Batch Normalization: Accelerating Convergence}\label{subsec:batch_norm}
+% ------------------------------------------------------------------------------
+
+As signals propagate through deep networks, each layer's weights update during every optimization step. Consequently, the distribution of inputs arriving at downstream layers continually shifts. In 2015, Sergey Ioffe and Christian Szegedy termed this phenomenon \textbf{Internal Covariate Shift}.
+
+When layer inputs drift into extreme positive or negative ranges, non-linear activation functions (Sigmoid, Tanh, or saturated ReLUs) suffer from gradient saturation, causing training to grind to a halt. In 2018, Shibani Santurkar et al.~further demonstrated that normalizing intermediate activations fundamentally smooths the loss landscape, allowing significantly larger learning rates without risk of divergence.
+
+\subsubsection{The Batch Normalization Algorithm}
+
+For a mini-batch of activations $\mathcal{B} = \{\mathbf{x}_1, \mathbf{x}_2, \dots, \mathbf{x}_B\}$ where each $\mathbf{x}_i \in \mathbb{R}^D$:
+\begin{enumerate}
+    \item \textbf{Compute Mini-Batch Mean}:
+    \begin{equation}
+    \boldsymbol{\mu}_{\mathcal{B}} = \frac{1}{B} \sum_{i=1}^B \mathbf{x}_i\label{eq:bn_mean}
+    \end{equation}
+    \item \textbf{Compute Mini-Batch Variance}:
+    \begin{equation}
+    \boldsymbol{\sigma}_{\mathcal{B}}^2 = \frac{1}{B} \sum_{i=1}^B (\mathbf{x}_i - \boldsymbol{\mu}_{\mathcal{B}})^2\label{eq:bn_var}
+    \end{equation}
+    \item \textbf{Standardize Activations}:
+    \begin{equation}
+    \hat{\mathbf{x}}_i = \frac{\mathbf{x}_i - \boldsymbol{\mu}_{\mathcal{B}}}{\sqrt{\boldsymbol{\sigma}_{\mathcal{B}}^2 + \epsilon}}\label{eq:bn_standardize}
+    \end{equation}
+    where $\epsilon \approx 10^{-5}$ is a small numerical stabilizer preventing division by zero.
+    \item \textbf{Scale and Shift (Learnable Affine Reconstruction)}:
+    \begin{equation}
+    \mathbf{y}_i = \boldsymbol{\gamma} \odot \hat{\mathbf{x}}_i + \boldsymbol{\beta}\label{eq:bn_affine}
+    \end{equation}
+    where $\boldsymbol{\gamma} \in \mathbb{R}^D$ and $\boldsymbol{\beta} \in \mathbb{R}^D$ are learnable parameter vectors updated via backpropagation alongside the layer weights.
+\end{enumerate}
+
+\begin{keyidea}[Why Are Learnable Parameters $\boldsymbol{\gamma}$ and $\boldsymbol{\beta}$ Necessary?]
+Forcing intermediate activations to strictly follow a zero-mean, unit-variance distribution ($\mathcal{N}(0, 1)$) can strip away expressive power. For instance, if an activation is fed to a Sigmoid function, standardizing to $\mathcal{N}(0, 1)$ restricts inputs to the linear regime $[-1, 1]$, preventing the neuron from utilizing non-linear saturation!
+
+The learnable parameters $\boldsymbol{\gamma}$ and $\boldsymbol{\beta}$ allow the network to \textbf{undo} the normalization if identity mapping is optimal: if the network learns $\boldsymbol{\gamma} = \sqrt{\boldsymbol{\sigma}_{\mathcal{B}}^2 + \epsilon}$ and $\boldsymbol{\beta} = \boldsymbol{\mu}_{\mathcal{B}}$, it recovers the unnormalized activation exactly.
+\end{keyidea}
+
+\subsubsection{Training versus Inference: Running Statistics}
+
+During inference, single sensor samples may arrive individually ($B = 1$). A single sample has zero variance ($\sigma^2 = 0$), rendering Equation~\eqref{eq:bn_standardize} mathematically undefined!
+
+To solve this, Batch Normalization tracks global \textbf{running statistics} during training via exponential moving averages:
+\begin{align}
+\boldsymbol{\mu}_{\text{run}} &\leftarrow (1 - \alpha) \boldsymbol{\mu}_{\text{run}} + \alpha \boldsymbol{\mu}_{\mathcal{B}}\label{eq:running_mean} \\
+\boldsymbol{\sigma}^2_{\text{run}} &\leftarrow (1 - \alpha) \boldsymbol{\sigma}^2_{\text{run}} + \alpha \boldsymbol{\sigma}^2_{\mathcal{B}}\label{eq:running_var}
+\end{align}
+where $\alpha$ is the momentum factor (typically $\alpha = 0.1$ in PyTorch).
+
+During inference (\texttt{model.eval()}), the layer freezes training statistics and normalizes query samples using the precomputed running values:
+\begin{equation}
+\mathbf{y}_{\text{test}} = \boldsymbol{\gamma} \odot \left( \frac{\mathbf{x}_{\text{test}} - \boldsymbol{\mu}_{\text{run}}}{\sqrt{\boldsymbol{\sigma}^2_{\text{run}} + \epsilon}} \right) + \boldsymbol{\beta}\label{eq:bn_inference}
+\end{equation}
+
+\subsubsection{Alternative Normalization: LayerNorm and GroupNorm}
+
+While Batch Normalization is exceptional for vision and feedforward models with large batches ($B \ge 32$), it exhibits severe limitations in real-time edge processing:
+\begin{itemize}
+    \item When batch size is tiny ($B = 1\text{ to }4$), empirical batch statistics $\boldsymbol{\mu}_{\mathcal{B}}$ and $\boldsymbol{\sigma}^2_{\mathcal{B}}$ become noisy and erratic.
+    \item For recurrent neural networks (RNNs) and Transformers, sequence lengths vary dynamically.
+\end{itemize}
+
+\paragraph{Layer Normalization (\texttt{nn.LayerNorm})}
+Ba, Kiros, and Hinton (2016) proposed \textbf{Layer Normalization}, which normalizes across \textit{features} rather than across the batch:
+\begin{equation}
+\mu_i = \frac{1}{D}\sum_{j=1}^D x_{i,j}, \qquad \sigma_i^2 = \frac{1}{D}\sum_{j=1}^D (x_{i,j} - \mu_i)^2\label{eq:layernorm}
+\end{equation}
+Because LayerNorm operates independently on every single sample, its behavior is \textbf{identical during training and inference}, making it the gold standard for streaming IoT sequential models and Transformers.
+
+\subsubsection{Edge Optimization: Batch Normalization Folding}
+
+In microcontrollers and edge hardware (ESP32, ARM Cortex-M), executing Batch Normalization at runtime consumes valuable CPU cycles and memory. Fortunately, because inference uses fixed linear running statistics, any linear layer ($\mathbf{z} = \mathbf{W}\mathbf{x} + \mathbf{b}$) followed by Batch Normalization can be \textbf{mathematically folded} into a single equivalent linear layer:
+\begin{align}
+\mathbf{y} &= \boldsymbol{\gamma} \odot \left( \frac{\mathbf{W}\mathbf{x} + \mathbf{b} - \boldsymbol{\mu}_{\text{run}}}{\sqrt{\boldsymbol{\sigma}^2_{\text{run}} + \epsilon}} \right) + \boldsymbol{\beta} \nonumber \\
+&= \underbrace{\left( \frac{\boldsymbol{\gamma}}{\sqrt{\boldsymbol{\sigma}^2_{\text{run}} + \epsilon}} \mathbf{W} \right)}_{\mathbf{W}'} \mathbf{x} + \underbrace{\left( \boldsymbol{\beta} + \frac{\boldsymbol{\gamma}}{\sqrt{\boldsymbol{\sigma}^2_{\text{run}} + \epsilon}} (\mathbf{b} - \boldsymbol{\mu}_{\text{run}}) \right)}_{\mathbf{b}'}\label{eq:bn_folding}
+\end{align}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!12, thick, rounded corners=2mm, minimum width=2.4cm, minimum height=0.9cm, text centered, font=\small\sffamily},
+    fold_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!15, thick, rounded corners=2mm, minimum width=3.8cm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Before Folding
+    \node[box] (l1) at (0, 1.2) {Linear\\$\mathbf{W}, \mathbf{b}$};
+    \node[box, draw=exampleorange!80, fill=exampleorange!15] (bn) at (3.5, 1.2) {BatchNorm\\$\boldsymbol{\gamma}, \boldsymbol{\beta}, \boldsymbol{\mu}, \boldsymbol{\sigma}$};
+    \node[box, draw=gray!80, fill=gray!10] (act) at (7.0, 1.2) {Activation\\ReLU};
+
+    \draw[arrow] (-1.8, 1.2) -- node[above, font=\scriptsize\sffamily] {$\mathbf{x}$} (l1.west);
+    \draw[arrow] (l1.east) -- (bn.west);
+    \draw[arrow] (bn.east) -- (act.west);
+    \draw[arrow] (act.east) -- node[above, font=\scriptsize\sffamily] {$\mathbf{y}$} (8.6, 1.2);
+
+    \node[font=\footnotesize\bfseries\sffamily, text=gray!80] at (3.5, 2.2) {During Training: Two Distinct Layers};
+
+    % Folding Process Arrow
+    \draw[-{Stealth[length=3mm]}, very thick, dashed, analogygreen!80] (3.5, 0.4) -- node[right, font=\scriptsize\bfseries\sffamily, analogygreen!90!black] {Compile-Time Folding} (3.5, -0.6);
+
+    % After Folding
+    \node[fold_box] (fused) at (1.8, -1.4) {\textbf{Fused Linear Layer}\\$\mathbf{W}' = \frac{\boldsymbol{\gamma}}{\boldsymbol{\sigma}} \mathbf{W}, \ \mathbf{b}' = \boldsymbol{\beta} + \frac{\boldsymbol{\gamma}}{\boldsymbol{\sigma}}(\mathbf{b} - \boldsymbol{\mu})$};
+    \node[box, draw=gray!80, fill=gray!10] (act2) at (7.0, -1.4) {Activation\\ReLU};
+
+    \draw[arrow] (-1.8, -1.4) -- node[above, font=\scriptsize\sffamily] {$\mathbf{x}$} (fused.west);
+    \draw[arrow] (fused.east) -- (act2.west);
+    \draw[arrow] (act2.east) -- node[above, font=\scriptsize\sffamily] {$\mathbf{y}$} (8.6, -1.4);
+
+    \node[font=\footnotesize\bfseries\sffamily, text=analogygreen!90!black] at (3.5, -2.4) {Edge Deployment: Zero Extra Flops, Zero Latency Overhead!};
+\end{tikzpicture}
+\caption{Batch Normalization Folding for embedded microcontrollers. The affine normalization transformation is mathematically absorbed directly into the pre-activation weight matrix $\mathbf{W}'$ and bias vector $\mathbf{b}'$.}\label{fig:bn_folding}
+\end{figure}
+
+% ------------------------------------------------------------------------------
+\subsection{Learning Rate Schedules: Dynamic Adaptation}\label{subsec:lr_schedules}
+% ------------------------------------------------------------------------------
+
+The learning rate $\eta$ is universally acknowledged as the single most consequential hyperparameter in deep learning. A static learning rate presents an impossible dilemma:
+\begin{itemize}
+    \item \textbf{Too Large} ($\eta \ge 0.1$): The optimizer makes massive steps, overshooting ravines and oscillating chaotically or diverging to infinity (\texttt{NaN}).
+    \item \textbf{Too Small} ($\eta \le 10^{-5}$): Training crawls, consuming unnecessary compute and trapping the parameters inside shallow, suboptimal saddle points.
+\end{itemize}
+
+A \textbf{Learning Rate Schedule} dynamically adjusts $\eta_t$ as a function of epoch $t$, starting with aggressive exploration and tapering to precise local convergence.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Axes
+    \draw[-{Stealth[length=2.5mm]}, thick, gray!80] (0, 0) -- (11.0, 0) node[right, font=\small\sffamily] {Epoch $t$};
+    \draw[-{Stealth[length=2.5mm]}, thick, gray!80] (0, 0) -- (0, 4.8) node[above, font=\small\sffamily] {Learning Rate $\eta_t$};
+
+    % Step Decay (Blue)
+    \draw[keyideablue, very thick] (0, 4.0) -- (3.0, 4.0) -- (3.0, 2.0) -- (6.0, 2.0) -- (6.0, 0.8) -- (9.0, 0.8) -- (9.0, 0.2) -- (10.5, 0.2);
+    \node[keyideablue, font=\footnotesize\bfseries\sffamily, anchor=west] at (3.1, 3.8) {Step Decay (\texttt{StepLR})};
+
+    % Cosine Annealing (Green)
+    \draw[analogygreen, very thick] plot[domain=0:10.5, samples=100] (\x, {0.1 + 0.5*(3.9)*(1 + cos(\x/10.5*180))});
+    \node[analogygreen!90!black, font=\footnotesize\bfseries\sffamily, anchor=west] at (5.5, 2.6) {Cosine Annealing (\texttt{CosineAnnealingLR})};
+
+    % Warmup + Cosine (Orange)
+    \draw[exampleorange, very thick, dashed] (0, 0.2) -- (1.5, 4.2);
+    \draw[exampleorange, very thick, dashed] plot[domain=1.5:10.5, samples=100] (\x, {0.1 + 0.5*(4.1)*(1 + cos((\x-1.5)/9.0*180))});
+    \node[exampleorange!90!black, font=\footnotesize\bfseries\sffamily, anchor=west] at (1.6, 4.4) {Warmup + Cosine Decay};
+\end{tikzpicture}
+\caption{Dynamic trajectories of standard learning rate schedules across training epochs.}\label{fig:lr_schedules}
+\end{figure}
+
+\subsubsection{Common Scheduling Algorithms}
+
+\paragraph{1. Step Decay (\texttt{StepLR})}
+Reduces $\eta$ by a multiplicative factor $\gamma$ (typically $\gamma = 0.1\text{ or }0.5$) every $S$ epochs:
+\begin{equation}
+\eta_t = \eta_0 \cdot \gamma^{\lfloor t / S \rfloor}\label{eq:step_lr}
+\end{equation}
+
+\paragraph{2. Cosine Annealing (\texttt{CosineAnnealingLR})}
+Proposed by Ilya Loshchilov and Frank Hutter (2016), the learning rate follows a smooth cosine curve from $\eta_{\max}$ down to a specified minimum $\eta_{\min}$:
+\begin{equation}
+\eta_t = \eta_{\min} + \frac{1}{2}\left(\eta_{\max} - \eta_{\min}\right)\left( 1 + \cos\left( \frac{t}{T_{\max}} \pi \right) \right)\label{eq:cosine_annealing}
+\end{equation}
+Cosine annealing avoids the sudden, disruptive gradient shocks of Step Decay, providing smooth convergence into wide, generalizing minima.
+
+\paragraph{3. Warmup with Cosine Decay}
+When training begins, network weights are random and gradients are noisy. Stepping immediately with a large $\eta_{\max}$ destabilizes early representations. A \textbf{Warmup} phase linearly increases the learning rate from $0$ to $\eta_{\max}$ over the first $W$ epochs:
+\begin{equation}
+\eta_t = 
+\begin{cases}
+\eta_{\max} \cdot \left(\frac{t}{W}\right) & \text{if } t \le W \\[6pt]
+\eta_{\min} + \frac{1}{2}(\eta_{\max} - \eta_{\min})\left(1 + \cos\left( \frac{t - W}{T_{\max} - W}\pi \right)\right) & \text{if } t > W
+\end{cases}\label{eq:warmup_cosine}
+\end{equation}
+
+\paragraph{4. Reduce on Plateau (\texttt{ReduceLROnPlateau})}
+Rather than decaying based on a rigid clock, \texttt{ReduceLROnPlateau} monitors out-of-sample validation loss $\mathcal{L}_{\text{val}}$. If $\mathcal{L}_{\text{val}}$ fails to improve for a set number of epochs (the \texttt{patience} parameter), the scheduler cuts the learning rate by factor $\gamma$:
+\begin{lstlisting}[style=pythonstyle]
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer, mode='min', factor=0.5, patience=5, min_lr=1e-6
+)
+
+for epoch in range(epochs):
+    train_loss = train_one_epoch(...)
+    val_loss = evaluate(...)
+    scheduler.step(val_loss) # Dynamically reacts to validation loss!
+\end{lstlisting}
+
+% ------------------------------------------------------------------------------
+\subsection{Early Stopping: The Non-Parametric Regularizer}\label{subsec:early_stopping}
+% ------------------------------------------------------------------------------
+
+As training proceeds, a model's training loss monotonically decreases. However, validation loss follows a U-shaped curve: it drops initially as the network captures true physical patterns, hits a global minimum at epoch $t^*$, and then begins climbing as the model overfits training noise.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Axes
+    \draw[-{Stealth[length=2.5mm]}, thick, gray!80] (0, 0) -- (10.5, 0) node[right, font=\small\sffamily] {Epoch $t$};
+    \draw[-{Stealth[length=2.5mm]}, thick, gray!80] (0, 0) -- (0, 4.8) node[above, font=\small\sffamily] {Loss $\mathcal{L}$};
+
+    % Training loss (Decreasing)
+    \draw[gray!70, thick, dotted] plot[smooth] coordinates {(0.5, 4.2) (2.0, 2.2) (4.0, 1.2) (6.0, 0.6) (8.0, 0.3) (10.0, 0.15)};
+    \node[gray!80, font=\scriptsize\sffamily, anchor=west] at (8.0, 0.4) {Training Loss};
+
+    % Validation loss (U-curve)
+    \draw[warningred, very thick] plot[smooth] coordinates {(0.5, 4.4) (2.0, 2.6) (3.5, 1.8) (5.0, 1.6) (6.5, 1.85) (8.0, 2.6) (10.0, 4.1)};
+    \node[warningred, font=\footnotesize\bfseries\sffamily, anchor=west] at (8.2, 3.2) {Validation Loss};
+
+    % Optimal stopping point
+    \draw[dashed, analogygreen!80, thick] (5.0, 0) -- (5.0, 1.6);
+    \fill[analogygreen!90!black] (5.0, 1.6) circle (3pt);
+    \node[analogygreen!90!black, font=\scriptsize\bfseries\sffamily, anchor=north] at (5.0, -0.15) {Optimal Checkpoint $t^*$};
+
+    % Patience window
+    \draw[{Stealth[length=2mm]}-{Stealth[length=2mm]}, thick, gray!80] (5.0, 2.2) -- node[above, font=\tiny\sffamily] {Patience Window} (8.0, 2.2);
+    \draw[dashed, gray!60] (8.0, 0) -- (8.0, 2.6);
+    \node[warningred, font=\scriptsize\bfseries\sffamily, anchor=north] at (8.0, -0.15) {Early Stop Triggered};
+\end{tikzpicture}
+\caption{Early Stopping dynamics. Training continues beyond the optimal validation minimum $t^*$ for a specified \texttt{patience} window before halting and restoring the best checkpoint weights.}\label{fig:early_stopping}
+\end{figure}
+
+\textbf{Early Stopping} halts training when validation loss fails to improve for a user-specified \texttt{patience} window (typically $5\text{ to }15$ epochs), immediately reverting model parameters to the optimal checkpoint saved at $t^*$.
+
+\begin{keyidea}[Early Stopping Acts as Implicit L2 Regularization]
+There is a profound mathematical equivalence between Early Stopping and L2 Regularization (Ridge weight decay). In linear models initialized at $\mathbf{w}_0 = \mathbf{0}$ and optimized via gradient descent with learning rate $\eta$, the effective number of iterations $t$ acts inversely proportional to the L2 penalty $\lambda$:
+\begin{equation}
+\lambda_{\text{effective}} \approx \frac{1}{\eta t}\label{eq:early_stopping_equivalence}
+\end{equation}
+Halting training early physically restricts the Euclidean distance $\|\mathbf{w} - \mathbf{w}_0\|_2$ that weights can travel away from zero, strictly bounding model complexity!
+\end{keyidea}
+
+% ------------------------------------------------------------------------------
+\subsection{Data Augmentation for Physical and Edge Sensors}\label{subsec:data_augmentation}
+% ------------------------------------------------------------------------------
+
+While computer vision models leverage rotations, flips, and color jittering to artificially inflate datasets, applying computer vision transforms to physical sensor telemetry is meaningless. Flipping a 3-axis accelerometer vector upside down reverses the gravity vector ($+1\text{ g} \to -1\text{ g}$), signaling an impossible physical state!
+
+Data augmentation for physical time-series must respect fundamental domain constraints (sampling rate, physical units, sensor bandwidth).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Base Signal
+    \begin{scope}[shift={(0, 2.8)}]
+        \draw[-{Stealth[length=2mm]}, gray!80] (0, 0) -- (4.2, 0) node[right, font=\tiny\sffamily] {$t$};
+        \draw[keyideablue, thick] plot[domain=0:4, samples=60] (\x, {0.6*sin(\x*180)});
+        \node[font=\footnotesize\bfseries\sffamily, text=keyideablue] at (2.0, 1.0) {1. Base Sensor Signal};
+    \end{scope}
+
+    % Jittering (Noise Injection)
+    \begin{scope}[shift={(6.0, 2.8)}]
+        \draw[-{Stealth[length=2mm]}, gray!80] (0, 0) -- (4.2, 0) node[right, font=\tiny\sffamily] {$t$};
+        \draw[warningred, thick] plot[domain=0:4, samples=60] (\x, {0.6*sin(\x*180) + 0.15*cos(\x*900)});
+        \node[font=\footnotesize\bfseries\sffamily, text=warningred] at (2.0, 1.0) {2. Jittering ($\mathbf{x} + \mathcal{N}(0, \sigma^2)$)};
+    \end{scope}
+
+    % Magnitude Scaling
+    \begin{scope}[shift={(0, 0)}]
+        \draw[-{Stealth[length=2mm]}, gray!80] (0, 0) -- (4.2, 0) node[right, font=\tiny\sffamily] {$t$};
+        \draw[analogygreen!90!black, thick] plot[domain=0:4, samples=60] (\x, {0.9*sin(\x*180)});
+        \node[font=\footnotesize\bfseries\sffamily, text=analogygreen!90!black] at (2.0, 1.2) {3. Magnitude Scaling ($\alpha \mathbf{x}$)};
+    \end{scope}
+
+    % Time Warping
+    \begin{scope}[shift={(6.0, 0)}]
+        \draw[-{Stealth[length=2mm]}, gray!80] (0, 0) -- (4.2, 0) node[right, font=\tiny\sffamily] {$t$};
+        \draw[exampleorange!90!black, thick] plot[domain=0:4, samples=60] (\x, {0.6*sin((\x^1.3)*180)});
+        \node[font=\footnotesize\bfseries\sffamily, text=exampleorange!90!black] at (2.0, 1.0) {4. Time Warping ($\tau(t)$)};
+    \end{scope}
+\end{tikzpicture}
+\caption{Four foundational data augmentation transformations for physical sensor time-series.}\label{fig:sensor_augmentations}
+\end{figure}
+
+\subsubsection{Core Sensor Augmentation Transformations}
+
+\begin{enumerate}
+    \item \textbf{Jittering (Gaussian Noise Injection)}:
+    \begin{equation}
+    \tilde{\mathbf{x}}(t) = \mathbf{x}(t) + \boldsymbol{\epsilon}(t), \qquad \boldsymbol{\epsilon}(t) \sim \mathcal{N}(0, \sigma_{\text{noise}}^2)\label{eq:jittering}
+    \end{equation}
+    Simulates thermal Johnson noise in sensor resistors and electromagnetic noise from adjacent high-power industrial motors.
+    \item \textbf{Magnitude Scaling}:
+    \begin{equation}
+    \tilde{\mathbf{x}}(t) = \alpha \cdot \mathbf{x}(t), \qquad \alpha \sim \text{Uniform}(1 - \delta, 1 + \delta)\label{eq:scaling}
+    \end{equation}
+    where $\delta \approx 0.05\text{--}0.10$. Simulates slight variations in sensor battery supply voltage or mechanical mounting clamp tightness.
+    \item \textbf{Time Warping}: Compresses or expands segments of the time-series along the temporal axis, simulating slight operational speed variations (such as a motor fluctuating between $1{,}750\text{ RPM}$ and $1{,}850\text{ RPM}$).
+    \item \textbf{Mixup (Linear Interpolation)}: Introduced by Hongyi Zhang et al.~(2017), Mixup constructs synthetic training examples by taking convex combinations of random pairs of sensor vectors and their one-hot target vectors:
+    \begin{align}
+    \tilde{\mathbf{x}} &= \lambda \mathbf{x}_i + (1 - \lambda) \mathbf{x}_j\label{eq:mixup_x} \\
+    \tilde{\mathbf{y}} &= \lambda \mathbf{y}_i + (1 - \lambda) \mathbf{y}_j\label{eq:mixup_y}
+    \end{align}
+    where $\lambda \sim \text{Beta}(\alpha, \alpha)$ with $\alpha \in [0.2, 0.4]$. Mixup regularizes the model to behave linearly between distinct operating modes, smoothing out decision boundaries and drastically reducing overconfident false alarms.
+\end{enumerate}
+
+Listing~\ref{lst:sensor_augmentation} provides a modular Python implementation of these transformations tailored for PyTorch dataset pipelines.
+
+\begin{lstlisting}[style=pythonstyle, caption={Modular data augmentation pipeline for physical sensor telemetry.}, label={lst:sensor_augmentation}]
+import torch
+import numpy as np
+
+class SensorAugmentor:
+    """Domain-preserving data augmentation for multi-axis sensor streams."""
+    def __init__(self, jitter_std=0.03, scale_range=(0.95, 1.05)):
+        self.jitter_std = jitter_std
+        self.scale_range = scale_range
+
+    def add_jitter(self, x: torch.Tensor) -> torch.Tensor:
+        """Injects additive zero-mean Gaussian thermal noise."""
+        noise = torch.randn_like(x) * self.jitter_std
+        return x + noise
+
+    def scale_magnitude(self, x: torch.Tensor) -> torch.Tensor:
+        """Applies random uniform gain scaling."""
+        gain = torch.empty(1).uniform_(*self.scale_range).item()
+        return x * gain
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        # Sequentially apply noise and scaling with 50% probability
+        if torch.rand(1).item() > 0.5:
+            x = self.add_jitter(x)
+        if torch.rand(1).item() > 0.5:
+            x = self.scale_magnitude(x)
+        return x
+\end{lstlisting}
+
+% ------------------------------------------------------------------------------
+\subsection{Systematic Debugging: What to Do When a Model Will Not Learn}\label{subsec:debugging}
+% ------------------------------------------------------------------------------
+
+Software engineers are accustomed to clear, explicit error reports: when an algorithm contains a bug, the compiler throws a syntax error, a null-pointer exception, or a descriptive stack trace.
+
+Machine learning models fail silently. A broken model will happily execute $100$ epochs, consume kilowatt-hours of electrical power, and output meaningless predictions without a single error message.
+
+When your model refuses to converge, do not blindly tweak random hyperparameters. Execute this \textbf{7-step systematic diagnostic protocol}:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    diag_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!10, thick, rounded corners=1.5mm, minimum width=11.5cm, minimum height=0.75cm, text width=11.0cm, font=\footnotesize\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    \node[diag_box, fill=warningred!15, draw=warningred!80] (b1) at (0, 4.5) {\textbf{Step 1: Overfit a Single Batch} $\longrightarrow$ Can the model memorize 5 samples to 100\% accuracy?};
+    \node[diag_box] (b2) at (0, 3.5) {\textbf{Step 2: Check Initial Loss at Epoch 0} $\longrightarrow$ Does initial loss match theoretical $\ln(K)$?};
+    \node[diag_box] (b3) at (0, 2.5) {\textbf{Step 3: Run Learning Rate Range Test} $\longrightarrow$ Sweep $\eta$ from $10^{-6}$ to $10^{1}$ on log scale.};
+    \node[diag_box] (b4) at (0, 1.5) {\textbf{Step 4: Inspect Gradient Norms} $\longrightarrow$ Are gradients vanishing ($< 10^{-6}$) or exploding ($> 10^3$)?};
+    \node[diag_box] (b5) at (0, 0.5) {\textbf{Step 5: Verify Input Preprocessing} $\longrightarrow$ Are all sensor channels zero-mean ($\mu=0, \sigma=1$)?};
+    \node[diag_box] (b6) at (0, -0.5) {\textbf{Step 6: Check Label Alignment \& Types} $\longrightarrow$ Are targets correctly indexed ($0 \dots K-1$)?};
+    \node[diag_box, fill=analogygreen!15, draw=analogygreen!80] (b7) at (0, -1.5) {\textbf{Step 7: Confirm Mode Toggles} $\longrightarrow$ Are \texttt{model.train()} and \texttt{model.eval()} set correctly?};
+
+    \draw[arrow] (b1) -- (b2);
+    \draw[arrow] (b2) -- (b3);
+    \draw[arrow] (b3) -- (b4);
+    \draw[arrow] (b4) -- (b5);
+    \draw[arrow] (b5) -- (b6);
+    \draw[arrow] (b6) -- (b7);
+\end{tikzpicture}
+\caption{The 7-step systematic deep learning diagnostic protocol.}\label{fig:diagnostic_protocol}
+\end{figure}
+
+\subsubsection{The 7-Step Diagnostic Protocol Explained}
+
+\begin{enumerate}
+    \item \textbf{Step 1: Overfit a Single Mini-Batch}: Take exactly 4 to 8 samples from your dataset and train the model exclusively on those samples for 50 epochs without regularization (no Dropout, no weight decay). If the model cannot achieve $100\%$ accuracy and near-zero loss ($< 10^{-3}$) on 5 samples, \textbf{your code has a fatal architectural bug}:
+    \begin{itemize}
+        \\item Loss function does not match outputs (e.g., passing logits into a custom loss expecting probabilities).
+        \item Gradients are detached or zeroed prematurely inside \texttt{forward()}.
+        \item Learning rate is wildly miscalibrated.
+    \end{itemize}
+    Do not proceed to full dataset training until your model proves it can memorize a single batch!
+    
+    \item \textbf{Step 2: Check Initial Loss at Step 0}: Before running any optimization steps, evaluate the model on random weights. For a balanced classification problem with $K$ classes, every class has random probability $1 / K$. The theoretical initial cross-entropy loss must be:
+    \begin{equation}
+    \mathcal{L}_{\text{init}} = -\ln\left(\frac{1}{K}\right) = \ln(K)\label{eq:initial_loss_rule}
+    \end{equation}
+    For $K = 2$, $\mathcal{L}_{\text{init}} = \ln(2) \approx 0.693$. For $K = 10$, $\mathcal{L}_{\text{init}} = \ln(10) \approx 2.302$. If your initial loss is $15.4$ or $0.02$, your output scaling, activation function, or weight initialization is broken.
+    
+    \item \textbf{Step 3: Run a Learning Rate Range Test}: Train for 100 iterations, exponentially ramping $\eta$ from $10^{-6}$ up to $1.0$. Plot loss against $\log(\eta)$. Select a base learning rate approximately one order of magnitude below the point of steepest descent.
+    
+    \item \textbf{Step 4: Inspect Gradient Magnitudes}: Monitor the Euclidean norm of parameter gradients:
+    \begin{equation}
+    \|\mathbf{g}\|_2 = \sqrt{\sum_j \left(\frac{\partial \mathcal{L}}{\partial w_j}\right)^2}\label{eq:grad_norm}
+    \end{equation}
+    If $\|\mathbf{g}\|_2 \approx 0$, gradients are vanishing (caused by deep saturating Sigmoids or dying ReLUs; replace with LeakyReLU or insert BatchNorm). If $\|\mathbf{g}\|_2 > 10^3$, gradients are exploding (insert \texttt{clip\_grad\_norm\_(model.parameters(), 1.0)}).
+    
+    \item \textbf{Step 5: Verify Input Feature Normalization}: If feature 1 is motor temperature in Kelvin ($300\text{ K}$) and feature 2 is vibration displacement in meters ($0.00005\text{ m}$), gradients will be completely dominated by feature 1, freezing the weights associated with feature 2. Always standardize every input sensor channel using zero-mean unit-variance scaling:
+    \begin{equation*}
+    \tilde{x}_j = \frac{x_j - \mu_j}{\sigma_j}
+    \end{equation*}
+    
+    \item \textbf{Step 6: Check Label Alignment and Target Types}: Ensure target labels are 0-indexed integers ($y \in \{0, 1, \dots, K-1\}$). If classes are labeled $\{1, 2, \dots, K\}$, PyTorch will crash with an out-of-bounds error or silently map the final class to an unallocated index!
+    
+    \item \textbf{Step 7: Confirm Mode Toggles}: Verify that \texttt{model.train()} is called before training loops and \texttt{model.eval()} is called before validation loops. Leaving \texttt{model.eval()} active during training disables Dropout and freezes BatchNorm updates completely!
+\end{enumerate}
+
+\begin{example}[A Real-World IoT Diagnostic Walkthrough]
+An engineer trains an MLP to classify 4 types of hydraulic valve wear ($K = 4$). The model achieves $25\%$ accuracy (pure random chance) and stalls across 50 epochs.
+\begin{enumerate}
+    \item \textbf{Check Initial Loss}: Theoretical loss should be $\ln(4) \approx 1.386$. The actual initial loss printed is $8.450$!
+    \item \textbf{Investigation}: Why is the initial loss so huge? Inspecting the architecture reveals:
+    \begin{lstlisting}[style=pythonstyle]
+    # BUG IDENTIFIED: Double Softmax!
+    self.output = nn.Sequential(
+        nn.Linear(32, 4),
+        nn.Softmax(dim=-1) # Manual Softmax
+    )
+    criterion = nn.CrossEntropyLoss() # Fused Softmax + NLLLoss!
+    \end{lstlisting}
+    The engineer placed an explicit \texttt{nn.Softmax()} before \texttt{nn.CrossEntropyLoss()}. The double-softmax squashed class probabilities down to near-zero values, inflating the loss and obliterating gradient magnitudes ($\|\mathbf{g}\| \approx 10^{-7}$).
+    \item \textbf{Correction}: Removing \texttt{nn.Softmax()} from \texttt{forward()} restored initial loss to exactly $1.386$. The model converged to $98.2\%$ validation accuracy within 12 epochs.
+\end{enumerate}
+\end{example}
+
+% ------------------------------------------------------------------------------
+\subsection{Summary and Practical Checklist}\label{subsec:training_summary}
+% ------------------------------------------------------------------------------
+
+\begin{takeaways}[Eight Rules of Robust Deep Learning Training]
+\begin{itemize}
+    \item \textbf{Dropout Breaks Co-adaptation}: Randomly zeroing activations during training forces neurons to learn robust, independent representations. Always use Inverted Dropout to eliminate test-time scaling.
+    \item \textbf{Estimate Uncertainty via MC Dropout}: Keeping Dropout active across multiple forward passes at test time quantifies epistemic uncertainty for safe edge actuation.
+    \item \textbf{Batch Normalization Smooths Optimization}: Standardizing intermediate layer activations prevents internal covariate shift and enables larger learning rates.
+    \item \textbf{Fold BatchNorm for Microcontrollers}: During edge compilation, fold BatchNorm parameters ($\boldsymbol{\gamma}, \boldsymbol{\beta}, \boldsymbol{\mu}_{\text{run}}, \boldsymbol{\sigma}^2_{\text{run}}$) into preceding linear layer weights to eliminate runtime computation entirely.
+    \item \textbf{Dynamic Schedules Beat Static Rates}: Deploy \texttt{CosineAnnealingLR} or \texttt{ReduceLROnPlateau} to transition from global exploration to precise local convergence.
+    \item \textbf{Early Stopping Prevents Overfitting}: Monitor validation loss and restore the optimal saved checkpoint when patience expires.
+    \item \textbf{Augment Physical Signals Responsibly}: Apply domain-aware sensor transforms (jittering, magnitude scaling, time-warping, Mixup) without violating physical sensor laws.
+    \item \textbf{Execute the 7-Step Diagnostic Protocol}: When a model will not learn, overfit a single mini-batch first, verify initial loss against $\ln(K)$, check gradient norms, and verify normalization.
+\end{itemize}
+\end{takeaways}
+
+% ------------------------------------------------------------------------------
+\subsection{Check Yourself}\label{subsec:training_check_yourself}
+% ------------------------------------------------------------------------------
+
+\begin{checkyourself}[Practice Exercises]
+\begin{enumerate}
+    \item \textbf{Inverted Dropout Scaling Arithmetic}:
+    A hidden layer outputs activation vector $\mathbf{h} = [2.0, \ -4.0, \ 6.0, \ 10.0]^T$. A Dropout layer with drop probability $p = 0.50$ is applied during training. The sampled Bernoulli mask is $\mathbf{m} = [1, \ 0, \ 1, \ 0]^T$.
+    \begin{enumerate}[label=(\alph*)]
+        \item What is the Inverted Dropout scaling factor $\frac{1}{1 - p}$?
+        \item Compute the scaled output activation vector $\tilde{\mathbf{h}}$ during training.
+        \item If the same vector $\mathbf{h}$ is passed during inference mode (\texttt{model.eval()}), what is the output vector?
+        \item Prove mathematically that the expected value $\mathbb{E}[\tilde{h}_j]$ during training equals $h_j$.
+    \end{enumerate}
+
+    \item \textbf{Batch Normalization and Folding for TinyML}:
+    A mini-batch contains three pre-activation scalars: $\mathbf{x} = [2.0, \ 5.0, \ 11.0]^T$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the mini-batch mean $\mu_{\mathcal{B}}$, variance $\sigma_{\mathcal{B}}^2$, and standard deviation $\sigma_{\mathcal{B}}$.
+        \item Compute the standardized values $\hat{x}_i$ (using $\epsilon = 0$).
+        \item Given learnable affine parameters $\gamma = 2.0$ and $\beta = 1.0$, compute the normalized outputs $y_i$.
+        \item A linear layer has weight $W = 3.0$ and bias $b = -2.0$. It is followed by a trained BatchNorm layer with running mean $\mu_{\text{run}} = 6.0$, running variance $\sigma^2_{\text{run}} = 16.0$ ($\sigma = 4.0$), $\gamma = 2.0$, and $\beta = 1.0$. Calculate the folded weight $W'$ and folded bias $b'$.
+    \end{enumerate}
+
+    \item \textbf{Cosine Annealing Schedule Trajectory}:
+    An optimizer trains with \texttt{CosineAnnealingLR} configured with maximum learning rate $\eta_{\max} = 0.01$, minimum learning rate $\eta_{\min} = 0.0001$, and period $T_{\max} = 50$ epochs.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the learning rate $\eta_0$ at epoch $t = 0$.
+        \item Compute the learning rate $\eta_{25}$ at epoch $t = 25$ (midpoint).
+        \item Compute the learning rate $\eta_{50}$ at epoch $t = 50$ (final epoch).
+    \end{enumerate}
+
+    \item \textbf{Initial Loss Sanity Check}:
+    A predictive maintenance neural network classifies wind turbine gearbox health into $K = 5$ distinct operational modes.
+    \begin{enumerate}[label=(\alph*)]
+        \item Assuming balanced classes and random initialization, compute the theoretical initial loss $\mathcal{L}_{\text{init}}$ under \texttt{nn.CrossEntropyLoss}.
+        \item An engineer runs the script and observes an initial loss of $12.40$. Name the two most probable software implementation errors.
+    \end{enumerate}
+
+    \item \textbf{Sensor Mixup Augmentation}:
+    Two physical sensor readings from an industrial pump are:
+    \begin{itemize}
+        \item Normal Sample $A$: $\mathbf{x}_A = [40.0^\circ\text{C}, \ 1.2\text{ mm/s}]^T$, one-hot label $\mathbf{y}_A = [1.0, \ 0.0]^T$ (Healthy).
+        \item Faulty Sample $B$: $\mathbf{x}_B = [80.0^\circ\text{C}, \ 4.8\text{ mm/s}]^T$, one-hot label $\mathbf{y}_B = [0.0, \ 1.0]^T$ (Cavitation).
+    \end{itemize}
+    A Mixup transformation is applied with interpolation parameter $\lambda = 0.75$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the synthetic augmented feature vector $\tilde{\mathbf{x}}$.
+        \item Compute the synthetic soft target label vector $\tilde{\mathbf{y}}$.
+        \item Why does training on soft targets prevent overconfident predictions on edge microcontrollers?
+    \end{enumerate}
+\end{enumerate}
+\end{checkyourself}
+
+% ------------------------------------------------------------------------------
+\subsection*{Answers}\label{subsec:training_answers}
+% ------------------------------------------------------------------------------
+
+\begin{enumerate}
+    \item \textbf{Inverted Dropout Scaling Arithmetic}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Scaling Factor}:
+        \begin{equation*}
+        \text{Scale} = \frac{1}{1 - p} = \frac{1}{1 - 0.50} = \frac{1}{0.50} = \mathbf{2.0}
+        \end{equation*}
+
+        \item \textbf{Scaled Training Output $\tilde{\mathbf{h}}$}:
+        \begin{align*}
+        \tilde{\mathbf{h}} &= \frac{1}{1 - p} (\mathbf{h} \odot \mathbf{m}) = 2.0 \cdot \left( \begin{bmatrix} 2.0 \\ -4.0 \\ 6.0 \\ 10.0 \end{bmatrix} \odot \begin{bmatrix} 1 \\ 0 \\ 1 \\ 0 \end{bmatrix} \right) \\
+        &= 2.0 \cdot \begin{bmatrix} 2.0 \\ 0.0 \\ 6.0 \\ 0.0 \end{bmatrix} = \begin{bmatrix} \mathbf{4.0} \\ \mathbf{0.0} \\ \mathbf{12.0} \\ \mathbf{0.0} \end{bmatrix}
+        \end{align*}
+
+        \item \textbf{Inference Output}:
+        In inference mode (\texttt{model.eval()}), Dropout is deactivated. The output is the uncorrupted vector:
+        \begin{equation*}
+        \mathbf{h}_{\text{test}} = \mathbf{h} = [\mathbf{2.0}, \ \mathbf{-4.0}, \ \mathbf{6.0}, \ \mathbf{10.0}]^T
+        \end{equation*}
+
+        \item \textbf{Proof of Expected Value}:
+        The mask variable $m_j \in \{0, 1\}$ takes value $1$ with probability $1 - p$ and value $0$ with probability $p$. Taking the expectation:
+        \begin{align*}
+        \mathbb{E}[\tilde{h}_j] &= \mathbb{E}\left[ \frac{1}{1 - p} h_j m_j \right] = \frac{h_j}{1 - p} \mathbb{E}[m_j] \\
+        &= \frac{h_j}{1 - p} \left[ 1 \cdot (1 - p) + 0 \cdot p \right] = \frac{h_j}{1 - p} (1 - p) = \mathbf{h_j}
+        \end{align*}
+        The expected signal energy during training exactly matches the uncorrupted test-time energy.
+    \end{enumerate}
+
+    \item \textbf{Batch Normalization and Folding for TinyML}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Batch Statistics}:
+        \begin{align*}
+        \mu_{\mathcal{B}} &= \frac{2.0 + 5.0 + 11.0}{3} = \frac{18.0}{3} = \mathbf{6.00} \\
+        \sigma_{\mathcal{B}}^2 &= \frac{(2.0 - 6.0)^2 + (5.0 - 6.0)^2 + (11.0 - 6.0)^2}{3} \\
+        &= \frac{(-4.0)^2 + (-1.0)^2 + (5.0)^2}{3} = \frac{16.0 + 1.0 + 25.0}{3} = \frac{42.0}{3} = \mathbf{14.00} \\
+        \sigma_{\mathcal{B}} &= \sqrt{14.00} \approx \mathbf{3.7417}
+        \end{align*}
+
+        \item \textbf{Standardized Values $\hat{x}_i$}:
+        \begin{align*}
+        \hat{x}_1 &= \frac{2.0 - 6.0}{\sqrt{14}} = \frac{-4.0}{3.7417} \approx \mathbf{-1.0690} \\
+        \hat{x}_2 &= \frac{5.0 - 6.0}{\sqrt{14}} = \frac{-1.0}{3.7417} \approx \mathbf{-0.2673} \\
+        \hat{x}_3 &= \frac{11.0 - 6.0}{\sqrt{14}} = \frac{5.0}{3.7417} \approx \mathbf{1.3363}
+        \end{align*}
+
+        \item \textbf{Affine Outputs ($y_i = \gamma \hat{x}_i + \beta$ with $\gamma = 2.0, \beta = 1.0$)}:
+        \begin{align*}
+        y_1 &= 2.0(-1.0690) + 1.0 = -2.1380 + 1.0 = \mathbf{-1.1380} \\
+        y_2 &= 2.0(-0.2673) + 1.0 = -0.5346 + 1.0 = \mathbf{0.4654} \\
+        y_3 &= 2.0(1.3363) + 1.0 = 2.6726 + 1.0 = \mathbf{3.6726}
+        \end{align*}
+
+        \item \textbf{BatchNorm Folding Calculations}:
+        Given $W = 3.0, b = -2.0, \mu_{\text{run}} = 6.0, \sigma_{\text{run}} = 4.0, \gamma = 2.0, \beta = 1.0$:
+        \begin{align*}
+        W' &= \frac{\gamma}{\sigma_{\text{run}}} W = \left( \frac{2.0}{4.0} \right) \cdot 3.0 = 0.5 \cdot 3.0 = \mathbf{1.5000} \\
+        b' &= \beta + \frac{\gamma}{\sigma_{\text{run}}} (b - \mu_{\text{run}}) = 1.0 + \left( \frac{2.0}{4.0} \right) (-2.0 - 6.0) \\
+        &= 1.0 + 0.5(-8.0) = 1.0 - 4.0 = \mathbf{-3.0000}
+        \end{align*}
+        The fused linear layer executes as $\mathbf{y} = 1.5000 \cdot x - 3.0000$, eliminating the runtime BatchNorm layer entirely!
+    \end{enumerate}
+
+    \item \textbf{Cosine Annealing Schedule Trajectory}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{At Epoch $t = 0$}:
+        \begin{equation*}
+        \eta_0 = 0.0001 + \frac{1}{2}(0.01 - 0.0001)\left(1 + \cos(0)\right) = 0.0001 + \frac{1}{2}(0.0099)(2) = \mathbf{0.0100}
+        \end{equation*}
+
+        \item \textbf{At Epoch $t = 25$ ($t / T_{\max} = 0.5$)}:
+        Because $\cos(\frac{25}{50}\pi) = \cos(\frac{\pi}{2}) = 0$:
+        \begin{equation*}
+        \eta_{25} = 0.0001 + \frac{1}{2}(0.0099)(1 + 0) = 0.0001 + 0.00495 = \mathbf{0.00505}
+        \end{equation*}
+
+        \item \textbf{At Epoch $t = 50$ ($t / T_{\max} = 1.0$)}:
+        Because $\cos(\pi) = -1$:
+        \begin{equation*}
+        \eta_{50} = 0.0001 + \frac{1}{2}(0.0099)(1 + (-1)) = 0.0001 + 0 = \mathbf{0.0001}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{Initial Loss Sanity Check}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Theoretical Initial Loss for $K = 5$}:
+        \begin{equation*}
+        \mathcal{L}_{\text{init}} = -\ln\left(\frac{1}{5}\right) = \ln(5) \approx \mathbf{1.6094}
+        \end{equation*}
+
+        \item \textbf{Probable Implementation Errors for $\mathcal{L} = 12.40$}:
+        \begin{enumerate}
+            \item \textbf{Double Softmax Bug}: The model architecture applies an explicit \texttt{nn.Softmax()} layer at the output, which is subsequently passed to \texttt{nn.CrossEntropyLoss()} (which applies a second log-softmax internally), driving probabilities into near-zero territory.
+            \item \textbf{Exploding Weight Initialization}: The final layer weights were initialized with an excessively large variance, generating huge initial pre-activation logits ($|z| > 50$) that cause extreme cross-entropy penalties.
+        \end{enumerate}
+    \end{enumerate}
+
+    \item \textbf{Sensor Mixup Augmentation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Synthesized Feature Vector $\tilde{\mathbf{x}}$}:
+        \begin{align*}
+        \tilde{\mathbf{x}} &= 0.75 \begin{bmatrix} 40.0 \\ 1.2 \end{bmatrix} + 0.25 \begin{bmatrix} 80.0 \\ 4.8 \end{bmatrix} = \begin{bmatrix} 30.0 \\ 0.90 \end{bmatrix} + \begin{bmatrix} 20.0 \\ 1.20 \end{bmatrix} = \begin{bmatrix} \mathbf{50.0^\circ\text{C}} \\ \mathbf{2.10\text{ mm/s}} \end{bmatrix}
+        \end{align*}
+
+        \item \textbf{Synthesized Soft Target Label $\tilde{\mathbf{y}}$}:
+        \begin{align*}
+        \tilde{\mathbf{y}} &= 0.75 \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix} + 0.25 \begin{bmatrix} 0.0 \\ 1.0 \end{bmatrix} = \begin{bmatrix} \mathbf{0.75} \\ \mathbf{0.25} \end{bmatrix}
+        \end{align*}
+
+        \item \textbf{Operational Value of Soft Targets on Edge Devices}:
+        Standard one-hot training ($[1, 0]$ vs $[0, 1]$) encourages neural networks to drive output logits toward extreme positive/negative values ($z \to \pm\infty$), resulting in hyper-confident $99.99\%$ probability outputs even when inputs are ambiguous or noisy. Training with soft Mixup targets forces the network to output calibrated, proportional probabilities in the transitional boundary zones between operational modes, preventing false positive emergency shutdowns on microcontrollers.
+    \end{enumerate}
+\end{enumerate}

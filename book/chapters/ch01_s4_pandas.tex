@@ -1,0 +1,578 @@
+% FILE: chapters/ch01_s4_pandas.tex
+\section{pandas}\label{sec:pandas}
+
+In the previous section, we explored NumPy, which provides raw speed and multi-dimensional numerical array computation. However, real-world data rarely arrives as pristine, homogeneous matrices of floating-point numbers.
+
+In practical IoT systems, industrial automation, and predictive maintenance, data arrives as messy, heterogeneous tables: a single row contains a calendar timestamp (\code{"2026-03-01 08:14:22"}), a text device identifier (\code{"ESP32_NODE_04"}), continuous sensor measurements (temperature, vibration, pressure), categorical status flags (\code{"Operational"}, \code{"Degraded"}), and occasional corrupted null values (\code{NaN}).
+
+NumPy cannot assign column names or handle mixed data types without converting everything into inefficient generic objects. This is why **pandas** exists: it provides fast, expressive, and flexible data structures designed to make working with labeled, heterogeneous, and time-indexed data intuitive.
+
+In this section, we master the pandas data analysis workflow:
+\begin{enumerate}
+    \item \textbf{Series and DataFrames}: The two foundational data structures of pandas.
+    \item \textbf{Data Ingestion}: Loading and serializing CSV, Excel, and JSON files without memory bloat.
+    \item \textbf{Indexing and Filtering}: Mastering label-based (\code{.loc}) and position-based (\code{.iloc}) selection, boolean masking, and sorting.
+    \item \textbf{The Split-Apply-Combine Pattern}: Grouping and multi-metric aggregations with \code{groupby}.
+    \item \textbf{Database-Style Joins}: Merging, joining, and concatenating disparate sensor feeds.
+    \item \textbf{Time-Series Manipulation}: Datetime parsing, chronological indexing, rolling windows, and sensor frequency resampling.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    idxbox/.style={rectangle, draw=red!70, fill=red!10, rounded corners=1.5mm, thick, minimum width=1.4cm, minimum height=0.65cm, font=\scriptsize\ttfamily},
+    colbox/.style={rectangle, draw=blue!70, fill=blue!10, rounded corners=1.5mm, thick, minimum width=2.2cm, minimum height=0.65cm, font=\scriptsize\ttfamily},
+    cellbox/.style={rectangle, draw=gray!60, fill=white, thick, minimum width=2.2cm, minimum height=0.65cm, font=\scriptsize\ttfamily}
+]
+    % Column Headers
+    \node[colbox] (c0) at (2.2, 3.2) {timestamp};
+    \node[colbox] (c1) at (4.6, 3.2) {device\_id};
+    \node[colbox] (c2) at (7.0, 3.2) {temp\_c};
+    \node[colbox] (c3) at (9.4, 3.2) {vibration\_g};
+
+    % Index Column
+    \node[idxbox] (i0) at (0.0, 2.3) {0};
+    \node[idxbox] (i1) at (0.0, 1.5) {1};
+    \node[idxbox] (i2) at (0.0, 0.7) {2};
+
+    % Row 0
+    \node[cellbox] at (2.2, 2.3) {08:00:00};
+    \node[cellbox] at (4.6, 2.3) {ESP32\_A};
+    \node[cellbox] at (7.0, 2.3) {22.1};
+    \node[cellbox] at (9.4, 2.3) {0.05};
+
+    % Row 1
+    \node[cellbox] at (2.2, 1.5) {08:00:10};
+    \node[cellbox] at (4.6, 1.5) {ESP32\_B};
+    \node[cellbox] at (7.0, 1.5) {28.5};
+    \node[cellbox] at (9.4, 1.5) {0.42};
+
+    % Row 2
+    \node[cellbox] at (2.2, 0.7) {08:00:20};
+    \node[cellbox] at (4.6, 0.7) {ESP32\_A};
+    \node[cellbox] at (7.0, 0.7) {22.4};
+    \node[cellbox] at (9.4, 0.7) {0.06};
+
+    % Annotations
+    \node[above=0.2cm of i0, font=\scriptsize\sffamily\bfseries, text=red!80!black] {Row Index};
+    \node[above=0.2cm of c1, xshift=1.2cm, font=\scriptsize\sffamily\bfseries, text=blue!80!black] {Column Names (Feature Headers)};
+    \draw[thick, blue!80, -{Stealth[length=2mm]}] (7.0, -0.1) -- (7.0, -0.6) node[below, font=\scriptsize\sffamily] {Single Column = pd.Series (dtype: float64)};
+    \draw[thick, red!80, -{Stealth[length=2mm]}] (-0.8, 1.5) -- (-1.4, 1.5) node[left, font=\scriptsize\sffamily] {Row Labels};
+\end{tikzpicture}
+\caption{Anatomy of a pandas DataFrame: An explicit Row Index and Column Labels wrapping homogeneous NumPy arrays underneath.}\label{fig:dataframe_anatomy}
+\end{figure}
+
+% ==============================================================================
+% 1. SERIES AND DATAFRAMES
+% ==============================================================================
+\subsection{Core Data Structures: Series and DataFrames}
+
+\begin{keyidea}[What is a Series and a DataFrame?]
+\begin{itemize}
+    \item \textbf{\code{pd.Series}}: A one-dimensional labeled array capable of holding any data type (integers, floats, strings, Python objects). It consists of raw values backed by a NumPy array, paired with an explicit index of labels.
+    \item \textbf{\code{pd.DataFrame}}: A two-dimensional, size-mutable tabular data structure with labeled axes (rows and columns). A DataFrame is conceptually a dictionary of \code{Series} objects that all share the exact same row index.
+\end{itemize}
+\end{keyidea}
+
+\begin{analogy}[The Spreadsheet with Programmable Superpowers]
+A pandas DataFrame is like a spreadsheet page inside Microsoft Excel or Google Sheets. The horizontal letters at the top are the column names, the vertical numbers down the left are the row index, and each column has a specific data type (dates, numbers, text). However, unlike a spreadsheet that requires manual clicking, pandas allows you to filter, transform, merge, and clean 10,000,000 rows in fractions of a second using reproducible code.
+\end{analogy}
+
+\paragraph{Creating Series and DataFrames from Scratch}
+\begin{lstlisting}[language=Python]
+import pandas as pd
+import numpy as np
+
+# 1. Creating a 1D Series with a custom index
+temperatures = pd.Series(
+    data=[21.4, 22.8, 28.5], 
+    index=['Sensor_North', 'Sensor_East', 'Sensor_Furnace'],
+    name="ambient_celsius"
+)
+print("--- pandas Series ---")
+print(temperatures)
+
+# 2. Creating a 2D DataFrame from a Python Dictionary
+telemetry_data = {
+    'device_id': ['ESP32_01', 'ESP32_02', 'ESP32_01', 'ESP32_02'],
+    'temperature_c': [22.4, 28.1, 22.6, 28.5],
+    'pressure_hpa': [1013.2, 1011.8, 1013.1, 1011.5],
+    'status': ['OK', 'WARNING', 'OK', 'WARNING']
+}
+
+df = pd.DataFrame(telemetry_data)
+print("\n--- pandas DataFrame ---")
+print(df)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- pandas Series ---
+Sensor_North      21.4
+Sensor_East       22.8
+Sensor_Furnace    28.5
+Name: ambient_celsius, dtype: float64
+
+--- pandas DataFrame ---
+  device_id  temperature_c  pressure_hpa   status
+0  ESP32_01           22.4        1013.2       OK
+1  ESP32_02           28.1        1011.8  WARNING
+2  ESP32_01           22.6        1013.1       OK
+3  ESP32_02           28.5        1011.5  WARNING
+\end{lstlisting}
+
+\paragraph{Essential DataFrame Inspection Attributes}
+Before processing any data, you must inspect its shape, column types, and memory consumption:
+\begin{itemize}
+    \item \code{df.shape}: Returns \code{(rows, columns)}.
+    \item \code{df.columns}: The sequence of column header strings.
+    \item \code{df.dtypes}: The data type assigned to each column (\code{int64}, \code{float64}, \code{object}, \code{datetime64}).
+    \item \code{df.info()}: Concise summary of non-null counts and physical memory usage.
+    \item \code{df.describe()}: Computes summary statistics ($\mu, \sigma$, min, 25\%, 50\%, 75\%, max) for all numeric columns.
+\end{itemize}
+
+% ==============================================================================
+% 2. DATA INGESTION
+% ==============================================================================
+\subsection{Data Ingestion: Loading and Exporting CSV, Excel, and JSON}
+
+Sensor logs and business datasets are stored in diverse formats. pandas provides built-in parsers optimized for disk I/O:
+
+\paragraph{1. Comma-Separated Values (CSV)}
+The most common format in edge computing and machine learning.
+\begin{lstlisting}[language=Python]
+# Loading a sensor CSV with specific options
+df_csv = pd.read_csv(
+    "factory_sensors.csv",
+    sep=",",                    # Delimiter (e.g., '\t' for tab-delimited)
+    header=0,                  # First row contains column names
+    usecols=['timestamp', 'device_id', 'temp_c', 'vibration_g'], # Memory optimization!
+    parse_dates=['timestamp'], # Automatically convert text strings to datetime
+    na_values=['NA', 'null', -999.0] # Translate hardware error codes into np.nan
+)
+\end{lstlisting}
+
+\paragraph{2. Microsoft Excel Files}
+\begin{lstlisting}[language=Python]
+# Requires 'openpyxl' engine installed
+df_excel = pd.read_excel("machine_specifications.xlsx", sheet_name="Spindle_Specs")
+\end{lstlisting}
+
+\paragraph{3. JSON and Nested IoT Telemetry}
+IoT gateways frequently transmit sensor readings as nested JSON packets. Use \code{pd.json_normalize()} to flatten hierarchical keys:
+\begin{lstlisting}[language=Python]
+raw_json_packets = [
+    {"packet_id": 1, "mcu": "ESP32", "payload": {"temp": 24.1, "batt_v": 3.78}},
+    {"packet_id": 2, "mcu": "ESP32", "payload": {"temp": 24.3, "batt_v": 3.76}}
+]
+
+df_json = pd.json_normalize(raw_json_packets)
+print(df_json)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+   packet_id    mcu  payload.temp  payload.batt_v
+0          1  ESP32          24.1            3.78
+1          2  ESP32          24.3            3.76
+\end{lstlisting}
+
+\paragraph{Memory Optimization with Explicit \code{dtype}}
+By default, pandas loads numeric columns as heavy 64-bit integers and floats (\code{int64}, \code{float64}). For millions of sensor rows, this exhausts computer RAM. Explicitly downcasting to \code{float32} and categorical types cuts memory usage by up to $75\%$:
+\begin{lstlisting}[language=Python]
+dtypes_optimized = {
+    'device_id': 'category',     # Replaces repeated strings with integer lookup keys
+    'temperature_c': 'float32',  # 4 bytes instead of 8 bytes per reading
+    'pressure_hpa': 'float32'
+}
+df_opt = pd.read_csv("large_sensor_stream.csv", dtype=dtypes_optimized)
+\end{lstlisting}
+
+% ==============================================================================
+% 3. SELECTING, FILTERING, AND SORTING
+% ==============================================================================
+\subsection{Selecting, Filtering, and Sorting Data}
+
+\paragraph{The Two Indexing Systems: \code{.loc} vs. \code{.iloc}}
+Beginners often confuse label-based indexing with integer-based indexing. pandas separates these mechanisms cleanly:
+\begin{enumerate}
+    \item \textbf{\code{.loc[row_label, col_label]}}: Selection based on the **explicit names** of rows and columns.
+    \item \textbf{\code{.iloc[row_integer, col_integer]}}: Selection based on **zero-indexed integer positions** (identical to standard Python array indexing).
+\end{enumerate}
+
+\begin{lstlisting}[language=Python]
+# A DataFrame with custom string row labels
+df_fleet = pd.DataFrame({
+    'firmware_version': ['v1.0.2', 'v1.0.4', 'v1.0.4'],
+    'battery_voltage': [4.12, 3.85, 3.42]
+}, index=['Node_Alpha', 'Node_Beta', 'Node_Gamma'])
+
+# 1. Label-based selection (.loc)
+print("Alpha Battery:", df_fleet.loc['Node_Alpha', 'battery_voltage'])
+
+# 2. Position-based selection (.iloc) - row 0, col 1
+print("Pos (0, 1):   ", df_fleet.iloc[0, 1])
+
+# 3. Slicing with .loc includes the endpoint!
+print("Slice .loc:\n", df_fleet.loc['Node_Alpha':'Node_Beta', :])
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Alpha Battery: 4.12
+Pos (0, 1):    4.12
+Slice .loc:
+             firmware_version  battery_voltage
+Node_Alpha            v1.0.2             4.12
+Node_Beta             v1.0.4             3.85
+\end{lstlisting}
+
+\begin{warning}[\code{.loc} Includes the Endpoint; \code{.iloc} Excludes It!]
+Notice that slicing with \code{.loc['Node_Alpha':'Node_Beta']} **includes** \code{'Node_Beta'}. Conversely, integer slicing with \code{.iloc[0:2]} follows standard Python convention and **excludes** index 2 (returning rows 0 and 1 only).
+\end{warning}
+
+\paragraph{Boolean Filtering with Compound Conditions}
+To filter rows based on physical criteria, write boolean expressions. In pandas, you must use bitwise operators:
+\begin{itemize}
+    \item \code{&} for logical **AND**
+    \item \code{|} for logical **OR**
+    \item \code{~} for logical **NOT**
+\end{itemize}
+\textbf{Every individual condition must be enclosed in parentheses} to prevent Python operator precedence errors:
+
+\begin{lstlisting}[language=Python]
+# Find nodes with low battery (< 3.5V) OR outdated firmware ('v1.0.2')
+alert_mask = (df_fleet['battery_voltage'] < 3.5) | (df_fleet['firmware_version'] == 'v1.0.2')
+urgent_nodes = df_fleet[alert_mask]
+print("Nodes Requiring Technician Maintenance:\n", urgent_nodes)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Nodes Requiring Technician Maintenance:
+            firmware_version  battery_voltage
+Node_Alpha            v1.0.2             4.12
+Node_Gamma            v1.0.4             3.42
+\end{lstlisting}
+
+\paragraph{Sorting Values}
+To order rows by measurement values:
+\begin{lstlisting}[language=Python]
+# Sort by firmware ascending, then battery voltage descending
+sorted_fleet = df_fleet.sort_values(
+    by=['firmware_version', 'battery_voltage'], 
+    ascending=[True, False]
+)
+\end{lstlisting}
+
+% ==============================================================================
+% 4. GROUPBY AND AGGREGATION
+% ==============================================================================
+\subsection{The Split-Apply-Combine Engine: \code{groupby} and Aggregation}
+
+\begin{keyidea}[Split-Apply-Combine]
+The \textbf{\code{groupby}} operation partitions a complex dataset into logical subsets, applies a mathematical function (such as mean, sum, variance, or custom transformation) to each subset independently, and recombines the results into a single clean summary table.
+\end{keyidea}
+
+\paragraph{Hand-Worked Calculation: Grouping Telemetry by Device}
+Consider a factory dataset containing 6 telemetry frames recorded across two microcontrollers:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{cccc}
+\toprule
+\textbf{Index} & \textbf{device\_id} & \textbf{temp\_c} ($^\circ\text{C}$) & \textbf{vibration\_g} ($g$) \\
+\midrule
+0 & ESP32\_A & $22.1$ & $0.05$ \\
+1 & ESP32\_B & $28.5$ & $0.42$ \\
+2 & ESP32\_A & $22.4$ & $0.06$ \\
+3 & ESP32\_B & $28.9$ & $0.48$ \\
+4 & ESP32\_A & $23.0$ & $0.08$ \\
+5 & ESP32\_B & $29.4$ & $0.55$ \\
+\bottomrule
+\end{tabular}
+\caption{Raw sensor readings from two factory microcontrollers.}\label{tab:raw_telemetry}
+\end{table}
+
+Let us calculate the mean temperature and peak vibration for each device by hand:
+\begin{enumerate}
+    \item \textbf{Split}:
+    \begin{itemize}
+        \item Group 1 (\code{ESP32_A}): Rows 0, 2, 4.
+        \item Group 2 (\code{ESP32_B}): Rows 1, 3, 5.
+    \end{itemize}
+
+    \item \textbf{Apply (ESP32\_A)}:
+    \begin{align*}
+    \text{Mean Temp} &= \frac{22.1 + 22.4 + 23.0}{3} = \frac{67.5}{3} = \mathbf{22.50^\circ\text{C}} \\
+    \text{Peak Vibration} &= \max(0.05, 0.06, 0.08) = \mathbf{0.08\text{ g}}
+    \end{align*}
+
+    \item \textbf{Apply (ESP32\_B)}:
+    \begin{align*}
+    \text{Mean Temp} &= \frac{28.5 + 28.9 + 29.4}{3} = \frac{86.8}{3} \approx \mathbf{28.93^\circ\text{C}} \\
+    \text{Peak Vibration} &= \max(0.42, 0.48, 0.55) = \mathbf{0.55\text{ g}}
+    \end{align*}
+
+    \item \textbf{Combine}: Assemble into the aggregated output table:
+    \begin{equation*}
+    \begin{array}{lcc}
+    \toprule
+    \textbf{device\_id} & \textbf{temp\_mean} & \textbf{vibration\_max} \\
+    \midrule
+    \text{ESP32\_A} & 22.50 & 0.08 \\
+    \text{ESP32\_B} & 28.93 & 0.55 \\
+    \bottomrule
+    \end{array}
+    \end{equation*}
+\end{enumerate}
+
+\paragraph{Python Code for Multi-Metric Aggregations}
+\begin{lstlisting}[language=Python]
+telemetry_df = pd.DataFrame({
+    'device_id': ['ESP32_A', 'ESP32_B', 'ESP32_A', 'ESP32_B', 'ESP32_A', 'ESP32_B'],
+    'temp_c': [22.1, 28.5, 22.4, 28.9, 23.0, 29.4],
+    'vibration_g': [0.05, 0.42, 0.06, 0.48, 0.08, 0.55]
+})
+
+# Multi-metric aggregation across features
+summary = telemetry_df.groupby('device_id').agg({
+    'temp_c': ['mean', 'std'],
+    'vibration_g': ['mean', 'max']
+}).round(2)
+
+print("--- Telemetry Summary by Node ---")
+print(summary)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Telemetry Summary by Node ---
+          temp_c       vibration_g     
+            mean   std        mean   max
+device_id                               
+ESP32_A    22.50  0.46        0.06  0.08
+ESP32_B    28.93  0.45        0.48  0.55
+\end{lstlisting}
+
+% ==============================================================================
+% 5. MERGING AND JOINING
+% ==============================================================================
+\subsection{Combining Datasets: Merging and Joining}
+
+In real-world data engineering, machine telemetry must be joined with machine metadata (location, installation date, motor horsepower) stored in a separate database table.
+
+\paragraph{Database-Style Joins (\code{pd.merge})}
+pandas provides relational database joins via \code{pd.merge(left, right, on=..., how=...)}:
+\begin{itemize}
+    \item \textbf{\code{inner}}: Keeps only rows where the key exists in \textit{both} tables.
+    \item \textbf{\code{left}}: Keeps all rows from the left table; missing matches from the right table are filled with \code{NaN}.
+    \item \textbf{\code{right}}: Keeps all rows from the right table.
+    \item \textbf{\code{outer}}: Retains all rows from both tables.
+\end{itemize}
+
+\begin{lstlisting}[language=Python]
+# Table 1: Live telemetry summary
+df_telemetry = pd.DataFrame({
+    'device_id': ['ESP32_A', 'ESP32_B', 'ESP32_C'],
+    'vibration_peak': [0.08, 0.55, 0.12]
+})
+
+# Table 2: Static factory metadata
+df_meta = pd.DataFrame({
+    'device_id': ['ESP32_A', 'ESP32_B', 'ESP32_D'],
+    'location': ['Line_1_Conveyor', 'Line_3_Spindle', 'Line_4_Compressor'],
+    'rated_kw': [5.5, 22.0, 15.0]
+})
+
+# Left join: preserve all active telemetry devices
+merged = pd.merge(df_telemetry, df_meta, on='device_id', how='left')
+print("--- Joined Telemetry & Metadata ---")
+print(merged)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Joined Telemetry & Metadata ---
+  device_id  vibration_peak         location  rated_kw
+0   ESP32_A            0.08  Line_1_Conveyor       5.5
+1   ESP32_B            0.55   Line_3_Spindle      22.0
+2   ESP32_C            0.12              NaN       NaN
+\end{lstlisting}
+Notice that \code{ESP32_C} had no entry in the metadata table; its metadata fields automatically populated with \code{NaN}.
+
+% ==============================================================================
+% 6. TIME SERIES AND DATES
+% ==============================================================================
+\subsection{Dates, Timestamps, and Sensor Resampling}
+
+\begin{keyidea}[The DatetimeIndex]
+Sensor streams are inherently chronological. When you parse a column as a pandas \textbf{\code{DatetimeIndex}}, the entire DataFrame gains temporal intelligence: you can slice data using human-readable calendar strings (\code{"2026-03"}), resample across time frequencies, and compute rolling moving averages.
+\end{keyidea}
+
+\paragraph{1. Chronological Slicing and Setting the Index}
+\begin{lstlisting}[language=Python]
+# Convert timestamp text to true datetime objects
+df_sensor = pd.DataFrame({
+    'timestamp': pd.date_range(start='2026-03-01 00:00:00', periods=600, freq='1s'),
+    'current_amps': np.random.normal(loc=12.0, scale=0.5, size=600)
+})
+
+# Set timestamp as the official DataFrame index
+df_sensor.set_index('timestamp', inplace=True)
+
+# Slice exactly 2 minutes of data using human strings
+print("Subset (First 2 minutes):")
+print(df_sensor.loc['2026-03-01 00:00:00':'2026-03-01 00:02:00'].head(3))
+\end{lstlisting}
+
+\paragraph{2. Resampling Sensor Frequencies (Downsampling)}
+Microcontrollers often sample sensors at high frequencies ($1\text{ Hz}$ or $100\text{ Hz}$), generating millions of rows. To visualize long-term trends or train compact models, you downsample the stream into 1-minute aggregations using \code{.resample()}:
+
+\begin{lstlisting}[language=Python]
+# Downsample from 1-second readings to 1-minute summaries
+df_1min = df_sensor.resample('1min').agg({
+    'current_amps': ['mean', 'min', 'max']
+})
+print("\n--- 1-Minute Resampled Current Stream ---")
+print(df_1min.round(2))
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- 1-Minute Resampled Current Stream ---
+                    current_amps            
+                            mean    min    max
+timestamp                                     
+2026-03-01 00:00:00        12.04  10.72  13.41
+2026-03-01 00:01:00        11.98  10.51  13.12
+2026-03-01 00:02:00        11.95  10.84  13.35
+\end{lstlisting}
+
+\paragraph{3. Rolling Window Calculations}
+To compute a moving average filter that smooths high-frequency sensor noise:
+\begin{equation}
+y_t = \frac{1}{W} \sum_{k=0}^{W-1} x_{t-k}\label{eq:rolling_avg}
+\end{equation}
+
+\begin{lstlisting}[language=Python]
+# 10-sample rolling average and rolling standard deviation
+df_sensor['amps_smoothed'] = df_sensor['current_amps'].rolling(window=10).mean()
+df_sensor['amps_rolling_std'] = df_sensor['current_amps'].rolling(window=10).std()
+\end{lstlisting}
+
+\begin{iotbox}[Edge Gateway Telemetry Pipelines with pandas]
+In an industrial IoT deployment, an edge gateway (such as a Raspberry Pi or industrial edge server) receives thousands of raw MQTT JSON packets per second from wireless ESP32 nodes. 
+
+pandas serves as the central ETL (Extract, Transform, Load) engine on the gateway:
+\begin{enumerate}
+    \item \textbf{Ingestion}: Ingests incoming MQTT packets via \code{pd.DataFrame(packet_buffer)}.
+    \item \textbf{Cleaning}: Imputes missing packets caused by wireless packet loss using forward-fill (\code{.ffill()}).
+    \item \textbf{Feature Extraction}: Computes 10-second rolling RMS and peak-to-peak vibration values.
+    \item \textbf{Model Handoff}: Converts the engineered features into a compact NumPy array via \code{df.to_numpy()} to feed the local TinyML inference model!
+\end{enumerate}
+\end{iotbox}
+
+\begin{warning}[The Dreaded \code{SettingWithCopyWarning}]
+When filtering a DataFrame and attempting to assign a new column:
+\begin{lstlisting}[language=Python]
+# DANGEROUS: Triggers SettingWithCopyWarning
+subset = df[df['temp_c'] > 30.0]
+subset['flag'] = 1  # pandas cannot determine if 'subset' is a view or copy!
+
+# SAFE: Always call .copy() explicitly or use .loc
+subset = df[df['temp_c'] > 30.0].copy()
+subset['flag'] = 1  # Clean, explicit, no warning!
+\end{lstlisting}
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item A \code{pd.Series} is a 1D labeled array; a \code{pd.DataFrame} is a 2D table of aligned Series sharing an index.
+    \item Use \code{.loc} for explicit label names (inclusive endpoint) and \code{.iloc} for zero-indexed positions (exclusive endpoint).
+    \item In boolean filtering, combine conditions with \code{&}, \code{|}, \code{~} and enclose each condition in parentheses.
+    \item The Split-Apply-Combine pattern (\code{df.groupby()}) computes grouped multi-metric summaries.
+    \item Convert timestamp columns to a \code{DatetimeIndex} to unlock chronological slicing, frequency resampling (\code{.resample()}), and rolling filters (\code{.rolling()}).
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 7. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+\begin{enumerate}
+    \item \textbf{\code{.loc} vs. \code{.iloc}}: Given a DataFrame with index \code{['A', 'B', 'C', 'D']} and columns \code{['temp', 'volt']}, write two code snippets:
+    \begin{enumerate}[label=(\alph*)]
+        \item One using \code{.loc} to extract the sub-table from row \code{'B'} to \code{'D'} for column \code{'temp'}.
+        \item One using \code{.iloc} to extract the exact same data using integer positions.
+    \end{enumerate}
+
+    \item \textbf{Boolean Indexing Syntax}: Explain why the expression \code{df[df['temp'] > 25 & df['humidity'] < 60]} throws a Python \code{TypeError}. What is the correct syntax?
+
+    \item \textbf{Groupby Arithmetic by Hand}: A sensor table contains 4 rows:
+    \begin{itemize}
+        \item Row 0: \code{mcu: 'ESP32'}, \code{error_count: 2}
+        \item Row 1: \code{mcu: 'STM32'}, \code{error_count: 5}
+        \item Row 2: \code{mcu: 'ESP32'}, \code{error_count: 6}
+        \item Row 3: \code{mcu: 'STM32'}, \code{error_count: 15}
+    \end{itemize}
+    Calculate the output of \code{df.groupby('mcu')['error_count'].agg(['mean', 'sum'])} by hand.
+
+    \item \textbf{Relational Joins}: You execute an \code{inner} merge between Table A ($1{,}000$ rows) and Table B ($500$ rows) on column \code{'sensor_id'}. Table A has 300 unique sensor IDs; Table B only has 100 of those sensor IDs. Will the merged DataFrame contain 1,000 rows, 500 rows, or fewer? Explain.
+
+    \item \textbf{Time-Series Resampling}: What is the difference between \code{.resample('5min').mean()} and \code{.rolling(window=5).mean()} on a 1-minute sensor stream? Which one changes the total number of rows in the DataFrame?
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{\code{.loc} vs. \code{.iloc}}:
+    \begin{enumerate}[label=(\alph*)]
+        \item Label-based: \code{df.loc['B':'D', ['temp']]} (or \code{df.loc['B':'D', 'temp']}).
+        \item Position-based: \code{'B'} is integer row 1; \code{'D'} is integer row 3. Because \code{.iloc} excludes the endpoint, we slice rows 1 to 4 and column 0:
+        \begin{equation*}
+        \code{df.iloc[1:4, 0:1]}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{Boolean Indexing Syntax}:
+    In Python, the bitwise operator \code{&} has higher precedence than the comparison operators (\code{>} and \code{<}). Python attempts to evaluate \code{25 & df['humidity']} before evaluating the comparisons, resulting in a \code{TypeError}. 
+    To fix it, wrap each condition in parentheses:
+    \begin{equation*}
+    \code{df[(df['temp'] > 25) & (df['humidity'] < 60)]}
+    \end{equation*}
+
+    \item \textbf{Groupby Arithmetic by Hand}:
+    \begin{itemize}
+        \item \textbf{ESP32 Group}: Values are $[2, 6]$.
+        \begin{align*}
+        \text{Sum} &= 2 + 6 = \mathbf{8} \\
+        \text{Mean} &= \frac{8}{2} = \mathbf{4.0}
+        \end{align*}
+        \item \textbf{STM32 Group}: Values are $[5, 15]$.
+        \begin{align*}
+        \text{Sum} &= 5 + 15 = \mathbf{20} \\
+        \text{Mean} &= \frac{20}{2} = \mathbf{10.0}
+        \end{align*}
+    \end{itemize}
+    Combined output:
+    \begin{equation*}
+    \begin{array}{lcc}
+    \toprule
+    \textbf{mcu} & \textbf{mean} & \textbf{sum} \\
+    \midrule
+    \text{ESP32} & 4.0 & 8 \\
+    \text{STM32} & 10.0 & 20 \\
+    \bottomrule
+    \end{array}
+    \end{equation*}
+
+    \item \textbf{Relational Joins}:
+    The merged DataFrame will contain **fewer than 500 rows** (assuming no duplicate keys). 
+    An \code{inner} join retains only rows where the join key matches in \textit{both} tables. Because only 100 sensor IDs exist in both tables, all rows in Table A associated with the remaining 200 non-matching sensor IDs will be dropped.
+
+    \item \textbf{Time-Series Resampling}:
+    \begin{itemize}
+        \item \textbf{\code{.resample('5min').mean()}}: **Changes the number of rows** (downsampling). It groups data into fixed 5-minute buckets (e.g., 08:00--08:05, 08:05--08:10) and outputs a single average row per bucket, reducing the length of the DataFrame by $5\times$.
+        \item \textbf{\code{.rolling(window=5).mean()}}: **Preserves the exact number of rows**. For every single minute $t$, it calculates the average of the current reading and the 4 preceding readings ($[t-4, \dots, t]$), creating a smoothed time series of identical length.
+    \end{itemize}
+\end{enumerate}

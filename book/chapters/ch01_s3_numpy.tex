@@ -1,0 +1,578 @@
+% FILE: chapters/ch01_s3_numpy.tex
+\section{NumPy}\label{sec:numpy}
+
+In the previous section, we established a clean development environment. Now, we turn to the foundational engine that powers modern numerical computing, data science, and machine learning: \textbf{NumPy} (short for \textit{Numerical Python}).
+
+Every major machine learning framework—from Scikit-Learn and pandas to PyTorch, TensorFlow, and TinyML quantization compilers—is built upon or interoperates directly with NumPy. If you understand how NumPy structures data in memory, you will understand how neural networks manipulate tensors, how convolutional filters slide across images, and how microcontrollers process streaming sensor buffers.
+
+In this section, we study the core primitives of NumPy:
+\begin{enumerate}
+    \item \textbf{The $N$-Dimensional Array (\code{ndarray})}: How contiguous memory allocation solves Python's performance bottleneck.
+    \item \textbf{Array Shapes and Transformations}: Navigating dimensions, slicing, and distinguishing views from copies.
+    \item \textbf{Broadcasting}: The mathematical rules for computing across disparate array dimensions without copying memory.
+    \item \textbf{Vectorized Operations}: Replacing slow Python loops with high-speed C-level vector execution.
+    \item \textbf{Linear Algebra with \code{np.linalg}}: Dot products, matrix inversions, linear systems, and vector norms.
+    \item \textbf{The TinyML Bridge}: Connecting NumPy arrays to embedded C sensor buffers on microcontrollers.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    listnode/.style={rectangle, draw=red!70, fill=red!10, rounded corners=1.5mm, thick, minimum width=1.1cm, minimum height=0.7cm, font=\scriptsize\ttfamily},
+    valnode/.style={circle, draw=red!80, fill=white, thick, inner sep=1.5pt, font=\scriptsize\ttfamily},
+    nparr/.style={rectangle, draw=blue!70, fill=blue!10, rounded corners=1.5mm, thick, minimum width=1.2cm, minimum height=0.8cm, font=\scriptsize\ttfamily},
+    arrow/.style={-{Stealth[length=2mm]}, thick}
+]
+    % Python List
+    \node[anchor=west, font=\small\sffamily\bfseries] at (0, 2.6) {Standard Python List: Pointer Chasing (Scattered Heap)};
+    \node[listnode] (p0) at (0.8, 1.6) {ptr};
+    \node[listnode] (p1) at (2.2, 1.6) {ptr};
+    \node[listnode] (p2) at (3.6, 1.6) {ptr};
+    \node[listnode] (p3) at (5.0, 1.6) {ptr};
+    
+    \node[valnode] (v0) at (0.4, 0.4) {1.2};
+    \node[valnode] (v1) at (2.7, 0.2) {4.8};
+    \node[valnode] (v2) at (3.9, 0.5) {-2.1};
+    \node[valnode] (v3) at (5.5, 0.3) {0.5};
+
+    \draw[arrow, draw=red!80] (p0) -- (v0);
+    \draw[arrow, draw=red!80] (p1) -- (v1);
+    \draw[arrow, draw=red!80] (p2) -- (v2);
+    \draw[arrow, draw=red!80] (p3) -- (v3);
+
+    % NumPy Array
+    \node[anchor=west, font=\small\sffamily\bfseries] at (7.5, 2.6) {NumPy ndarray: Contiguous Uniform Buffer};
+    \node[nparr, fill=blue!15] (n0) at (8.0, 1.2) {1.2};
+    \node[nparr, fill=blue!15, right=0cm of n0] (n1) {4.8};
+    \node[nparr, fill=blue!15, right=0cm of n1] (n2) {-2.1};
+    \node[nparr, fill=blue!15, right=0cm of n2] (n3) {0.5};
+    \node[below=0.2cm of n1, xshift=0.6cm, font=\scriptsize\sffamily, text=blue!80!black] {Continuous 64-bit Float Blocks (Direct RAM)};
+\end{tikzpicture}
+\caption{Memory layout comparison: Python list of heap-allocated object pointers versus a contiguous NumPy buffer.}\label{fig:numpy_memory}
+\end{figure}
+
+% ==============================================================================
+% 1. ARRAYS AND SHAPES
+% ==============================================================================
+\subsection{The \code{ndarray}: Arrays, Shapes, and Memory}
+
+\begin{keyidea}[Why Python Lists are Slow for Machine Learning]
+A standard Python list (\code{[1.2, 4.8, -2.1]}) does not store numbers directly. It stores an array of memory pointers, each pointing to a separate, heavy Python integer or float object scattered across computer memory. Performing math on a Python list requires pointer chasing and type checking on every single iteration. 
+
+A NumPy \textbf{\code{ndarray}} stores numbers as a single, contiguous block of raw memory bytes of identical type (e.g., \code{float32} or \code{int8}), enabling the CPU to process numbers at hardware silicon speeds.
+\end{keyidea}
+
+\begin{analogy}[The Scattered Office vs. The Factory Conveyor]
+Imagine a warehouse clerk processing 10,000 invoices. In a Python list, each invoice is locked inside an ornate envelope and hidden in random filing cabinets across four different floors; the clerk must walk around, unlock each envelope, inspect the contents, and verify the date. A NumPy array is a high-speed conveyor belt: 10,000 raw invoices laid side-by-side in exact numerical order, scanned by an optical barcode reader in a single pass.
+\end{analogy}
+
+\paragraph{Array Dimensions and Terminology}
+NumPy generalizes data into $N$-dimensional arrays:
+\begin{itemize}
+    \item \textbf{0D Array (Scalar)}: A single isolated number (e.g., $42.0$).
+    \item \textbf{1D Array (Vector)}: A single sequence of values. Shape: \code{(N,)}.
+    \item \textbf{2D Array (Matrix)}: A table arranged in rows and columns. Shape: \code{(Rows, Columns)}.
+    \item \textbf{3D Array (Tensor)}: A stack of matrices (e.g., multiple sensor channels recorded across time). Shape: \code{(Channels, Samples, Features)}.
+\end{itemize}
+
+\paragraph{Core Attributes of an Array}
+Every NumPy array provides six fundamental inspection properties:
+\begin{itemize}
+    \item \code{.ndim}: The number of axes (dimensions).
+    \item \code{.shape}: A tuple of integers showing the size along each axis.
+    \item \code{.size}: Total number of elements across all dimensions.
+    \item \code{.dtype}: The exact data type of each element (e.g., \code{float64}, \code{float32}, \code{int8}).
+    \item \code{.itemsize}: Memory footprint of a single element in bytes (e.g., 8 bytes for \code{float64}).
+    \item \code{.nbytes}: Total physical memory consumed by the raw data buffer ($\text{size} \times \text{itemsize}$).
+\end{itemize}
+
+\paragraph{Python Code: Array Creation and Inspection}
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+# 1. Creating a 2D matrix representing 3 sensor readings with 4 features each
+sensor_data = np.array([
+    [24.1, 101.3, 0.02, 9.81],
+    [24.3, 101.2, 0.05, 9.79],
+    [24.2, 101.4, 0.01, 9.82]
+], dtype=np.float32)
+
+print("Array Contents:\n", sensor_data)
+print("Dimensions (ndim):", sensor_data.ndim)
+print("Shape:            ", sensor_data.shape)
+print("Total Elements:   ", sensor_data.size)
+print("Data Type (dtype):", sensor_data.dtype)
+print("Bytes per item:   ", sensor_data.itemsize)
+print("Total RAM bytes:  ", sensor_data.nbytes)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Array Contents:
+ [[ 24.1   101.3     0.02    9.81 ]
+ [ 24.3   101.2     0.05    9.79 ]
+ [ 24.2   101.4     0.01    9.82 ]]
+Dimensions (ndim): 2
+Shape:             (3, 4)
+Total Elements:    12
+Data Type (dtype): float32
+Bytes per item:    4
+Total RAM bytes:   48
+\end{lstlisting}
+
+\paragraph{Common Array Generators}
+In practice, you rarely type arrays by hand. NumPy provides optimized constructor functions:
+\begin{lstlisting}[language=Python]
+zeros = np.zeros(shape=(2, 3))         # 2x3 matrix of 0.0
+ones = np.ones(shape=(4,))             # 1D vector of four 1.0s
+linear = np.linspace(0.0, 1.0, num=5)  # 5 equally spaced values: [0.0, 0.25, 0.5, 0.75, 1.0]
+steps = np.arange(start=10, stop=50, step=10) # [10, 20, 30, 40]
+\end{lstlisting}
+
+% ==============================================================================
+% 2. INDEXING AND SLICING
+% ==============================================================================
+\subsection{Indexing, Slicing, and the View vs. Copy Trap}
+
+\paragraph{Multi-Dimensional Slicing Syntax}
+To extract subsets of an array, use slice notation \code{[start:stop:step]} separated by commas for each axis:
+\begin{equation}
+\mathbf{A}[\text{row\_slice}, \quad \text{column\_slice}]\label{eq:slice_syntax}
+\end{equation}
+
+\begin{lstlisting}[language=Python]
+# A 3x4 matrix
+M = np.array([
+    [10, 11, 12, 13],
+    [20, 21, 22, 23],
+    [30, 31, 32, 33]
+])
+
+# Extract specific element at row 1, col 2 (0-indexed)
+print("Element (1, 2):", M[1, 2])
+
+# Extract row index 0 as a 1D vector
+print("Row 0:         ", M[0, :])
+
+# Extract column index 1 as a 1D vector
+print("Column 1:      ", M[:, 1])
+
+# Extract sub-matrix: rows 0-1, columns 1-2
+print("Sub-matrix:\n", M[0:2, 1:3])
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Element (1, 2): 22
+Row 0:          [10 11 12 13]
+Column 1:       [11 21 31]
+Sub-matrix:
+ [[11 12]
+ [21 22]]
+\end{lstlisting}
+
+\paragraph{The Critical Trap: Views vs. Copies}
+\begin{warning}[Slicing Creates a View, Not a Copy!]
+In standard Python lists, slicing creates a completely independent copy. In NumPy, \textbf{basic slicing returns a view of the original memory buffer}! Modifying a sliced sub-array silently mutates the original parent array. If you need an independent array, you must explicitly call \code{.copy()}.
+\end{warning}
+
+\begin{lstlisting}[language=Python]
+original = np.array([100, 200, 300])
+
+# Slice returns a VIEW
+view_slice = original[0:2]
+view_slice[0] = 999  # Mutating the view!
+
+print("Original Array Mutated:", original)  # [999, 200, 300]!
+
+# To create a safe, independent copy:
+safe_copy = original.copy()
+safe_copy[0] = 111
+print("Original Array Safe:   ", original)  # Still [999, 200, 300]
+\end{lstlisting}
+
+\paragraph{Boolean Masking (Filtering Sensor Spikes)}
+Boolean indexing allows you to filter elements based on logical conditions without writing a single \code{if} statement:
+
+\begin{lstlisting}[language=Python]
+temperatures = np.array([21.5, 22.0, 85.3, 21.8, 92.1])
+
+# 1. Create a boolean mask of physical anomalies
+mask = temperatures > 50.0
+print("Boolean Mask: ", mask)
+
+# 2. Extract anomalous readings
+print("Anomalies:    ", temperatures[mask])
+
+# 3. Clamp anomalies in-place (sensor clipping)
+temperatures[temperatures > 50.0] = 50.0
+print("Clamped Array:", temperatures)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Boolean Mask:  [False False  True False  True]
+Anomalies:     [85.3 92.1]
+Clamped Array: [21.5 22.  50.  21.8 50. ]
+\end{lstlisting}
+
+% ==============================================================================
+% 3. BROADCASTING
+% ==============================================================================
+\subsection{Broadcasting: Math Across Mismatched Shapes}
+
+\begin{keyidea}[What is Broadcasting?]
+\textbf{Broadcasting} is NumPy's ability to execute element-wise arithmetic operations between arrays of different shapes without allocating redundant memory copies. NumPy dynamically ``stretches'' dimensions of size $1$ so that array shapes match.
+\end{keyidea}
+
+\paragraph{The Two Strict Rules of Broadcasting}
+When operating on two arrays $\mathbf{A}$ and $\mathbf{B}$, NumPy compares their shape tuples element-wise, starting from the \textbf{trailing (rightmost) dimension} and working backward to the left:
+\begin{enumerate}
+    \item \textbf{Compatibility Check}: Two dimensions are compatible if:
+    \begin{itemize}
+        \item They are equal, OR
+        \item One of them is $1$.
+    \end{itemize}
+    \item \textbf{Shape Alignment}: If one array has fewer dimensions than the other, NumPy prepends dimensions of size $1$ to its shape until both have the same rank. If dimensions disagree and neither is $1$, NumPy raises a \code{ValueError: operands could not be broadcast together}.
+\end{enumerate}
+
+\paragraph{Hand-Worked Calculation: Step-by-Step Broadcasting}
+Let us trace the addition of matrix $\mathbf{A}$ and vector $\mathbf{B}$:
+\begin{equation*}
+\mathbf{A} = \begin{bmatrix} 10 \\ 20 \\ 30 \end{bmatrix} \quad (\text{Shape: } 3 \times 1), \qquad \mathbf{B} = \begin{bmatrix} 1 & 2 & 3 & 4 \end{bmatrix} \quad (\text{Shape: } 1 \times 4)
+\end{equation*}
+
+\begin{enumerate}
+    \item \textbf{Trailing Dimension (Dimension 1)}:
+    $\mathbf{A}$ has size $1$; $\mathbf{B}$ has size $4$. 
+    Because $\mathbf{A}$ has size $1$, it is virtually duplicated along the columns $4$ times:
+    \begin{equation*}
+    \mathbf{A}_{\text{stretched}} = \begin{bmatrix} 10 & 10 & 10 & 10 \\ 20 & 20 & 20 & 20 \\ 30 & 30 & 30 & 30 \end{bmatrix}
+    \end{equation*}
+
+    \item \textbf{Leading Dimension (Dimension 0)}:
+    $\mathbf{A}$ has size $3$; $\mathbf{B}$ has size $1$. 
+    Because $\mathbf{B}$ has size $1$, it is virtually duplicated along the rows $3$ times:
+    \begin{equation*}
+    \mathbf{B}_{\text{stretched}} = \begin{bmatrix} 1 & 2 & 3 & 4 \\ 1 & 2 & 3 & 4 \\ 1 & 2 & 3 & 4 \end{bmatrix}
+    \end{equation*}
+
+    \item \textbf{Element-Wise Addition}:
+    The final broadcasted output matrix has shape $(3, 4)$:
+    \begin{equation*}
+    \mathbf{C} = \mathbf{A} + \mathbf{B} = \begin{bmatrix} 
+    10+1 & 10+2 & 10+3 & 10+4 \\ 
+    20+1 & 20+2 & 20+3 & 20+4 \\ 
+    30+1 & 30+2 & 30+3 & 30+4 
+    \end{bmatrix} = \begin{bmatrix} 
+    11 & 12 & 13 & 14 \\ 
+    21 & 22 & 23 & 24 \\ 
+    31 & 32 & 33 & 34 
+    \end{bmatrix}
+    \end{equation*}
+\end{enumerate}
+
+NumPy performs this operation without actually creating the duplicate memory copies on RAM, saving CPU cache and memory bandwidth.
+
+\paragraph{Practical Sensor Example: Normalizing Accelerometer Offsets}
+In TinyML, a 3-axis accelerometer measures $[a_x, a_y, a_z]$. Over 1,000 time steps, the data shape is $(1000, 3)$. To subtract a static hardware calibration bias vector of shape $(3,)$, broadcasting stretches the $(3,)$ vector across all $1{,}000$ rows automatically:
+
+\begin{lstlisting}[language=Python]
+# Batch of 3 sensor readings, each with (x, y, z) axes
+raw_accel = np.array([
+    [0.12, -0.05, 9.85],
+    [0.10, -0.02, 9.80],
+    [0.15, -0.04, 9.88]
+]) # Shape: (3, 3)
+
+# Static hardware zero-point offset vector
+bias = np.array([0.12, -0.04, 9.81]) # Shape: (3,) -> matches trailing dim!
+
+# Calibrate: broadcasting subtracts bias from every row
+calibrated = raw_accel - bias
+print("Calibrated Accelerations (Zero-Centered):\n", calibrated.round(3))
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Calibrated Accelerations (Zero-Centered):
+ [[ 0.   -0.01  0.04]
+ [-0.02  0.02 -0.01]
+ [ 0.03  0.    0.07]]
+\end{lstlisting}
+
+% ==============================================================================
+% 4. VECTORIZED OPERATIONS
+% ==============================================================================
+\subsection{Vectorization: Eliminating Python Loops}
+
+\begin{keyidea}[What is Vectorization?]
+\textbf{Vectorization} is the practice of replacing explicit Python \code{for} loops with high-level array expressions. The iteration is delegated directly to pre-compiled C, Fortran, and assembly loops utilizing CPU SIMD (Single Instruction, Multiple Data) execution pipelines.
+\end{keyidea}
+
+\paragraph{Benchmark: Python Loop vs. NumPy Vectorization}
+Let us measure the physical execution time required to calculate the Euclidean norm $\sqrt{x^2 + y^2}$ for $1{,}000{,}000$ coordinate pairs:
+
+\begin{lstlisting}[language=Python]
+import time
+
+# Create 1,000,000 random sensor coordinate floats
+n = 1_000_000
+x_arr = np.random.uniform(0.0, 10.0, n)
+y_arr = np.random.uniform(0.0, 10.0, n)
+
+# 1. Pure Python Loop
+start = time.perf_counter()
+loop_result = []
+for i in range(n):
+    loop_result.append((x_arr[i]**2 + y_arr[i]**2)**0.5)
+loop_time = time.perf_counter() - start
+
+# 2. NumPy Vectorized Expression
+start = time.perf_counter()
+vector_result = np.sqrt(x_arr**2 + y_arr**2)
+vector_time = time.perf_counter() - start
+
+print(f"Python Loop Time:  {loop_time * 1000:.2f} ms")
+print(f"NumPy Vector Time: {vector_time * 1000:.2f} ms")
+print(f"Speedup Factor:    {loop_time / vector_time:.1f}x faster!")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Python Loop Time:  382.45 ms
+NumPy Vector Time: 3.12 ms
+Speedup Factor:    122.6x faster!
+\end{lstlisting}
+
+\paragraph{Reductions Along Axes}
+Aggregations (\code{sum}, \code{mean}, \code{std}, \code{max}) collapse arrays along specified axes:
+\begin{itemize}
+    \item \code{axis=0}: Collapses \textbf{rows} (computing statistics down columns).
+    \item \code{axis=1}: Collapses \textbf{columns} (computing statistics across rows).
+\end{itemize}
+
+\begin{lstlisting}[language=Python]
+A = np.array([
+    [1.0, 5.0],
+    [2.0, 10.0],
+    [3.0, 15.0]
+])
+
+print("Global Mean:           ", np.mean(A))             # Mean of all 6 values
+print("Feature Means (axis=0):", np.mean(A, axis=0))     # [2.0, 10.0]
+print("Sample Sums   (axis=1):", np.sum(A, axis=1))      # [6.0, 12.0, 18.0]
+\end{lstlisting}
+
+% ==============================================================================
+% 5. LINEAR ALGEBRA
+% ==============================================================================
+\subsection{Linear Algebra Functions: \code{np.linalg}}
+
+Machine learning models are fundamentally systems of linear matrix transformations. NumPy isolates core linear algebra routines in the \code{np.linalg} submodule.
+
+\paragraph{1. Matrix Multiplication (The \code{@} Operator)}
+Do not confuse element-wise multiplication (\code{A * B}) with formal linear algebra matrix multiplication (\code{A @ B}):
+\begin{equation}
+\mathbf{C}_{ij} = \sum_{k=1}^m \mathbf{A}_{ik} \mathbf{B}_{kj}\label{eq:matrix_mult}
+\end{equation}
+
+\begin{lstlisting}[language=Python]
+A = np.array([[1, 2], [3, 4]])
+B = np.array([[5, 6], [7, 8]])
+
+print("Element-wise (A * B):\n", A * B)
+print("Matrix Product (A @ B):\n", A @ B)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Element-wise (A * B):
+ [[ 5 12]
+ [21 32]]
+Matrix Product (A @ B):
+ [[19 22]
+ [43 50]]
+\end{lstlisting}
+
+\paragraph{2. Matrix Inverse and Determinant}
+The inverse $\mathbf{A}^{-1}$ satisfies $\mathbf{A} \mathbf{A}^{-1} = \mathbf{I}$:
+\begin{lstlisting}[language=Python]
+A = np.array([[2.0, 1.0], [1.0, 3.0]])
+
+# Determinant
+det = np.linalg.det(A)
+print(f"Determinant: {det:.2f}")
+
+# Inverse
+A_inv = np.linalg.inv(A)
+print("Matrix Inverse:\n", A_inv)
+
+# Verify identity matrix
+print("A @ A_inv:\n", np.round(A @ A_inv, 4))
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Determinant: 5.00
+Matrix Inverse:
+ [[ 0.6 -0.2]
+ [-0.2  0.4]]
+A @ A_inv:
+ [[1. 0.]
+ [0. 1.]]
+\end{lstlisting}
+
+\paragraph{3. Solving Systems of Linear Equations ($\mathbf{A}\mathbf{x} = \mathbf{b}$)}
+Never compute $\mathbf{x} = \mathbf{A}^{-1}\mathbf{b}$ explicitly using \code{np.linalg.inv(A) @ b}. Matrix inversion is computationally expensive ($\mathcal{O}(n^3)$) and numerically unstable. Always use \code{np.linalg.solve()}:
+
+\begin{lstlisting}[language=Python]
+# Solve: 2x1 + 1x2 = 8
+#        1x1 + 3x2 = 19
+A = np.array([[2.0, 1.0], [1.0, 3.0]])
+b = np.array([8.0, 19.0])
+
+x = np.linalg.solve(A, b)
+print("Solution Vector [x1, x2]:", x)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Solution Vector [x1, x2]: [1. 6.]
+\end{lstlisting}
+
+\paragraph{4. Vector and Matrix Norms}
+To calculate magnitude or regularization penalties:
+\begin{lstlisting}[language=Python]
+v = np.array([3.0, -4.0])
+
+l2_norm = np.linalg.norm(v, ord=2)  # Euclidean norm: sqrt(3^2 + (-4)^2) = 5.0
+l1_norm = np.linalg.norm(v, ord=1)  # Manhattan norm: |3| + |-4| = 7.0
+
+print(f"L2 Norm: {l2_norm:.1f}")
+print(f"L1 Norm: {l1_norm:.1f}")
+\end{lstlisting}
+
+% ==============================================================================
+% 6. THE TINYML BRIDGE
+% ==============================================================================
+\subsection{The TinyML Bridge: Exporting NumPy Arrays to C Firmware}
+
+\begin{iotbox}[From NumPy Arrays to Microcontroller C Buffers]
+In desktop training, machine learning weights and sensor features reside in 64-bit float NumPy arrays. Microcontrollers (such as the ESP32 or ARM Cortex-M) do not have Python interpreters: they execute static C/C++ firmware.
+
+Because a NumPy array is a contiguous raw byte buffer, converting a trained weight array into an embedded C header is straightforward:
+\begin{lstlisting}[language=Python]
+weights = np.array([0.452, -1.205, 0.884, -0.012], dtype=np.float32)
+
+# Generate C code representation
+c_array_str = ", ".join([f"{w:.4f}f" for w in weights])
+print(f"const float model_weights[{len(weights)}] = {{{c_array_str}}};")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+const float model_weights[4] = {0.4520f, -1.2050f, 0.8840f, -0.0120f};
+\end{lstlisting}
+This C array can be dropped directly into an Arduino sketch or ESP-IDF firmware project for zero-overhead edge inference!
+\end{iotbox}
+
+\begin{takeaways}
+\begin{itemize}
+    \item NumPy arrays (\code{ndarray}) store homogeneous data in contiguous memory blocks, executing at C speeds.
+    \item Array slicing returns a **view** of original memory; modifying a slice alters the parent array unless \code{.copy()} is used.
+    \item Broadcasting automatically aligns mismatched array shapes when dimensions match or equal $1$.
+    \item Vectorized operations replace slow Python loops with high-speed CPU SIMD instructions ($> 100\times$ speedup).
+    \item Always use \code{np.linalg.solve(A, b)} rather than inverting matrices directly with \code{np.linalg.inv(A) @ b}.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 7. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+\begin{enumerate}
+    \item \textbf{Memory Architecture}: Explain why computing the sum of $1{,}000{,}000$ numbers in a NumPy array is dramatically faster than summing the same numbers in a Python list. Mention at least two concrete memory differences.
+
+    \item \textbf{View vs. Copy}: Consider the code:
+\begin{lstlisting}[language=Python]
+A = np.array([10, 20, 30])
+B = A[1:]
+B[0] = 99
+\end{lstlisting}
+    What is the final value of \code{A}? Explain why.
+
+    \item \textbf{Broadcasting Arithmetic}: Array $\mathbf{P}$ has shape $(4, 1)$ and array $\mathbf{Q}$ has shape $(1, 3)$. 
+    \begin{enumerate}[label=(\alph*)]
+        \item Are $\mathbf{P}$ and $\mathbf{Q}$ compatible for broadcasting?
+        \item What is the shape of the resulting array $\mathbf{R} = \mathbf{P} \times \mathbf{Q}$?
+        \item Given $\mathbf{P} = \begin{bmatrix} 2 \\ 4 \\ 6 \\ 8 \end{bmatrix}$ and $\mathbf{Q} = \begin{bmatrix} 1 & 10 & 100 \end{bmatrix}$, calculate the full resulting matrix $\mathbf{R}$ by hand.
+    \end{enumerate}
+
+    \item \textbf{Axis Reduction}: For a 2D sensor array of shape $(500, 4)$ representing 500 time steps and 4 physical sensors, what code computes the standard deviation of each sensor across time? Does this collapse \code{axis=0} or \code{axis=1}?
+
+    \item \textbf{Solving Linear Equations}: By hand, set up the matrix equation $\mathbf{A}\mathbf{x} = \mathbf{b}$ for the system:
+    \begin{align*}
+    3 x_1 + 2 x_2 &= 16 \\
+    1 x_1 + 4 x_2 &= 22
+    \end{align*}
+    Compute $\det(\mathbf{A})$, verify that the system has a unique solution, and find $x_1$ and $x_2$.
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Memory Architecture}:
+    \begin{itemize}
+        \item \textbf{Contiguous Storage vs. Pointer Chasing}: A NumPy array stores numbers in a single contiguous memory block. The CPU pre-fetches blocks of adjacent numbers into high-speed L1/L2 hardware caches. A Python list stores pointers to heap objects scattered across memory, causing frequent cache misses.
+        \item \textbf{Type Uniformity vs. Dynamic Checking}: In NumPy, all elements share a single fixed \code{dtype} (e.g., \code{float64}), allowing the CPU to execute uninterrupted SIMD vector instructions. In Python lists, each element is a Python object whose data type must be inspected and unboxed on every single loop iteration.
+    \end{itemize}
+
+    \item \textbf{View vs. Copy}:
+    The final value of \code{A} is \code{[10, 99, 30]}. 
+    Slicing a NumPy array (\code{A[1:]}) returns a **view** that shares the same underlying memory buffer. Mutating \code{B[0]} mutates the memory at index 1 of array \code{A}.
+
+    \item \textbf{Broadcasting Arithmetic}:
+    \begin{enumerate}[label=(\alph*)]
+        \item Yes, compatible. Trailing dimensions are $1$ and $3$ (compatible because one is $1$). Leading dimensions are $4$ and $1$ (compatible because one is $1$).
+        \item Resulting shape: $(4, 3)$.
+        \item Hand calculation:
+        Each element in column vector $\mathbf{P}$ multiplies each element in row vector $\mathbf{Q}$:
+        \begin{equation*}
+        \mathbf{R} = \begin{bmatrix} 
+        2 \times 1 & 2 \times 10 & 2 \times 100 \\ 
+        4 \times 1 & 4 \times 10 & 4 \times 100 \\ 
+        6 \times 1 & 6 \times 10 & 6 \times 100 \\ 
+        8 \times 1 & 8 \times 10 & 8 \times 100 
+        \end{bmatrix} = \begin{bmatrix} 
+        2 & 20 & 200 \\ 
+        4 & 40 & 400 \\ 
+        6 & 60 & 600 \\ 
+        8 & 80 & 800 
+        \end{bmatrix}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{Axis Reduction}:
+    To compute the standard deviation of each sensor across time, run:
+    \begin{equation*}
+    \code{sensor_std = np.std(sensor_data, axis=0)}
+    \end{equation*}
+    This collapses \code{axis=0} (the 500 time-step rows), producing a 1D vector of shape \code{(4,)} containing the standard deviation for each sensor.
+
+    \item \textbf{Solving Linear Equations}:
+    Matrix representation:
+    \begin{equation*}
+    \mathbf{A} = \begin{bmatrix} 3 & 2 \\ 1 & 4 \end{bmatrix}, \quad \mathbf{x} = \begin{bmatrix} x_1 \\ x_2 \end{bmatrix}, \quad \mathbf{b} = \begin{bmatrix} 16 \\ 22 \end{bmatrix}
+    \end{equation*}
+    Determinant:
+    \begin{equation*}
+    \det(\mathbf{A}) = (3 \times 4) - (2 \times 1) = 12 - 2 = \mathbf{10}
+    \end{equation*}
+    Because $\det(\mathbf{A}) = 10 \neq 0$, a unique solution exists.
+    The inverse is:
+    \begin{equation*}
+    \mathbf{A}^{-1} = \frac{1}{10} \begin{bmatrix} 4 & -2 \\ -1 & 3 \end{bmatrix} = \begin{bmatrix} 0.4 & -0.2 \\ -0.1 & 0.3 \end{bmatrix}
+    \end{equation*}
+    Solve for $\mathbf{x}$:
+    \begin{equation*}
+    \mathbf{x} = \mathbf{A}^{-1} \mathbf{b} = \begin{bmatrix} (0.4 \times 16) + (-0.2 \times 22) \\ (-0.1 \times 16) + (0.3 \times 22) \end{bmatrix} = \begin{bmatrix} 6.4 - 4.4 \\ -1.6 + 6.6 \end{bmatrix} = \begin{bmatrix} \mathbf{2} \\ \mathbf{5} \end{bmatrix}
+    \end{equation*}
+    Verification: $3(2) + 2(5) = 6 + 10 = 16$; $1(2) + 4(5) = 2 + 20 = 22$.
+\end{enumerate}

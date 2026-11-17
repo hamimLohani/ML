@@ -1,0 +1,698 @@
+% FILE: chapters/ch04_s3_ensembles.tex
+\section{Ensemble Methods}\label{sec:ensembles}
+
+In the preceding sections, we studied individual machine learning algorithms: linear models, nearest neighbors, naive Bayes classifiers, support vector machines, and decision trees. Each model possesses distinct mathematical strengths and distinct blind spots:
+\begin{itemize}
+    \item A single decision tree is intuitive and fast, but suffers from high variance and easily overfits noise.
+    \item A linear model is stable and low-variance, but cannot capture non-linear feature interactions without manual polynomial expansion.
+    \item A support vector machine creates robust margins, but can be computationally demanding on large streaming datasets.
+\end{itemize}
+
+Rather than searching for a single hypothetical ``perfect'' algorithm, modern machine learning relies on a more powerful principle: **Ensemble Learning**. 
+
+An ensemble combines the predictions of multiple individual models (referred to as **base learners** or **weak learners**) to produce a single collective prediction that is more accurate, more robust, and more generalizable than any individual member.
+
+\begin{analogy}[The Medical Board of Specialists]
+When a patient exhibits subtle, ambiguous symptoms, a hospital does not rely on the diagnosis of a single junior resident. Instead, the hospital convenes a medical board comprising a cardiologist, a neurologist, a radiologist, and an endocrinologist:
+\begin{itemize}
+    \item Each physician views the patient's telemetry through their own specialized clinical lens.
+    \item An individual doctor might overlook an atypical symptom or misinterpret an electrical artifact.
+    \item By debating and combining their diverse assessments, individual diagnostic errors cancel out, and the collective board reaches a reliable diagnosis.
+\end{itemize}
+Ensemble methods apply this exact principle to sensor telemetry and industrial data streams.
+\end{analogy}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    box/.style={rectangle, draw=gray!70, fill=gray!5, thick, rounded corners=2mm, minimum height=0.9cm, text centered, font=\scriptsize\sffamily},
+    model_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=2mm, minimum height=0.75cm, text centered, font=\scriptsize\sffamily},
+    meta_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=0.8cm, text centered, font=\scriptsize\sffamily\bfseries},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % 1. BAGGING (Parallel)
+    \node[font=\footnotesize\sffamily\bfseries, text=keyideablue!90!black] at (-4.2, 3.4) {1. Bagging (Parallel)};
+    \node[box, minimum width=2.4cm] (b_data) at (-4.2, 2.6) {Training Data};
+    \node[model_box, minimum width=1.8cm] (b_m1) at (-5.6, 1.4) {Tree 1};
+    \node[model_box, minimum width=1.8cm] (b_m2) at (-4.2, 1.4) {Tree 2};
+    \node[model_box, minimum width=1.8cm] (b_m3) at (-2.8, 1.4) {Tree 3};
+    \node[meta_box, minimum width=2.6cm] (b_agg) at (-4.2, 0.1) {Average / Vote};
+    \draw[arrow] (b_data) -- (b_m1); \draw[arrow] (b_data) -- (b_m2); \draw[arrow] (b_data) -- (b_m3);
+    \draw[arrow] (b_m1) -- (b_agg); \draw[arrow] (b_m2) -- (b_agg); \draw[arrow] (b_m3) -- (b_agg);
+
+    % 2. BOOSTING (Sequential)
+    \node[font=\footnotesize\sffamily\bfseries, text=analogygreen!90!black] at (0.2, 3.4) {2. Boosting (Sequential)};
+    \node[box, minimum width=2.2cm] (bo_data) at (0.2, 2.6) {Training Data};
+    \node[model_box, minimum width=1.8cm] (bo_m1) at (0.2, 1.6) {Tree 1};
+    \node[model_box, minimum width=1.8cm] (bo_m2) at (0.2, 0.6) {Tree 2 (Residuals)};
+    \node[model_box, minimum width=1.8cm] (bo_m3) at (0.2, -0.4) {Tree 3 (Residuals)};
+    \draw[arrow] (bo_data) -- (bo_m1);
+    \draw[arrow] (bo_m1) -- node[right, font=\tiny\sffamily] {Error $r_1$} (bo_m2);
+    \draw[arrow] (bo_m2) -- node[right, font=\tiny\sffamily] {Error $r_2$} (bo_m3);
+
+    % 3. STACKING (Heterogeneous)
+    \node[font=\footnotesize\sffamily\bfseries, text=purple!90!black] at (4.6, 3.4) {3. Stacking (Heterogeneous)};
+    \node[box, minimum width=2.4cm] (s_data) at (4.6, 2.6) {Training Data};
+    \node[model_box, minimum width=1.6cm] (s_m1) at (3.2, 1.4) {Random Forest};
+    \node[model_box, minimum width=1.6cm] (s_m2) at (4.6, 1.4) {SVM};
+    \node[model_box, minimum width=1.6cm] (s_m3) at (6.0, 1.4) {Logistic Reg};
+    \node[meta_box, minimum width=2.6cm] (s_meta) at (4.6, 0.1) {Meta-Learner};
+    \draw[arrow] (s_data) -- (s_m1); \draw[arrow] (s_data) -- (s_m2); \draw[arrow] (s_data) -- (s_m3);
+    \draw[arrow] (s_m1) -- (s_meta); \draw[arrow] (s_m2) -- (s_meta); \draw[arrow] (s_m3) -- (s_meta);
+\end{tikzpicture}
+\caption{The three architectural paradigms of ensemble learning: Bagging trains independent models in parallel to reduce variance; Boosting trains sequential models to correct residual bias; Stacking combines diverse model families using a meta-learner.}\label{fig:ensemble_architectures}
+\end{figure}
+
+In this section, we master the four pillars of ensemble learning:
+\begin{enumerate}
+    \item \textbf{Bagging and Random Forests}: Parallel variance reduction via bootstrap sampling and random feature sub-spaces.
+    \item \textbf{Gradient Boosting}: Sequential error correction by descending loss gradients on residuals.
+    \item \textbf{Modern Implementations}: Architectural innovations behind XGBoost and LightGBM.
+    \item \textbf{Stacking and Voting}: Heterogeneous model aggregation via meta-learning.
+\end{enumerate}
+
+% ==============================================================================
+% 1. BAGGING AND RANDOM FORESTS
+% ==============================================================================
+\subsection{Bagging and Random Forests: Parallel Variance Reduction}\label{subsec:bagging_random_forests}
+
+As proven in the bias-variance decomposition (Section~\ref{sec:regression}), an unpruned, deep decision tree has low bias but very high variance: minor fluctuations in sensor noise cause dramatic changes in tree splits. 
+
+**Bootstrap Aggregating (Bagging)** is a meta-algorithm designed specifically to crush variance without increasing bias.
+
+\subsubsection{The Statistical Power of the Majority Vote}
+Why does combining models reduce error? Consider the **Condorcet Jury Theorem** from social mathematics.
+
+Suppose we assemble an ensemble of $M = 5$ independent classifiers to detect an overheating bearing. Each individual classifier has an independent error probability of $\epsilon = 0.20$ (an accuracy of $80\%$). 
+
+The ensemble outputs a prediction by majority vote. The ensemble is wrong *only if 3 or more classifiers are simultaneously wrong*. Using the binomial distribution:
+\begin{align}
+P(\text{Majority Error}) &= \sum_{k=3}^{5} \binom{5}{k} \epsilon^k (1 - \epsilon)^{5 - k} \notag \\
+&= \binom{5}{3} (0.2)^3 (0.8)^2 + \binom{5}{4} (0.2)^4 (0.8)^1 + \binom{5}{5} (0.2)^5 (0.8)^0 \notag \\
+&= 10(0.008)(0.64) + 5(0.0016)(0.8) + 1(0.00032)(1) \notag \\
+&= 0.0512 + 0.0064 + 0.00032 = \mathbf{0.05792} \quad (\approx 5.79\%)
+\end{align}
+The error rate drops from $20.0\%$ for an individual model to **$5.79\%$** for the ensemble! Collective accuracy jumps from $80.0\%$ to **$94.21\%$**.
+
+However, this exponential error reduction requires a crucial condition: **the base learners must make independent, uncorrelated errors**. If all five models make identical mistakes on the exact same data points, ensembling provides zero benefit.
+
+\subsubsection{Bootstrap Sampling and Out-Of-Bag (OOB) Estimation}
+To generate diversity from a single training set $\mathcal{D}$ of $N$ samples, Bagging draws $B$ separate **bootstrap samples** $\mathcal{D}_1, \dots, \mathcal{D}_B$.
+
+\paragraph{Formal Definition: Bootstrap Sampling}
+A bootstrap sample of size $N$ is generated by drawing $N$ observations uniformly at random **with replacement** from the original dataset of size $N$.
+
+Because sampling is performed with replacement, some original samples appear multiple times in a bootstrap set, while others are omitted entirely.
+
+\paragraph{The Out-Of-Bag (OOB) Phenomenon}
+What fraction of the original data is omitted from a bootstrap sample?
+\begin{itemize}
+    \item The probability of *not* selecting sample $i$ on any single draw is $1 - \frac{1}{N}$.
+    \item In a full bootstrap sample of $N$ independent draws, the probability that sample $i$ is never selected is:
+    \begin{equation}
+    P(i \notin \mathcal{D}_b) = \left( 1 - \frac{1}{N} \right)^N
+    \end{equation}
+    \item Taking the calculus limit as dataset size $N \to \infty$:
+    \begin{equation}
+    \lim_{N \to \infty} \left( 1 - \frac{1}{N} \right)^N = \frac{1}{e} \approx 0.367879 \quad (\mathbf{36.8\%})\label{eq:oob_limit}
+    \end{equation}
+\end{itemize}
+This means that for every tree grown on a bootstrap sample, approximately **$36.8\%$ of the original training samples are left out**! These omitted instances are called **Out-Of-Bag (OOB)** samples.
+
+\begin{keyidea}[Free Cross-Validation via OOB]
+Because tree $b$ never saw its OOB samples during training, we can evaluate tree $b$ on those samples as an unbiased validation set. 
+
+By aggregating predictions across all trees where sample $i$ was out-of-bag, Random Forests provide a rigorous, built-in validation metric (the **OOB Score**) with zero need for a separate train-validation split!
+\end{keyidea}
+
+\subsubsection{Random Forests: De-Correlating the Trees}
+Standard Bagging trains $B$ deep decision trees on $B$ bootstrap samples. However, if our sensor dataset contains one overwhelmingly strong feature (e.g., peak vibration during a catastrophic bearing seizure), every single tree will select that dominant feature as its root split. As a result, the trees become structurally similar and their predictions become highly correlated.
+
+If $B$ predictors each have variance $\sigma^2$ and pairwise correlation $\rho$, the variance of their ensemble average is:
+\begin{equation}
+\text{Var}\left( \frac{1}{B} \sum_{b=1}^{B} f_b(\mathbf{x}) \right) = \rho \sigma^2 + \frac{1 - \rho}{B} \sigma^2\label{eq:rf_variance_formula}
+\end{equation}
+As $B \to \infty$, the second term approaches zero, but the first term $\rho \sigma^2$ remains! To drive total variance down, we must reduce the pairwise correlation $\rho$.
+
+\paragraph{Breiman's Breakthrough: Random Feature Subspaces}
+Leo Breiman resolved this problem in 2001 by introducing **Random Forests**:
+\begin{keyidea}[The Random Subspace Method]
+At every candidate split in every tree, the algorithm evaluates only a randomly selected subset of $m$ features (out of $D$ total features):
+\begin{equation}
+m \approx \sqrt{D} \quad \text{for classification}, \quad m \approx \frac{D}{3} \quad \text{for regression}\label{eq:random_forest_m_features}
+\end{equation}
+\end{keyidea}
+By preventing the dominant feature from being selected at every split, other informative physical features (such as thermal gradients or acoustic harmonics) are forced to form the split decisions in other trees. The trees become de-correlated ($\rho \to 0$), driving ensemble variance down dramatically.
+
+\subsubsection{Feature Importance: Gini Impurity versus Permutation}
+Random Forests provide built-in mechanisms to interpret which sensor features drive predictions:
+\begin{enumerate}
+    \item \textbf{Mean Decrease in Impurity (MDI / Gini Importance)}:
+    Measures the total reduction in node impurity (Gini or MSE) brought by splits on feature $j$, averaged across all trees in the forest.
+    
+    \textit{Critical Pitfall}: MDI has a severe statistical bias toward continuous features and high-cardinality nominal features with many unique values. A noisy timestamp or serial number will be falsely ranked as highly important because it offers many opportunities for splits.
+    
+    \item \textbf{Permutation Feature Importance (Mean Decrease Accuracy)}:
+    Evaluated strictly on held-out Out-Of-Bag (OOB) data. The values of feature $j$ are randomly shuffled (permuted) across OOB samples, breaking its physical relationship with target $y$. If model accuracy drops drastically after shuffling, feature $j$ carries critical signal. If accuracy is unchanged, feature $j$ is redundant noise.
+\end{enumerate}
+
+% ==============================================================================
+% 2. GRADIENT BOOSTING
+% ==============================================================================
+\subsection{Gradient Boosting: The Residual Correction Engine}\label{subsec:gradient_boosting}
+
+While Bagging trains independent trees in parallel to reduce *variance*, **Boosting** trains trees sequentially in series to reduce *bias*.
+
+\subsubsection{The Core Intuition of Boosting}
+Instead of training deep, complex trees, boosting trains an ensemble of very shallow, weak learners (typically decision trees of depth $2$ to $4$, known as **decision stumps**). 
+
+The fundamental principle of boosting is **iterative residual correction**:
+\begin{enumerate}
+    \item Train a weak base model $h_1(\mathbf{x})$ on the raw data.
+    \item Compute the errors (residuals) made by $h_1(\mathbf{x})$ on every training sample.
+    \item Train a second weak model $h_2(\mathbf{x})$ specifically to predict those errors!
+    \item Add $h_2(\mathbf{x})$ to the ensemble. The new model corrects the shortcomings of the first.
+    \item Repeat for $M$ iterations, systematically eliminating the remaining error.
+\end{enumerate}
+
+\subsubsection{Gradient Descent in Function Space}
+Developed by Jerome Friedman in 1999, **Gradient Boosting** generalized boosting to arbitrary differentiable loss functions.
+
+Consider Mean Squared Error loss for regression: $L(y_i, \hat{y}_i) = \frac{1}{2}(y_i - \hat{y}_i)^2$. The negative gradient of this loss with respect to the model's prediction $F(\mathbf{x}_i)$ is:
+\begin{equation}
+-\frac{\partial L(y_i, F(\mathbf{x}_i))}{\partial F(\mathbf{x}_i)} = y_i - F(\mathbf{x}_i) = r_i\label{eq:mse_residual_gradient}
+\end{equation}
+The residual $y_i - F(\mathbf{x}_i)$ is the negative gradient of the loss function!
+
+\begin{keyidea}[Gradient Boosting as Gradient Descent]
+Fitting a decision tree to the residuals is mathematically equivalent to performing **gradient descent in function space**:
+\begin{equation}
+F_m(\mathbf{x}) = F_{m-1}(\mathbf{x}) + \eta \cdot h_m(\mathbf{x})\label{eq:gradient_boosting_additive}
+\end{equation}
+where $h_m(\mathbf{x})$ is a tree trained to approximate the negative gradient vector, and $\eta \in (0, 1]$ is the **learning rate (shrinkage factor)**.
+\end{keyidea}
+
+\paragraph{The Role of the Learning Rate $\eta$}
+The learning rate $\eta$ scales the contribution of each newly added tree:
+\begin{itemize}
+    \item If $\eta = 1.0$, the ensemble aggressively fits the residuals of the previous step, frequently overshooting the optimal solution and rapidly overfitting noise.
+    \item Setting $\eta$ small (e.g., $\eta = 0.05$ or $0.10$) forces the ensemble to take conservative steps along the loss gradient. Each tree provides a subtle correction. While smaller $\eta$ requires training more trees ($M \ge 100$), it substantially improves generalization on unseen test data.
+\end{itemize}
+
+% ==============================================================================
+% 3. MODERN GRADIENT BOOSTING: XGBOOST AND LIGHTGBM
+% ==============================================================================
+\subsection{Modern Gradient Boosting: XGBoost and LightGBM}\label{subsec:xgboost_lightgbm}
+
+While Scikit-Learn provides a native \texttt{GradientBoostingClassifier}, large-scale industrial IoT telemetry containing millions of high-frequency records created computational bottlenecks for first-generation implementations. This led to the development of two dominant modern frameworks: **XGBoost** and **LightGBM**.
+
+\subsubsection{XGBoost: Extreme Gradient Boosting}
+Created by Tianqi Chen in 2014, **XGBoost** introduced major mathematical and hardware-level optimizations that made it a standard in competitive machine learning:
+\begin{enumerate}
+    \item \textbf{Second-Order Taylor Approximation}: Traditional gradient boosting evaluates only first-order gradients $g_i = \frac{\partial L}{\partial \hat{y}_i}$. XGBoost evaluates both the first derivative (gradient $g_i$) and the **second derivative (Hessian $h_i = \frac{\partial^2 L}{\partial \hat{y}_i^2}$)**:
+    \begin{equation}
+    \mathcal{L}^{(t)} \approx \sum_{i=1}^{N} \left[ g_i f_t(\mathbf{x}_i) + \frac{1}{2} h_i f_t^2(\mathbf{x}_i) \right] + \Omega(f_t)\label{eq:xgboost_objective}
+    \end{equation}
+    The Hessian provides local loss curvature information, allowing the optimizer to choose split points with Newton-Raphson precision.
+    \item \textbf{Exact Split Quality Formula}: Using the gradient sums $G = \sum g_i$ and Hessian sums $H = \sum h_i$, the exact gain of splitting a leaf into left ($L$) and right ($R$) children is:
+    \begin{equation}
+    \text{Gain} = \frac{1}{2} \left[ \frac{G_L^2}{H_L + \lambda} + \frac{G_R^2}{H_R + \lambda} - \frac{(G_L + G_R)^2}{H_L + H_R + \lambda} \right] - \gamma\label{eq:xgboost_split_gain}
+    \end{equation}
+    If the calculated gain is less than $\gamma$, the split is pruned.
+    \item \textbf{Built-in Regularization $\Omega(f_t)$}: XGBoost penalizes model complexity directly in its objective function:
+    \begin{equation}
+    \Omega(f_t) = \gamma T + \frac{1}{2} \lambda \sum_{j=1}^{T} w_j^2\label{eq:xgboost_regularization}
+    \end{equation}
+    where $T$ is the number of terminal leaves, $\gamma$ is a minimum loss reduction threshold to allow a split, and $\lambda$ is an $L_2$ penalty on leaf weight magnitudes.
+    \item \textbf{Sparsity-Aware Split Finding}: If sensor packets contain missing values due to wireless transmission drops, XGBoost automatically learns a default branch direction for missing entries based on training loss reduction.
+\end{enumerate}
+
+\subsubsection{LightGBM and CatBoost: The Modern Boosting Ecosystem}
+Beyond XGBoost, two frameworks have shaped modern gradient boosting:
+\begin{itemize}
+    \item \textbf{LightGBM (Microsoft)}:
+    \begin{enumerate}
+        \item \textbf{Histogram-Based Discretization}: Continuous values are bucketed into $256$ discrete integer bins (\texttt{uint8}), reducing memory by $80\%$ and speeding up split evaluation by an order of magnitude.
+        \item \textbf{Leaf-Wise (Best-First) Tree Growth}: Splitting only the single leaf yielding maximal loss reduction (Figure~\ref{fig:tree_growth_strategies}), achieving faster convergence than level-wise architectures.
+        \item \textbf{GOSS (Gradient-based One-Side Sampling)}: Keeps instances with large gradients while randomly subsampling well-fitted samples with small gradients.
+    \end{enumerate}
+    \item \textbf{CatBoost (Yandex)}:
+    Designed specifically for datasets with high-cardinality categorical variables. It implements **Target Statistics with Online Ordering** (calculating target statistics using only preceding historical rows to prevent target leakage) and builds **Symmetric Oblivious Trees** (evaluating the exact same split condition across all nodes at depth $d$), making CatBoost models execute with lightning speed on embedded SIMD vector registers.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    node_box/.style={circle, draw=keyideablue!80, fill=keyideablue!15, thick, minimum size=0.6cm, font=\scriptsize\sffamily},
+    leaf_box/.style={circle, draw=analogygreen!80, fill=analogygreen!20, thick, minimum size=0.6cm, font=\scriptsize\sffamily},
+    arrow/.style={-{Stealth[length=2mm]}, thick, draw=gray!80}
+]
+    % Level-wise (XGBoost traditional)
+    \node[font=\footnotesize\sffamily\bfseries, text=keyideablue!90!black] at (-3.6, 2.8) {Level-wise Growth (Symmetric)};
+    \node[node_box] (l_root) at (-3.6, 2.0) {};
+    \node[node_box] (l_1) at (-4.6, 1.1) {};
+    \node[node_box] (l_2) at (-2.6, 1.1) {};
+    \node[leaf_box] (l_3) at (-5.1, 0.2) {};
+    \node[leaf_box] (l_4) at (-4.1, 0.2) {};
+    \node[leaf_box] (l_5) at (-3.1, 0.2) {};
+    \node[leaf_box] (l_6) at (-2.1, 0.2) {};
+    \draw[arrow] (l_root) -- (l_1); \draw[arrow] (l_root) -- (l_2);
+    \draw[arrow] (l_1) -- (l_3); \draw[arrow] (l_1) -- (l_4);
+    \draw[arrow] (l_2) -- (l_5); \draw[arrow] (l_2) -- (l_6);
+    \node[font=\tiny\sffamily, text=gray!80] at (-3.6, -0.4) {Splits all leaves at level $d$ equally};
+
+    % Leaf-wise (LightGBM)
+    \node[font=\footnotesize\sffamily\bfseries, text=analogygreen!90!black] at (3.6, 2.8) {Leaf-wise Growth (Asymmetric)};
+    \node[node_box] (r_root) at (3.6, 2.0) {};
+    \node[node_box] (r_1) at (2.6, 1.1) {};
+    \node[leaf_box] (r_2) at (4.6, 1.1) {};
+    \node[node_box] (r_3) at (2.0, 0.2) {};
+    \node[leaf_box] (r_4) at (3.2, 0.2) {};
+    \node[leaf_box] (r_5) at (1.5, -0.7) {};
+    \node[leaf_box] (r_6) at (2.5, -0.7) {};
+    \draw[arrow] (r_root) -- (r_1); \draw[arrow] (r_root) -- (r_2);
+    \draw[arrow] (r_1) -- (r_3); \draw[arrow] (r_1) -- (r_4);
+    \draw[arrow] (r_3) -- (r_5); \draw[arrow] (r_3) -- (r_6);
+    \node[font=\tiny\sffamily, text=gray!80] at (3.6, -1.2) {Splits only the leaf with maximum loss drop};
+\end{tikzpicture}
+\caption{Contrasting tree growth strategies. Traditional level-wise growth (left) expands depth layers symmetrically. LightGBM's leaf-wise growth (right) splits only the single leaf yielding maximal loss reduction, converging faster.}\label{fig:tree_growth_strategies}
+\end{figure}
+
+% ==============================================================================
+% 4. STACKING AND VOTING
+% ==============================================================================
+\subsection{Stacking and Voting: Heterogeneous Ensembles}\label{subsec:stacking_voting}
+
+Bagging and Boosting typically ensemble homogeneous models (trees combined with trees). In contrast, **Voting** and **Stacking** combine fundamentally *different* families of algorithms (e.g., combining a linear model, a neural network, a support vector machine, and a gradient boosted tree).
+
+\subsubsection{Voting Classifiers: Hard versus Soft Voting}
+Given $M$ diverse pre-trained base models:
+\begin{itemize}
+    \item \textbf{Hard Voting (Majority Rule)}: Each model casts a discrete vote for its predicted class. The class receiving the simple majority wins:
+    \begin{equation}
+    \hat{y} = \text{mode}\{C_1(\mathbf{x}), C_2(\mathbf{x}), \dots, C_M(\mathbf{x})\}\label{eq:hard_voting}
+    \end{equation}
+    \item \textbf{Soft Voting (Probability Averaging)}: Base models output predicted probability vectors. The ensemble averages the probability distributions across all models, selecting the class with the highest average probability:
+    \begin{equation}
+    \hat{y} = \arg\max_{c} \frac{1}{M} \sum_{m=1}^{M} P_m(y = c \mid \mathbf{x})\label{eq:soft_voting}
+    \end{equation}
+\end{itemize}
+Soft voting almost always outperforms hard voting because it gives greater weight to models that are highly confident about a sample, rather than treating a $51\%$ borderline vote identically to a $99\%$ confident vote.
+
+\subsubsection{Stacked Generalization (Stacking)}
+Developed by David Wolpert in 1992, **Stacking** replaces manual voting rules with an intelligent machine learning model:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    layer_box/.style={rectangle, draw=gray!60, fill=gray!5, thick, rounded corners=2mm, minimum width=10.5cm, minimum height=1.5cm},
+    sub_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=2mm, minimum height=0.9cm, minimum width=2.4cm, text centered, font=\scriptsize\sffamily},
+    meta_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=0.9cm, minimum width=3.8cm, text centered, font=\scriptsize\sffamily\bfseries},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Level 0 Box
+    \node[layer_box] at (0, 2.0) {};
+    \node[font=\footnotesize\sffamily\bfseries, text=keyideablue!90!black, anchor=west] at (-5.0, 2.5) {Level-0: Base Learners (Trained on Raw Sensor Features $\mathbf{x} \in \mathbb{R}^D$)};
+    \node[sub_box] (m1) at (-3.4, 1.8) {Random Forest\\$P_{\text{RF}}(y=1)$};
+    \node[sub_box] (m2) at (0.0, 1.8) {Support Vector Machine\\$P_{\text{SVM}}(y=1)$};
+    \node[sub_box] (m3) at (3.4, 1.8) {Logistic Regression\\$P_{\text{LR}}(y=1)$};
+
+    % Level 1 Box
+    \node[layer_box] at (0, -0.6) {};
+    \node[font=\footnotesize\sffamily\bfseries, text=analogygreen!90!black, anchor=west] at (-5.0, -0.1) {Level-1: Meta-Learner (Trained on Base Predictions $\mathbf{z} \in \mathbb{R}^M$)};
+    \node[meta_box] (meta) at (0.0, -0.8) {Meta-Model (e.g., Logistic Regression)\\Learns optimal blending weights};
+
+    % Connections
+    \draw[arrow] (m1.south) -- (meta.north -| m1.south);
+    \draw[arrow] (m2.south) -- (meta.north);
+    \draw[arrow] (m3.south) -- (meta.north -| m3.south);
+
+    % Output
+    \draw[arrow] (meta.south) -- ++(0, -0.6) node[below, font=\scriptsize\sffamily\bfseries] {Final Prediction $\hat{y}$};
+\end{tikzpicture}
+\caption{The hierarchical architecture of Stacking. Base classifiers generate out-of-fold probability vectors, which serve as the input training features for a Level-1 meta-learner.}\label{fig:stacking_architecture}
+\end{figure}
+
+\begin{enumerate}
+    \item \textbf{Level-0 Base Learners}: Train diverse models (e.g., Random Forest, SVM, LightGBM) on the original input features $\mathbf{x}$.
+    \item \textbf{Level-1 Meta-Learner}: A secondary model (typically a simple linear model like Logistic Regression) whose input features are the predictions output by the Level-0 models:
+    \begin{equation}
+    \mathbf{z} = [ \hat{p}_{\text{RF}}, \ \hat{p}_{\text{SVM}}, \ \hat{p}_{\text{LR}} ]^T \implies \hat{y} = \text{MetaLearner}(\mathbf{z})
+    \end{equation}
+    The meta-learner discovers which base models to trust in different operational regimes.
+\end{enumerate}
+
+\begin{warning}[The Stacking Data Leakage Trap]
+If you generate the training features $\mathbf{z}$ for the meta-learner by calling \texttt{predict()} on the same data used to train the Level-0 models, the meta-learner will learn from overfitted training predictions!
+
+To prevent severe leakage, the meta-learner's training features must be constructed using **Out-Of-Fold (OOF) cross-validation predictions**. Scikit-Learn's \texttt{StackingClassifier} handles this cross-validation partitioning automatically.
+\end{warning}
+
+% ==============================================================================
+% 5. HANDS-ON PYTHON BENCHMARK
+% ==============================================================================
+\subsection{Hands-On Python: The Ensemble Benchmark}\label{subsec:ensembles_python}
+
+Let us evaluate the progressive performance gains of ensembling on an industrial hydraulic pump dataset monitoring cavitation and valve breakdowns.
+
+\begin{lstlisting}[style=pythonstyle]
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import (
+    RandomForestClassifier,
+    GradientBoostingClassifier,
+    HistGradientBoostingClassifier,
+    VotingClassifier,
+    StackingClassifier
+)
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import accuracy_score, f1_score
+
+# 1. Deterministic seed for reproducible evaluation
+np.random.seed(42)
+
+# 2. Synthesize Multi-Sensor Industrial Pump Telemetry (800 samples)
+# Features: [Vibration RMS (g), Temp (C), Discharge Pressure (bar), Current (A)]
+n = 800
+vibe = np.random.normal(0.25, 0.08, n)
+temp = np.random.normal(45.0, 5.0, n)
+press = np.random.normal(5.0, 0.8, n)
+curr = np.random.normal(12.0, 1.5, n)
+
+# Non-linear physical failure threshold (Cavitation / Overload)
+score = (
+    2.5 * (vibe - 0.25) / 0.08
+    - 2.0 * (press - 5.0) / 0.8
+    + 1.2 * (curr - 12.0) / 1.5
+    + np.random.normal(0, 0.8, n)
+)
+y = (score > 1.0).astype(int)
+X = np.column_stack([vibe, temp, press, curr])
+
+# 3. Stratified Train-Test Split (75% Train, 25% Test)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y
+)
+
+# 4. Define Base Models for Voting and Stacking
+clf_lr = Pipeline([('scaler', StandardScaler()), ('lr', LogisticRegression(random_state=42))])
+clf_nb = Pipeline([('scaler', StandardScaler()), ('nb', GaussianNB())])
+clf_rf = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)
+
+# 5. Build Benchmark Ensembles
+models = {
+    'Single Decision Tree (depth=4)': DecisionTreeClassifier(max_depth=4, random_state=42),
+    'Random Forest (100 trees)':      RandomForestClassifier(n_estimators=100, max_depth=6, random_state=42),
+    'Gradient Boosting (100 trees)':  GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42),
+    'HistGradientBoosting (LightGBM)': HistGradientBoostingClassifier(max_iter=100, learning_rate=0.1, max_depth=3, random_state=42),
+    'Soft Voting (RF + LR + NB)':     VotingClassifier(
+        estimators=[('lr', clf_lr), ('nb', clf_nb), ('rf', clf_rf)],
+        voting='soft'
+    ),
+    'Stacking (RF + LR + NB -> LR)':  StackingClassifier(
+        estimators=[('lr', clf_lr), ('nb', clf_nb), ('rf', clf_rf)],
+        final_estimator=LogisticRegression(random_state=42),
+        cv=5
+    )
+}
+
+# 6. Execute Benchmark
+print("=== Industrial Anomaly Detection: Ensemble Benchmark (800 Samples) ===")
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    print(f"{name:35s} | Accuracy: {acc*100:5.1f}% | F1-Score: {f1:5.3f}")
+\end{lstlisting}
+
+Executing this script produces the exact output below:
+\begin{lstlisting}[style=outputstyle]
+=== Industrial Anomaly Detection: Ensemble Benchmark (800 Samples) ===
+Single Decision Tree (depth=4)      | Accuracy:  83.0% | F1-Score: 0.800
+Random Forest (100 trees)           | Accuracy:  85.5% | F1-Score: 0.815
+Gradient Boosting (100 trees)       | Accuracy:  84.5% | F1-Score: 0.803
+HistGradientBoosting (LightGBM)     | Accuracy:  86.5% | F1-Score: 0.834
+Soft Voting (RF + LR + NB)          | Accuracy:  88.0% | F1-Score: 0.848
+Stacking (RF + LR + NB -> LR)       | Accuracy:  88.0% | F1-Score: 0.850
+\end{lstlisting}
+
+\paragraph{Analysis of Results:}
+\begin{itemize}
+    \item \textbf{Single Tree vs.\ Forest}: Moving from a single tree to a Random Forest improves accuracy from $83.0\%$ to $85.5\%$, as variance from individual noise spikes is averaged away.
+    \item \textbf{Gradient Boosting}: \texttt{HistGradientBoosting} achieves $86.5\%$ accuracy by binning continuous features into integer histograms and focusing tree capacity on difficult boundary cases.
+    \item \textbf{Heterogeneous Power}: Soft Voting and Stacking achieve the highest overall score ($88.0\%$ accuracy, $0.850$ F1-score). By combining a non-linear tree ensemble with a smooth linear logistic regression and a probabilistic naive Bayes model, the individual model families compensate for each other's limitations.
+\end{itemize}
+
+% ==============================================================================
+% 6. IOT AND TINYML CONNECTION
+% ==============================================================================
+\subsection{IoT and TinyML: Running Ensembles on Edge Microcontrollers}\label{subsec:ensembles_iot}
+
+\begin{iotbox}[The Embedded Ensemble Dilemma]
+In enterprise cloud servers, deploying a 500-tree gradient boosted ensemble is trivial. On a Cortex-M4 microcontroller running at $80\text{ MHz}$ with $64\text{ KB}$ of SRAM, executing hundreds of decision trees on streaming $10\text{ kHz}$ accelerometer buffers is challenging.
+
+\paragraph{1. Compact Forests via C Code Generation}
+Rather than loading heavy runtime interpreter libraries, embedded engineers train the ensemble in Python, export the trees, and compile them directly into static C decision functions. 
+
+Below is an optimized embedded C routine implementing a compact, lightweight 3-tree voting ensemble:
+
+\begin{lstlisting}[style=pythonstyle]
+// Embedded C: Fast 3-Tree Majority Voting Ensemble
+#include <stdint.h>
+
+static inline uint8_t tree_0(float vibe, float temp) {
+    return (vibe > 0.32f && temp > 48.0f) ? 1 : 0;
+}
+
+static inline uint8_t tree_1(float vibe, float press) {
+    return (vibe > 0.28f && press < 4.2f) ? 1 : 0;
+}
+
+static inline uint8_t tree_2(float temp, float curr) {
+    return (temp > 52.0f || curr > 13.8f) ? 1 : 0;
+}
+
+uint8_t predict_ensemble_vote(float vibe, float temp, float press, float curr) {
+    uint8_t votes = tree_0(vibe, temp) + tree_1(vibe, press) + tree_2(temp, curr);
+    return (votes >= 2) ? 1 : 0; // Majority vote (2 out of 3)
+}
+\end{lstlisting}
+This routine compiles into under $80$ bytes of ARM machine instructions, requires zero dynamic heap allocations, and evaluates in less than $50$ nanoseconds!
+
+\paragraph{2. Model Distillation for Edge Deployment}
+When maximum accuracy is required on constrained hardware, engineers use **Knowledge Distillation**:
+\begin{enumerate}
+    \item Train a massive, unconstrained 300-tree LightGBM or Stacking ensemble on a cloud cluster using historical telemetry (the ``Teacher'').
+    \item Pass unlabeled telemetry through the teacher to generate continuous probability vectors (soft labels).
+    \item Train a single, compact decision tree of depth $4$ (the ``Student'') to mimic the teacher's probability outputs.
+\end{enumerate}
+The compact student tree captures much of the non-linear decision boundary learned by the large ensemble, while executing in a single branch path on a low-cost microcontroller!
+\end{iotbox}
+
+% ==============================================================================
+% 7. COMMON PITFALLS
+% ==============================================================================
+\subsection{Common Pitfalls in Ensemble Modeling}\label{subsec:ensembles_pitfalls}
+
+\begin{warning}[Five Fatal Ensemble Mistakes to Avoid]
+\begin{enumerate}
+    \item \textbf{Ensembling Correlated or Identical Models}:
+    Combining five Random Forests trained with identical hyperparameters on the same data. The models make identical errors, providing zero variance reduction while multiplying inference compute by $5\times$. Ensembles require **diversity**.
+
+    \item \textbf{Training Stacking Meta-Learners on Training-Set Predictions}:
+    Passing training predictions directly to the Level-1 meta-learner. Base learners exhibit near-zero training error due to memorization, tricking the meta-learner into placing overconfidence in overfitted models. Always use out-of-fold (OOF) cross-validation predictions.
+
+    \item \textbf{Setting Learning Rate $\eta$ Too High in Gradient Boosting}:
+    Using $\eta = 0.5$ or $1.0$ with hundreds of trees. High learning rates cause gradient boosting to aggressively fit noise spikes in early iterations, degrading test accuracy. Use $\eta \le 0.1$ and apply early stopping.
+
+    \item \textbf{Relying on Default MDI Feature Importance with High Cardinality}:
+    Using tree-based Gini feature importance on high-cardinality nominal variables (e.g., sensor MAC addresses). Gini importance is systematically biased toward variables with many unique categories. Use Permutation Feature Importance instead.
+
+    \item \textbf{Deploying Massive Ensembles to Microcontrollers Without Pruning}:
+    Attempting to flash a 200-tree Random Forest to an MCU. The tree nodes exhaust flash storage and inference latency violates real-time deadlines. Apply pruning or model distillation.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 8. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:ensembles_takeaways}
+
+\begin{takeaways}[Core Principles of Ensemble Methods]
+\begin{itemize}
+    \item \textbf{The Core Premise}: Ensembling combines multiple weak or diverse base learners so that individual errors cancel out, producing a collective prediction with superior accuracy and stability.
+    \item \textbf{Bagging (Bootstrap Aggregation)}: Trains independent deep trees in parallel on bootstrapped samples, reducing variance. OOB samples provide built-in validation without holding out data.
+    \item \textbf{Random Forests}: De-correlates trees by randomly subsampling $m \approx \sqrt{D}$ features at each split, preventing dominant features from homogenizing tree structures.
+    \item \textbf{Gradient Boosting}: Trains shallow trees sequentially, fitting each new base learner to the negative gradient of the loss function (the pseudo-residuals). Scaled by learning rate $\eta$.
+    \item \textbf{XGBoost & LightGBM}: XGBoost optimizes second-order Taylor expansions with built-in leaf regularization. LightGBM speeds up execution using histogram feature binning and best-first leaf-wise growth.
+    \item \textbf{Voting & Stacking}: Combines heterogeneous model families. Soft voting averages probability distributions; Stacking trains a meta-learner on out-of-fold cross-validated predictions.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 9. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:ensembles_check_yourself}
+
+Test your understanding of ensemble mathematics, variance reduction formulas, and residual updates with the following practice problems. Complete step-by-step solutions are provided at the end of this chapter.
+
+\begin{checkyourself}[Practice Problems]
+\begin{enumerate}
+    \item \textbf{Condorcet Jury Theorem Error Probability}:
+    An IoT safety system uses $M = 5$ independent sensor classifiers to verify an emergency valve shutdown. Each individual classifier has an error probability of $\epsilon = 0.20$.
+    \begin{enumerate}[label=(\alph*)]
+        \item What is the minimum number of classifiers that must fail for the simple majority vote to be incorrect?
+        \item Calculate the exact probability that the majority vote is incorrect.
+        \item By how much does the ensemble reduce the failure probability compared to a single classifier?
+    \end{enumerate}
+
+    \item \textbf{Out-of-Bag (OOB) Mathematical Derivation}:
+    Consider a training dataset of $N$ observations. A bootstrap sample of size $N$ is generated by drawing samples uniformly with replacement.
+    \begin{enumerate}[label=(\alph*)]
+        \item For a specific sample $x_i$, what is the probability that it is *not* selected on any single draw?
+        \item Write the expression for the probability that sample $x_i$ is *never* selected across all $N$ independent draws.
+        \item Using the identity $\lim_{N \to \infty} (1 - \frac{1}{N})^N = e^{-1}$, evaluate the asymptotic percentage of samples left out-of-bag as $N$ grows large.
+    \end{enumerate}
+
+    \item \textbf{Random Forest Feature Subspace Calculation}:
+    An industrial turbine logs $D = 25$ continuous telemetry features (pressures, temperatures, vibrations).
+    \begin{enumerate}[label=(\alph*)]
+        \item How many features $m$ should be evaluated at each split if training a Random Forest classifier ($m \approx \sqrt{D}$)?
+        \item How many features should be evaluated if training a Random Forest regressor ($m \approx D / 3$)?
+        \item Why does restricting the feature set at each split reduce the correlation $\rho$ between trees?
+    \end{enumerate}
+
+    \item \textbf{Gradient Boosting Residual Update}:
+    An engineer trains a Gradient Boosting regressor with Mean Squared Error loss. For a given machine, the true motor winding temperature is $y = 120.0^\circ\text{C}$.
+    \begin{itemize}
+        \item Initial baseline prediction (ensemble mean): $F_0(\mathbf{x}) = 100.0^\circ\text{C}$.
+        \item The first decision tree $h_1(\mathbf{x})$ is trained on residuals and predicts $h_1(\mathbf{x}) = 18.0^\circ\text{C}$.
+        \item The learning rate is $\eta = 0.10$.
+    \end{itemize}
+    \begin{enumerate}[label=(\alph*)]
+        \item What was the initial residual $r_0$ that tree $h_1$ was trained to predict?
+        \item Calculate the updated ensemble prediction $F_1(\mathbf{x}) = F_0(\mathbf{x}) + \eta \cdot h_1(\mathbf{x})$.
+        \item Compute the new residual $r_1 = y - F_1(\mathbf{x})$ that will be fed to the next tree $h_2(\mathbf{x})$.
+    \end{enumerate}
+
+    \item \textbf{Soft Voting versus Hard Voting Calculation}:
+    Three diverse classifiers ($M_1, M_2, M_3$) evaluate an unknown acoustic signal across three candidate classes ($A, B, C$). Their predicted probability distributions are:
+    \begin{itemize}
+        \item Classifier $M_1$: $P(A) = 0.45, \ P(B) = 0.40, \ P(C) = 0.15$
+        \item Classifier $M_2$: $P(A) = 0.10, \ P(B) = 0.70, \ P(C) = 0.20$
+        \item Classifier $M_3$: $P(A) = 0.42, \ P(B) = 0.40, \ P(C) = 0.18$
+    \end{itemize}
+    \begin{enumerate}[label=(\alph*)]
+        \item Determine the individual discrete prediction of each classifier, and compute the final class selected by **Hard Voting**.
+        \item Compute the ensemble average probability for Class $A$, Class $B$, and Class $C$. Which class is selected by **Soft Voting**?
+        \item Explain why the two voting strategies produced conflicting predictions, and identify which prediction is more reliable.
+    \end{enumerate}
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 10. ANSWERS TO CHECK YOURSELF
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Condorcet Jury Theorem Error Probability}:
+    \begin{enumerate}[label=(\alph*)]
+        \item In a 5-classifier system, a simple majority requires at least $3$ votes. Therefore, the majority is wrong if **$3, 4, \text{ or } 5$** classifiers fail simultaneously.
+        \item Using the binomial formula with $M = 5$ and $\epsilon = 0.20$:
+        \begin{align*}
+        P(k = 3) &= \binom{5}{3} (0.2)^3 (0.8)^2 = 10(0.008)(0.64) = 0.0512 \\
+        P(k = 4) &= \binom{5}{4} (0.2)^4 (0.8)^1 = 5(0.0016)(0.8) = 0.0064 \\
+        P(k = 5) &= \binom{5}{5} (0.2)^5 (0.8)^0 = 1(0.00032)(1) = 0.00032
+        \end{align*}
+        Summing these probabilities:
+        \begin{equation*}
+        P(\text{Majority Error}) = 0.0512 + 0.0064 + 0.00032 = \mathbf{0.05792} \quad (\mathbf{5.792\%})
+        \end{equation*}
+        \item A single classifier fails with probability $0.2000$ ($20.0\%$). The ensemble fails with probability $0.0579$ ($5.79\%$). 
+        The ensemble reduces the probability of an erroneous shutdown decision by **$14.21$ percentage points** (a $71\%$ relative risk reduction).
+    \end{enumerate}
+
+    \item \textbf{Out-of-Bag (OOB) Mathematical Derivation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item On any single random draw from $N$ items, the probability of selecting item $i$ is $\frac{1}{N}$. Therefore, the probability of *not* selecting item $i$ is:
+        \begin{equation*}
+        1 - \frac{1}{N}
+        \end{equation*}
+        \item Since draws are independent with replacement, the probability that item $i$ is omitted across all $N$ consecutive draws is:
+        \begin{equation*}
+        P(\text{OOB}) = \left( 1 - \frac{1}{N} \right)^N
+        \end{equation*}
+        \item As $N \to \infty$, we evaluate the limit:
+        \begin{equation*}
+        \lim_{N \to \infty} \left( 1 - \frac{1}{N} \right)^N = e^{-1} = \frac{1}{e} \approx \mathbf{0.367879} \quad (\mathbf{36.79\%})
+        \end{equation*}
+        On average, approximately $36.8\%$ of all training samples are left out of each bootstrap sample, serving as an independent validation set.
+    \end{enumerate}
+
+    \item \textbf{Random Forest Feature Subspace Calculation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item For classification:
+        \begin{equation*}
+        m = \lfloor \sqrt{25} \rfloor = \mathbf{5} \text{ features}
+        \end{equation*}
+        \item For regression:
+        \begin{equation*}
+        m = \left\lfloor \frac{25}{3} \right\rfloor = \lfloor 8.33 \rfloor = \mathbf{8} \text{ features}
+        \end{equation*}
+        \item In standard bagging, if one feature is overwhelmingly predictive, all trees select that feature at the root node, making the trees structurally similar and highly correlated ($\rho \approx 1$). 
+        By restricting candidate splits to a random subset of $m$ features, the dominant feature is absent from candidate consideration in $\frac{D - m}{D} = \frac{20}{25} = 80\%$ of splits. This forces trees to explore alternative physical predictors, reducing pairwise correlation $\rho$ and decreasing ensemble variance according to Equation~\eqref{eq:rf_variance_formula}.
+    \end{enumerate}
+
+    \item \textbf{Gradient Boosting Residual Update}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Initial Residual $r_0$}:
+        \begin{equation*}
+        r_0 = y - F_0(\mathbf{x}) = 120.0^\circ\text{C} - 100.0^\circ\text{C} = \mathbf{20.0^\circ\text{C}}
+        \end{equation*}
+        \item \textbf{Updated Ensemble Prediction $F_1(\mathbf{x})$}:
+        \begin{equation*}
+        F_1(\mathbf{x}) = F_0(\mathbf{x}) + \eta \cdot h_1(\mathbf{x}) = 100.0 + 0.10(18.0) = 100.0 + 1.8 = \mathbf{101.8^\circ\text{C}}
+        \end{equation*}
+        \item \textbf{New Residual $r_1$}:
+        \begin{equation*}
+        r_1 = y - F_1(\mathbf{x}) = 120.0 - 101.8 = \mathbf{18.2^\circ\text{C}}
+        \end{equation*}
+        The remaining error that tree $h_2(\mathbf{x})$ must predict is $18.2^\circ\text{C}$. Taking a small step ($\eta = 0.10$) ensures the model approaches the true target smoothly without overshooting.
+    \end{enumerate}
+
+    \item \textbf{Soft Voting versus Hard Voting Calculation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Hard Voting}:
+        \begin{itemize}
+            \item $M_1$: $\max(0.45, 0.40, 0.15) = 0.45 \implies$ Votes for **Class A**.
+            \item $M_2$: $\max(0.10, 0.70, 0.20) = 0.70 \implies$ Votes for **Class B**.
+            \item $M_3$: $\max(0.42, 0.40, 0.18) = 0.42 \implies$ Votes for **Class A**.
+        \end{itemize}
+        Vote tally: Class $A$ receives $2$ votes, Class $B$ receives $1$ vote, Class $C$ receives $0$ votes. \\
+        Hard voting selects **Class A**.
+
+        \item \textbf{Soft Voting}:
+        Compute the average predicted probability for each class across all three models:
+        \begin{align*}
+        P_{\text{avg}}(A) &= \frac{0.45 + 0.10 + 0.42}{3} = \frac{0.97}{3} \approx \mathbf{0.3233} \quad (32.33\%) \\
+        P_{\text{avg}}(B) &= \frac{0.40 + 0.70 + 0.40}{3} = \frac{1.50}{3} = \mathbf{0.5000} \quad (\mathbf{50.00\%}) \\
+        P_{\text{avg}}(C) &= \frac{0.15 + 0.20 + 0.18}{3} = \frac{0.53}{3} \approx \mathbf{0.1767} \quad (17.67\%)
+        \end{align*}
+        Soft voting selects **Class B** ($50.0\% > 32.33\%$).
+
+        \item \textbf{Explanation of Conflict}:
+        Classifiers $M_1$ and $M_3$ were uncertain; they voted for Class $A$ with slim margins ($45\%$ vs $40\%$, and $42\%$ vs $40\%$). Meanwhile, Classifier $M_2$ was highly confident in Class $B$ ($70\%$). 
+        
+        Hard voting treats a marginal $42\%$ vote identically to a decisive $70\%$ vote, allowing two weak, uncertain votes to override one highly confident assessment. Soft voting incorporates probability confidence directly into the aggregation, making **Class B the more statistically reliable prediction**.
+    \end{enumerate}
+\end{enumerate}

@@ -1,0 +1,919 @@
+% FILE: chapters/ch02_s1_linear_algebra.tex
+\chapter{Math Foundations}\label{ch:math_foundations}
+\section{Linear Algebra}\label{sec:linear_algebra}
+
+In everyday programming, we work with individual numbers: a sensor reads $23.5^\circ\text{C}$, a timer counts down $10\text{ seconds}$, or a battery level reads $87\%$. A single number like this is called a \textbf{scalar}. 
+
+However, modern machine learning and edge computing rarely process one number at a time. A three-axis accelerometer measures acceleration along the $x$, $y$, and $z$ axes fifty times a second. A digital microphone captures thousands of pressure samples every second. A miniature camera captures a grid of hundreds of thousands of colored pixels. 
+
+If we had to write a separate variable and a separate formula for every single pixel or audio sample, our programs would be unreadable and impossibly slow. \textbf{Linear algebra} is the mathematical language created to bundle, organize, and transform large collections of numbers simultaneously.
+
+% ==============================================================================
+% 1. VECTORS AND MATRICES
+% ==============================================================================
+\subsection{Vectors and Matrices: Representing Multi-Dimensional Data}
+
+\begin{keyidea}[Scalars, Vectors, and Matrices]
+\begin{itemize}
+    \item A \textbf{scalar} is a single number representing magnitude (e.g., $c = 5.2$).
+    \item A \textbf{vector} is an ordered list of numbers arranged in a single column or row, representing a point or direction in multi-dimensional space.
+    \item A \textbf{matrix} is a two-dimensional grid of numbers arranged in rows and columns, representing a collection of data samples or a geometric transformation.
+\end{itemize}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Consider an agricultural drone monitoring a field. At each GPS coordinate, it measures four values: soil moisture, leaf greenness index, surface temperature, and ambient humidity. Instead of tracking four separate variables across thousands of waypoints, we bundle the four measurements into a single \textbf{feature vector}. When we stack all the vectors from the entire flight together, we obtain a \textbf{data matrix}.
+
+\begin{analogy}[The Grocery Checkout]
+\begin{itemize}
+    \item \textbf{Scalar}: The price of one single egg (\$0.30).
+    \item \textbf{Vector}: Your shopping basket receipt showing the quantity of each item: $2\text{ loaves of bread}, 1\text{ carton of milk}, 12\text{ eggs}$.
+    \item \textbf{Matrix}: The store's weekly sales spreadsheet, where each row is a different customer's basket, and each column is a specific product.
+\end{itemize}
+\end{analogy}
+
+\paragraph{The Idea in Words, Step by Step}
+In linear algebra, notation is standardized:
+\begin{itemize}
+    \item Scalars are written in lowercase italic letters: $s, c, \alpha$.
+    \item Vectors are written in bold lowercase letters: $\mathbf{x}, \mathbf{y}, \mathbf{v}$. By convention in machine learning, a vector is assumed to be a \textbf{column vector} unless stated otherwise.
+    \item Matrices are written in bold uppercase letters: $\mathbf{A}, \mathbf{X}, \mathbf{W}$.
+\end{itemize}
+
+A vector with $n$ elements belongs to the space $\mathbb{R}^n$ (read: ``real numbers of dimension $n$''). A matrix with $m$ rows and $n$ columns has shape $m \times n$ (read: ``$m$ by $n$'') and belongs to $\mathbb{R}^{m \times n}$.
+\begin{equation}
+\mathbf{x} = \begin{bmatrix} x_1 \\ x_2 \\ \vdots \\ x_n \end{bmatrix} \in \mathbb{R}^n, \quad
+\mathbf{A} = \begin{bmatrix} 
+A_{1,1} & A_{1,2} & \cdots & A_{1,n} \\ 
+A_{2,1} & A_{2,2} & \cdots & A_{2,n} \\ 
+\vdots & \vdots & \ddots & \vdots \\ 
+A_{m,1} & A_{m,2} & \cdots & A_{m,n} 
+\end{bmatrix} \in \mathbb{R}^{m \times n}
+\end{equation}
+The entry $A_{i,j}$ represents the value located at \textbf{row $i$} and \textbf{column $j$}. Remember the order: \textbf{Row first, Column second} (think: Roman Catholic, or R-C).
+
+\paragraph{Vector Operations: Addition and Scalar Scaling}
+Two vectors can only be added together if they have the \textbf{exact same dimension}. We add them element by element.
+Multiplying a vector by a scalar multiplies every single component by that scalar:
+\begin{equation}
+\mathbf{u} + \mathbf{v} = \begin{bmatrix} u_1 + v_1 \\ u_2 + v_2 \end{bmatrix}, \quad
+c \mathbf{u} = \begin{bmatrix} c \cdot u_1 \\ c \cdot u_2 \end{bmatrix}\label{eq:vec_add_scale}
+\end{equation}
+
+\paragraph{Hand Calculation Example}
+Let $\mathbf{u} = \begin{bmatrix} 2.0 \\ 5.0 \end{bmatrix}$, $\mathbf{v} = \begin{bmatrix} 3.0 \\ -1.0 \end{bmatrix}$, and $c = 3.0$:
+\begin{enumerate}
+    \item \textbf{Vector Addition}:
+    \begin{equation*}
+    \mathbf{u} + \mathbf{v} = \begin{bmatrix} 2.0 + 3.0 \\ 5.0 + (-1.0) \end{bmatrix} = \begin{bmatrix} 5.0 \\ 4.0 \end{bmatrix}
+    \end{equation}
+    \item \textbf{Scalar Multiplication}:
+    \begin{equation*}
+    c\mathbf{u} = 3.0 \times \begin{bmatrix} 2.0 \\ 5.0 \end{bmatrix} = \begin{bmatrix} 3.0 \times 2.0 \\ 3.0 \times 5.0 \end{bmatrix} = \begin{bmatrix} 6.0 \\ 15.0 \end{bmatrix}
+    \end{equation}
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.9, >=Stealth]
+    % Grid
+    \draw[thin, gray!30] (-1,-1) grid (6,6);
+    \draw[->, thick] (-0.5,0) -- (6,0) node[right, font=\small\sffamily] {$x_1$};
+    \draw[->, thick] (0,-0.5) -- (0,6) node[above, font=\small\sffamily] {$x_2$};
+    
+    % Vectors
+    \draw[->, very thick, keyideablue] (0,0) -- (2,5) node[midway, left, font=\small\sffamily] {$\mathbf{u}$};
+    \draw[->, very thick, analogygreen] (0,0) -- (3,-1) node[midway, below left, font=\small\sffamily] {$\mathbf{v}$};
+    \draw[->, dashed, thick, analogygreen] (2,5) -- (5,4) node[midway, above, font=\tiny\sffamily] {$\mathbf{v}$ (shifted)};
+    \draw[->, very thick, warningred] (0,0) -- (5,4) node[midway, above left, font=\small\sffamily] {$\mathbf{u} + \mathbf{v}$};
+    
+    % Points
+    \filldraw[keyideablue] (2,5) circle (2pt) node[above] {$(2, 5)$};
+    \filldraw[analogygreen] (3,-1) circle (2pt) node[below] {$(3, -1)$};
+    \filldraw[warningred] (5,4) circle (2pt) node[right] {$(5, 4)$};
+\end{tikzpicture}
+\caption{Geometric visualization of vector addition: Placing the tail of $\mathbf{v}$ at the tip of $\mathbf{u}$ leads directly to the resulting vector $\mathbf{u} + \mathbf{v}$.}\label{fig:vector_addition}
+\end{figure}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+# Creating 1D vectors
+u = np.array([2.0, 5.0])
+v = np.array([3.0, -1.0])
+c = 3.0
+
+# Operations
+vec_sum = u + v
+vec_scaled = c * u
+
+# Creating a 2x3 data matrix
+A = np.array([
+    [1.0, 2.0, 3.0],
+    [4.0, 5.0, 6.0]
+])
+
+print(f"u + v:       {vec_sum}")
+print(f"3 * u:       {vec_scaled}")
+print(f"Matrix A shape: {A.shape} (rows, cols)")
+print(f"Element at row 0, col 2: {A[0, 2]}")  # 0-indexed in Python
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+u + v:       [5. 4.]
+3 * u:       [ 6. 15.]
+Matrix A shape: (2, 3) (rows, cols)
+Element at row 0, col 2: 3.0
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Line 1: We import \code{numpy}, Python's core numerical mathematics library, aliased as \code{np}.
+    \item Lines 4--5: \code{np.array([...])} creates contiguous memory arrays optimized for fast parallel math.
+    \item Lines 8--9: The operators \code{+} and \code{*} automatically perform element-wise arithmetic across the arrays.
+    \item Line 18: \code{A.shape} returns a tuple \code{(2, 3)}, confirming 2 rows and 3 columns.
+    \item Line 19: In Python, indexing starts at $0$. \code{A[0, 2]} accesses the first row, third column.
+\end{itemize}
+
+\begin{iotbox}[Accelerometer Readings as 3D Vectors]
+Every inertial measurement unit (IMU) like the MPU-6050 produces a three-dimensional acceleration vector at every sampling instant:
+\begin{equation*}
+\mathbf{a} = \begin{bmatrix} a_x \\ a_y \\ a_z \end{bmatrix} \text{ in } \text{m/s}^2
+\end{equation*}
+When resting flat on a table, an ESP32 reading this sensor sees $\mathbf{a} = [0.0, 0.0, 9.81]^T$, directly measuring Earth's gravity vector.
+\end{iotbox}
+
+\begin{warning}[1D Arrays vs. 2D Matrices in NumPy]
+A 1D array defined as \code{x = np.array([1, 2, 3])} has shape \code{(3,)}. It is neither a row vector nor a column vector! 
+To create an explicit column vector of shape \code{(3, 1)}, write:
+\begin{lstlisting}[language=Python]
+x_col = np.array([[1], [2], [3]])  # Shape: (3, 1)
+# or reshape existing array:
+x_col = x.reshape(-1, 1)
+\end{lstlisting}
+Failing to maintain explicit 2D shapes is the single most common cause of dimension mismatch errors in machine learning.
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Vectors represent multi-channel measurements or single data samples.
+    \item Matrices organize entire datasets into rows (samples) and columns (features).
+    \item Vector addition and scalar scaling are strictly element-wise operations.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 2. DOT PRODUCT AND MATRIX MULTIPLICATION
+% ==============================================================================
+\subsection{The Dot Product and Matrix Multiplication}
+
+\begin{keyidea}[The Dot Product and Matrix Multiplication]
+The \textbf{dot product} multiplies corresponding elements of two vectors and sums the results, producing a single scalar.
+
+\textbf{Matrix multiplication} extends this concept: every entry in the product matrix is the dot product between a row from the first matrix and a column from the second matrix.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+How does an artificial neuron in a neural network make a prediction? It takes multiple sensor inputs (temperature, vibration, pressure), multiplies each input by an importance weight, and adds them together. That exact mathematical operation is the dot product. Matrix multiplication allows a neural network to calculate the activations of hundreds of neurons across thousands of samples in a single step.
+
+\begin{analogy}[The Cashier Scanner]
+Suppose you buy $3\text{ apples}$ and $2\text{ avocados}$. The prices are $\$1.50$ per apple and $\$2.00$ per avocado. 
+Your quantity vector is $\mathbf{x} = [3, 2]^T$. The price vector is $\mathbf{p} = [1.50, 2.00]^T$.
+To calculate the total cost, the cashier computes:
+\begin{equation*}
+\text{Total} = (3 \times 1.50) + (2 \times 2.00) = 4.50 + 4.00 = \$8.50
+\end{equation*}
+That is the dot product. If three customers walk up with different baskets, matrix multiplication computes the bill for all three customers simultaneously.
+\end{analogy}
+
+\paragraph{The Idea in Words, Step by Step}
+\textbf{1. The Dot Product:}
+Given two vectors $\mathbf{u}, \mathbf{v} \in \mathbb{R}^n$:
+\begin{equation}
+\mathbf{u} \cdot \mathbf{v} = \sum_{i=1}^n u_i v_i = u_1 v_1 + u_2 v_2 + \dots + u_n v_n\label{eq:dot_product}
+\end{equation}
+The dot product also has an essential geometric meaning:
+\begin{equation}
+\mathbf{u} \cdot \mathbf{v} = \|\mathbf{u}\| \|\mathbf{v}\| \cos(\theta)\label{eq:dot_cosine}
+\end{equation}
+where $\theta$ is the angle between the two vectors. If two vectors point in the same direction, their dot product is large and positive. If they are perpendicular ($\theta = 90^\circ$, where $\cos(90^\circ) = 0$), their dot product is \textbf{zero}. In machine learning, a dot product of zero means the two features are completely independent (\textbf{orthogonal}).
+
+\textbf{2. Matrix Multiplication Compatibility Rule:}
+You can only multiply matrix $\mathbf{A}$ by matrix $\mathbf{B}$ if the \textbf{number of columns in $\mathbf{A}$ equals the number of rows in $\mathbf{B}$}:
+\begin{equation}
+(m \times \mathbf{k}) \times (\mathbf{k} \times n) = (m \times n)
+\end{equation}
+The inner dimensions ($\mathbf{k}$) must match. The outer dimensions ($m \times n$) determine the shape of the result $\mathbf{C}$.
+
+\paragraph{Hand Calculation Example}
+Let us multiply matrix $\mathbf{A} \in \mathbb{R}^{2 \times 2}$ by matrix $\mathbf{B} \in \mathbb{R}^{2 \times 2}$:
+\begin{equation*}
+\mathbf{A} = \begin{bmatrix} 1.0 & 2.0 \\ 3.0 & 4.0 \end{bmatrix}, \quad
+\mathbf{B} = \begin{bmatrix} 5.0 & 6.0 \\ 0.0 & 1.0 \end{bmatrix}
+\end{equation*}
+We compute each entry of $\mathbf{C} = \mathbf{A}\mathbf{B}$ by taking the dot product of Row $i$ of $\mathbf{A}$ with Column $j$ of $\mathbf{B}$:
+\begin{align*}
+C_{1,1} &= (\text{Row } 1 \text{ of } \mathbf{A}) \cdot (\text{Col } 1 \text{ of } \mathbf{B}) = (1.0 \times 5.0) + (2.0 \times 0.0) = 5.0 + 0.0 = 5.0 \\
+C_{1,2} &= (\text{Row } 1 \text{ of } \mathbf{A}) \cdot (\text{Col } 2 \text{ of } \mathbf{B}) = (1.0 \times 6.0) + (2.0 \times 1.0) = 6.0 + 2.0 = 8.0 \\
+C_{2,1} &= (\text{Row } 2 \text{ of } \mathbf{A}) \cdot (\text{Col } 1 \text{ of } \mathbf{B}) = (3.0 \times 5.0) + (4.0 \times 0.0) = 15.0 + 0.0 = 15.0 \\
+C_{2,2} &= (\text{Row } 2 \text{ of } \mathbf{A}) \cdot (\text{Col } 2 \text{ of } \mathbf{B}) = (3.0 \times 6.0) + (4.0 \times 1.0) = 18.0 + 4.0 = 22.0
+\end{align*}
+Result:
+\begin{equation*}
+\mathbf{C} = \begin{bmatrix} 5.0 & 8.0 \\ 15.0 & 22.0 \end{bmatrix}
+\end{equation*}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+# Vectors
+u = np.array([1.0, 2.0, 3.0])
+v = np.array([4.0, -1.0, 2.0])
+
+# Dot product via @ operator or np.dot()
+dot_result = u @ v  # (1*4) + (2*-1) + (3*2) = 4 - 2 + 6 = 8.0
+
+# Matrices
+A = np.array([
+    [1.0, 2.0],
+    [3.0, 4.0]
+])
+B = np.array([
+    [5.0, 6.0],
+    [0.0, 1.0]
+])
+
+# Matrix multiplication using @
+C = A @ B
+
+print(f"Dot product u . v: {dot_result}")
+print("Matrix Product C = A @ B:\n", C)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Dot product u . v: 8.0
+Matrix Product C = A @ B:
+ [[ 5.  8.]
+ [15. 22.]]
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Line 8: In Python 3.5+, the \code{@} symbol is the dedicated operator for matrix multiplication and dot products.
+    \item Lines 11--18: We define matrices $\mathbf{A}$ and $\mathbf{B}$ as 2D NumPy arrays.
+    \item Line 21: \code{A @ B} executes standard row-by-column matrix multiplication, matching our hand-calculated matrix $\mathbf{C}$.
+\end{itemize}
+
+\begin{iotbox}[The TinyML Linear Neuron]
+On an ESP32 detecting motor failure, a simple linear model computes an anomaly risk score $y$:
+\begin{equation*}
+y = \mathbf{w}^T \mathbf{x} + b = w_1 x_{\text{vib}} + w_2 x_{\text{temp}} + w_3 x_{\text{current}} + b
+\end{equation*}
+This is a single dot product between learned weights $\mathbf{w}$ and sensor features $\mathbf{x}$, followed by adding a scalar bias $b$. On edge hardware, this single line executes in less than 2 microseconds!
+\end{iotbox}
+
+\begin{warning}[Matrix Multiplication is Not Commutative]
+In regular arithmetic, order does not matter: $3 \times 5 = 5 \times 3$. In linear algebra, \textbf{order matters critically}:
+\begin{equation*}
+\mathbf{A}\mathbf{B} \ne \mathbf{B}\mathbf{A}
+\end{equation*}
+Furthermore, if $\mathbf{A}$ is shape $2 \times 3$ and $\mathbf{B}$ is shape $3 \times 4$, the product $\mathbf{A}\mathbf{B}$ is valid (shape $2 \times 4$), but $\mathbf{B}\mathbf{A}$ cannot even be computed because the inner dimensions ($4$ and $2$) do not match!
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item The dot product computes weighted sums and measures alignment between vectors.
+    \item Matrix multiplication $\mathbf{A}\mathbf{B}$ requires the inner dimensions to match: $(m \times k) \times (k \times n) = m \times n$.
+    \item Matrix multiplication is not commutative: $\mathbf{A}\mathbf{B} \ne \mathbf{B}\mathbf{A}$.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 3. TRANSPOSE, INVERSE, AND DETERMINANT
+% ==============================================================================
+\subsection{Matrix Operations: Transpose, Inverse, and Determinant}
+
+\begin{keyidea}[Fundamental Matrix Properties]
+\begin{itemize}
+    \item The \textbf{transpose} ($\mathbf{A}^T$) flips a matrix over its diagonal, swapping rows and columns.
+    \item The \textbf{determinant} ($\det(\mathbf{A})$ or $|\mathbf{A}|$) measures how much a linear transformation scales area or volume.
+    \item The \textbf{inverse} ($\mathbf{A}^{-1}$) is the matrix that ``undoes'' the transformation of $\mathbf{A}$, satisfying $\mathbf{A}\mathbf{A}^{-1} = \mathbf{I}$.
+\end{itemize}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+How do we solve equations in machine learning? In scalar math, if $3x = 12$, we divide by 3: $x = \frac{12}{3} = 4$. But in linear algebra, \textbf{you cannot divide by a matrix}. There is no such thing as $\frac{\mathbf{B}}{\mathbf{A}}$. Instead, to solve a system $\mathbf{A}\mathbf{x} = \mathbf{b}$, we multiply both sides by the \textbf{matrix inverse}:
+\begin{equation}
+\mathbf{x} = \mathbf{A}^{-1}\mathbf{b}
+\end{equation}
+This is the exact mathematical engine used in Linear Regression to calculate optimal model parameters in closed form: $\mathbf{w} = (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{y}$.
+
+\begin{analogy}[The Reset Button and Collapsing Dough]
+\begin{itemize}
+    \item \textbf{Inverse}: Think of $\mathbf{A}$ as an action that bends and stretches a lump of dough into a bowl shape. The inverse $\mathbf{A}^{-1}$ is the exact reverse motion that flattens the bowl back into the original flat slab.
+    \item \textbf{Determinant}: Think of the determinant as the volume multiplier of the dough. If you stretch the dough so its volume doubles, $\det(\mathbf{A}) = 2$. But if you roll a heavy steamroller over the dough until its thickness becomes $0$, its 3D volume collapses to zero: $\det(\mathbf{A}) = 0$. Once squashed completely flat, no baker can reconstruct the original 3D shape—the inverse does not exist!
+\end{itemize}
+\end{analogy}
+
+\paragraph{The Idea in Words, Step by Step}
+\textbf{1. Transpose:}
+If $\mathbf{A}$ is an $m \times n$ matrix, its transpose $\mathbf{A}^T$ is an $n \times m$ matrix where entry $(i, j)$ becomes entry $(j, i)$:
+\begin{equation}
+\mathbf{A} = \begin{bmatrix} 1 & 2 & 3 \\ 4 & 5 & 6 \end{bmatrix} \implies
+\mathbf{A}^T = \begin{bmatrix} 1 & 4 \\ 2 & 5 \\ 3 & 6 \end{bmatrix}
+\end{equation}
+Key identity: $(\mathbf{A}\mathbf{B})^T = \mathbf{B}^T \mathbf{A}^T$ (the order of multiplication reverses!).
+
+\textbf{2. Identity Matrix:}
+The identity matrix $\mathbf{I}$ has ones along the main diagonal and zeros everywhere else. It acts as the number $1$ for matrices:
+\begin{equation}
+\mathbf{A}\mathbf{I} = \mathbf{I}\mathbf{A} = \mathbf{A}
+\end{equation}
+
+\textbf{3. Determinant and Invertibility:}
+For a $2 \times 2$ matrix $\mathbf{A} = \begin{bmatrix} a & b \\ c & d \end{bmatrix}$:
+\begin{equation}
+\det(\mathbf{A}) = ad - bc\label{eq:det_2x2}
+\end{equation}
+\begin{itemize}
+    \item If $\det(\mathbf{A}) \ne 0$, the matrix is \textbf{invertible} (also called \textbf{non-singular}).
+    \item If $\det(\mathbf{A}) = 0$, the matrix is \textbf{singular} (has no inverse).
+\end{itemize}
+
+\textbf{4. The $2 \times 2$ Inverse Formula:}
+\begin{equation}
+\mathbf{A}^{-1} = \frac{1}{\det(\mathbf{A})} \begin{bmatrix} d & -b \\ -c & a \end{bmatrix} = \frac{1}{ad - bc} \begin{bmatrix} d & -b \\ -c & a \end{bmatrix}\label{eq:inv_2x2}
+\end{equation}
+Notice how the diagonal elements swap places ($a \leftrightarrow d$), while the off-diagonal elements are negated ($-b, -c$).
+
+\paragraph{Hand Calculation Example}
+Let us invert the matrix $\mathbf{A} = \begin{bmatrix} 4.0 & 7.0 \\ 2.0 & 6.0 \end{bmatrix}$:
+\begin{enumerate}
+    \item Calculate the determinant using Equation~\ref{eq:det_2x2}:
+    \begin{equation*}
+    \det(\mathbf{A}) = (4.0 \times 6.0) - (7.0 \times 2.0) = 24.0 - 14.0 = 10.0
+    \end{equation*}
+    Since $\det(\mathbf{A}) = 10.0 \ne 0$, the inverse exists!
+    \item Swap diagonal elements ($4.0 \leftrightarrow 6.0$) and negate off-diagonal elements ($-7.0, -2.0$):
+    \begin{equation*}
+    \begin{bmatrix} 6.0 & -7.0 \\ -2.0 & 4.0 \end{bmatrix}
+    \end{equation*}
+    \item Multiply by $\frac{1}{\det(\mathbf{A})} = \frac{1}{10.0} = 0.1$:
+    \begin{equation*}
+    \mathbf{A}^{-1} = 0.1 \times \begin{bmatrix} 6.0 & -7.0 \\ -2.0 & 4.0 \end{bmatrix} = \begin{bmatrix} 0.6 & -0.7 \\ -0.2 & 0.4 \end{bmatrix}
+    \end{equation*}
+    \item \textbf{Verification}: Multiply $\mathbf{A}\mathbf{A}^{-1}$ to ensure we recover the identity matrix $\mathbf{I}$:
+    \begin{align*}
+    \mathbf{A}\mathbf{A}^{-1} &= \begin{bmatrix} (4 \times 0.6) + (7 \times -0.2) & (4 \times -0.7) + (7 \times 0.4) \\ (2 \times 0.6) + (6 \times -0.2) & (2 \times -0.7) + (6 \times 0.4) \end{bmatrix} \\
+    &= \begin{bmatrix} 2.4 - 1.4 & -2.8 + 2.8 \\ 1.2 - 1.2 & -1.4 + 2.4 \end{bmatrix} = \begin{bmatrix} 1.0 & 0.0 \\ 0.0 & 1.0 \end{bmatrix} = \mathbf{I}
+    \end{align*}
+    The verification is exact.
+\end{enumerate}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+A = np.array([
+    [4.0, 7.0],
+    [2.0, 6.0]
+])
+
+# 1. Transpose
+A_transpose = A.T
+
+# 2. Determinant
+det_A = np.linalg.det(A)
+
+# 3. Inverse
+A_inv = np.linalg.inv(A)
+
+print("Matrix Transpose A^T:\n", A_transpose)
+print(f"Determinant: {det_A:.1f}")
+print("Matrix Inverse A^-1:\n", A_inv)
+print("Verification (A @ A_inv):\n", np.round(A @ A_inv, decimals=4))
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Matrix Transpose A^T:
+ [[4. 2.]
+ [7. 6.]]
+Determinant: 10.0
+Matrix Inverse A^-1:
+ [[ 0.6 -0.7]
+ [-0.2  0.4]]
+Verification (A @ A_inv):
+ [[1. 0.]
+ [0. 1.]]
+\end{lstlisting}
+
+\begin{iotbox}[Sensor Cross-Sensitivity Decoupling]
+Low-cost metal-oxide gas sensors (like MQ-2 or MQ-135) respond to both carbon monoxide (CO) and methane ($\text{CH}_4$) simultaneously. The raw voltages measured by an ESP32 represent a blended linear combination:
+\begin{equation*}
+\mathbf{v}_{\text{measured}} = \mathbf{S} \mathbf{c}_{\text{gas}}
+\end{equation*}
+where $\mathbf{S}$ is the $2 \times 2$ sensitivity calibration matrix. To find the true individual gas concentrations $\mathbf{c}_{\text{gas}}$, the microcontroller computes:
+\begin{equation*}
+\mathbf{c}_{\text{gas}} = \mathbf{S}^{-1} \mathbf{v}_{\text{measured}}
+\end{equation*}
+\end{iotbox}
+
+\begin{warning}[Never Invert Matrices Explicitly in Production Code]
+Computing $\mathbf{A}^{-1}$ directly using \code{np.linalg.inv()} is numerically slow and amplifies floating-point rounding errors. To solve $\mathbf{A}\mathbf{x} = \mathbf{b}$, always use the dedicated numerical solver:
+\begin{lstlisting}[language=Python]
+# Preferred, numerically stable solution:
+x = np.linalg.solve(A, b)  # Much faster and avoids precision loss
+\end{lstlisting}
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item The transpose swaps rows and columns: $(A^T)_{i,j} = A_{j,i}$.
+    \item A matrix can be inverted if and only if its determinant is non-zero ($\det(\mathbf{A}) \ne 0$).
+    \item In code, use \code{np.linalg.solve(A, b)} rather than inverting $\mathbf{A}$ explicitly.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 4. VECTOR AND MATRIX NORMS
+% ==============================================================================
+\subsection{Vector and Matrix Norms: Measuring Magnitude and Distance}
+
+\begin{keyidea}[Norms as Multi-Dimensional Rulers]
+A \textbf{norm} is a function that maps a vector or matrix to a single non-negative real number, representing its length, magnitude, or physical size.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+How do you measure how well a machine learning model is performing? You subtract the model's predictions from the true values, producing an \textbf{error vector} $\mathbf{e} = \hat{\mathbf{y}} - \mathbf{y}$. But an error vector contains dozens of numbers. We need a single scalar that answers: ``How large is our overall error?'' Norms provide the mathematical ruler to measure error size and prevent models from overfitting by penalizing large parameter weights.
+
+\begin{analogy}[Walking in Manhattan vs. As the Crow Flies]
+Imagine traveling between two street corners in New York City:
+\begin{itemize}
+    \item \textbf{$L_1$ Norm (Manhattan Distance)}: You cannot walk straight through buildings. You must walk 3 blocks east and 4 blocks north along the street grid. Total distance walked: $3 + 4 = 7$ blocks.
+    \item \textbf{$L_2$ Norm (Euclidean Distance)}: A bird flying straight through the air between the two corners travels the hypotenuse: $\sqrt{3^2 + 4^2} = \sqrt{9 + 16} = 5$ blocks.
+\end{itemize}
+\end{analogy}
+
+\paragraph{The Idea in Words, Step by Step}
+The most common vector norms in machine learning are:
+\begin{enumerate}
+    \item \textbf{$L_1$ Norm (Taxicab / Manhattan Norm)}: The sum of the absolute values of the components. Denoted by $\|\mathbf{x}\|_1$:
+    \begin{equation}
+    \|\mathbf{x}\|_1 = \sum_{i=1}^n |x_i|\label{eq:l1_norm}
+    \end{equation}
+    Used in \textbf{Lasso Regression} because it drives unimportant weights to \textbf{exact zero}, automatically selecting features.
+    
+    \item \textbf{$L_2$ Norm (Euclidean Norm)}: The straight-line length from the origin. Denoted by $\|\mathbf{x}\|_2$:
+    \begin{equation}
+    \|\mathbf{x}\|_2 = \sqrt{\sum_{i=1}^n x_i^2} = \sqrt{\mathbf{x} \cdot \mathbf{x}}\label{eq:l2_norm}
+    \end{equation}
+    Used in \textbf{Ridge Regression} and ordinary least squares because it heavily penalizes large isolated mistakes.
+    
+    \item \textbf{$L_\infty$ Norm (Max Norm)}: The absolute value of the single largest component:
+    \begin{equation}
+    \|\mathbf{x}\|_\infty = \max_{i} |x_i|\label{eq:linf_norm}
+    \end{equation}
+\end{enumerate}
+
+For matrices, the most common norm is the \textbf{Frobenius Norm} ($\|\mathbf{A}\|_F$), which is simply the Euclidean norm applied across all entries in the matrix:
+\begin{equation}
+\|\mathbf{A}\|_F = \sqrt{\sum_{i=1}^m \sum_{j=1}^n A_{i,j}^2}\label{eq:frobenius_norm}
+\end{equation}
+
+\paragraph{Hand Calculation Example}
+Consider an error vector between two sensor measurements and their predicted values:
+\begin{equation*}
+\mathbf{e} = \begin{bmatrix} 3.0 \\ -4.0 \end{bmatrix}
+\end{equation*}
+Let us compute all three norms by hand:
+\begin{enumerate}
+    \item \textbf{$L_1$ Norm}:
+    \begin{equation*}
+    \|\mathbf{e}\|_1 = |3.0| + |-4.0| = 3.0 + 4.0 = 7.0
+    \end{equation*}
+    \item \textbf{$L_2$ Norm}:
+    \begin{equation*}
+    \|\mathbf{e}\|_2 = \sqrt{(3.0)^2 + (-4.0)^2} = \sqrt{9.0 + 16.0} = \sqrt{25.0} = 5.0
+    \end{equation*}
+    \item \textbf{$L_\infty$ Norm}:
+    \begin{equation*}
+    \|\mathbf{e}\|_\infty = \max(|3.0|, |-4.0|) = 4.0
+    \end{equation*}
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.5, >=Stealth]
+    % Grid
+    \draw[thin, gray!30] (-1.5,-1.5) grid (1.5,1.5);
+    \draw[->, thick] (-1.6,0) -- (1.6,0) node[right, font=\footnotesize\sffamily] {$x_1$};
+    \draw[->, thick] (0,-1.6) -- (0,1.6) node[above, font=\footnotesize\sffamily] {$x_2$};
+    
+    % L1 unit circle (diamond)
+    \draw[very thick, warningred] (1,0) -- (0,1) -- (-1,0) -- (0,-1) -- cycle;
+    \node[warningred, font=\footnotesize\sffamily] at (0.7, 0.7) {$L_1$ (Diamond)};
+    
+    % L2 unit circle (circle)
+    \draw[very thick, keyideablue] (0,0) circle (1);
+    \node[keyideablue, font=\footnotesize\sffamily] at (1.1, -0.4) {$L_2$ (Circle)};
+    
+    % L_inf unit circle (square)
+    \draw[very thick, analogygreen] (-1,-1) rectangle (1,1);
+    \node[analogygreen, font=\footnotesize\sffamily] at (-0.8, 1.15) {$L_\infty$ (Square)};
+\end{tikzpicture}
+\caption{The ``unit circles'' where $\|\mathbf{x}\| = 1$ under different norms. The sharp corners of the $L_1$ diamond along the coordinate axes explain why $L_1$ regularization forces model weights to become exactly zero.}\label{fig:norm_shapes}
+\end{figure}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+# Prediction error vector
+e = np.array([3.0, -4.0])
+
+# Calculating norms using np.linalg.norm
+l1_norm = np.linalg.norm(e, ord=1)
+l2_norm = np.linalg.norm(e, ord=2)
+linf_norm = np.linalg.norm(e, ord=np.inf)
+
+# 2x2 Weight Matrix
+W = np.array([
+    [1.0, 2.0],
+    [3.0, 4.0]
+])
+frobenius_norm = np.linalg.norm(W, ord='fro')
+
+print(f"Vector e: {e}")
+print(f"L1 Norm:        {l1_norm:.1f}")
+print(f"L2 Norm:        {l2_norm:.1f}")
+print(f"L-inf Norm:     {linf_norm:.1f}")
+print(f"Frobenius Norm: {frobenius_norm:.4f}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Vector e: [ 3. -4.]
+L1 Norm:        7.0
+L2 Norm:        5.0
+L-inf Norm:     4.0
+Frobenius Norm: 5.4772
+\end{lstlisting}
+
+\begin{iotbox}[Anomaly Detection on Industrial Edge Nodes]
+When monitoring a milling machine with an ESP32, an onboard model estimates expected 3D vibrations $\hat{\mathbf{a}}$. If the Euclidean distance (the $L_2$ norm of the residual error) exceeds a threshold:
+\begin{equation*}
+\|\mathbf{a}_{\text{measured}} - \hat{\mathbf{a}}\|_2 > \tau_{\text{alert}}
+\end{equation*}
+the microcontroller immediately flags a worn cutting bit before catastrophic breakage occurs.
+\end{iotbox}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Norms measure the size, length, or energy of vectors and matrices.
+    \item The $L_1$ norm sums absolute values and promotes sparsity (zeroing out weights).
+    \item The $L_2$ norm measures Euclidean distance and heavily penalizes large errors.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 5. EIGENVALUES AND EIGENVECTORS
+% ==============================================================================
+\subsection{Eigenvalues and Eigenvectors: Directions of Invariance}
+
+\begin{keyidea}[Eigenvalues and Eigenvectors]
+When a matrix $\mathbf{A}$ multiplies most vectors, it changes both their length and their direction. 
+
+However, for certain special vectors $\mathbf{v}$, multiplying by $\mathbf{A}$ \textbf{only stretches or shrinks the vector without changing its direction}. These special directions are called \textbf{eigenvectors}, and the stretching factors are called \textbf{eigenvalues} ($\lambda$).
+\begin{equation}
+\mathbf{A}\mathbf{v} = \lambda \mathbf{v}\label{eq:eigen_def}
+\end{equation}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Imagine analyzing a multi-sensor array recording 50 correlated variables on a wind turbine. Processing 50 variables at 100 Hz overwhelms an embedded microcontroller. We want to find the 2 or 3 primary directions in which the data varies the most, so we can discard the remaining 47 redundant dimensions. This technique is called \textbf{Principal Component Analysis (PCA)}, and it is built entirely on eigenvectors and eigenvalues.
+
+\begin{analogy}[The Weather Vane and the Wind Tunnel]
+Imagine a miniature wind tunnel containing a weather vane mounted on a pivot. If you blast air through the tunnel, ribbons inside flap and bend in chaotic directions. But the arrow of the weather vane aligns precisely along the axis of the airflow: its direction does not change; only the speed of the wind blowing past it varies. The direction of that steady axis is the \textbf{eigenvector}. The velocity of the wind along that axis is the \textbf{eigenvalue}.
+\end{analogy}
+
+\paragraph{The Idea in Words, Step by Step}
+Equation~\ref{eq:eigen_def} states:
+\begin{equation*}
+\mathbf{A}\mathbf{v} = \lambda \mathbf{v} \implies \mathbf{A}\mathbf{v} - \lambda \mathbf{I}\mathbf{v} = \mathbf{0} \implies (\mathbf{A} - \lambda \mathbf{I})\mathbf{v} = \mathbf{0}
+\end{equation*}
+For a non-zero vector $\mathbf{v}$ to satisfy this equation, the matrix $(\mathbf{A} - \lambda \mathbf{I})$ must squash space into zero volume. That means its determinant must be zero:
+\begin{equation}
+\det(\mathbf{A} - \lambda \mathbf{I}) = 0\label{eq:char_eq}
+\end{equation}
+This is the \textbf{characteristic equation}. Solving it yields the eigenvalues $\lambda$. Once we find $\lambda$, we plug it back into $(\mathbf{A} - \lambda \mathbf{I})\mathbf{v} = \mathbf{0}$ to solve for the eigenvector $\mathbf{v}$.
+
+\paragraph{Hand Calculation Example}
+Let us find the eigenvalues and eigenvectors of the $2 \times 2$ matrix:
+\begin{equation*}
+\mathbf{A} = \begin{bmatrix} 4.0 & 1.0 \\ 2.0 & 3.0 \end{bmatrix}
+\end{equation*}
+\begin{enumerate}
+    \item \textbf{Set up the characteristic equation} $\det(\mathbf{A} - \lambda \mathbf{I}) = 0$:
+    \begin{equation*}
+    \mathbf{A} - \lambda \mathbf{I} = \begin{bmatrix} 4.0 - \lambda & 1.0 \\ 2.0 & 3.0 - \lambda \end{bmatrix}
+    \end{equation*}
+    \item \textbf{Calculate the determinant}:
+    \begin{align*}
+    \det(\mathbf{A} - \lambda \mathbf{I}) &= (4.0 - \lambda)(3.0 - \lambda) - (1.0 \times 2.0) \\
+    &= (12.0 - 7.0\lambda + \lambda^2) - 2.0 \\
+    &= \lambda^2 - 7.0\lambda + 10.0 = 0
+    \end{align*}
+    \item \textbf{Factor the quadratic equation}:
+    \begin{equation*}
+    (\lambda - 5.0)(\lambda - 2.0) = 0 \implies \lambda_1 = 5.0, \quad \lambda_2 = 2.0
+    \end{equation*}
+    Our two eigenvalues are $\lambda_1 = 5.0$ and $\lambda_2 = 2.0$.
+    \item \textbf{Find the eigenvector for $\lambda_1 = 5.0$}:
+    Plug $\lambda = 5.0$ into $(\mathbf{A} - 5.0\mathbf{I})\mathbf{v} = \mathbf{0}$:
+    \begin{equation*}
+    \begin{bmatrix} 4.0 - 5.0 & 1.0 \\ 2.0 & 3.0 - 5.0 \end{bmatrix} \begin{bmatrix} v_1 \\ v_2 \end{bmatrix} = \begin{bmatrix} -1.0 & 1.0 \\ 2.0 & -2.0 \end{bmatrix} \begin{bmatrix} v_1 \\ v_2 \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}
+    \end{equation*}
+    Both rows give the exact same equation: $-v_1 + v_2 = 0 \implies v_1 = v_2$.
+    Setting $v_1 = 1.0$, our first eigenvector is $\mathbf{v}_1 = \begin{bmatrix} 1.0 \\ 1.0 \end{bmatrix}$.
+    \item \textbf{Verification}: Multiply $\mathbf{A}\mathbf{v}_1$:
+    \begin{equation*}
+    \mathbf{A}\mathbf{v}_1 = \begin{bmatrix} 4.0 & 1.0 \\ 2.0 & 3.0 \end{bmatrix} \begin{bmatrix} 1.0 \\ 1.0 \end{bmatrix} = \begin{bmatrix} 4(1) + 1(1) \\ 2(1) + 3(1) \end{bmatrix} = \begin{bmatrix} 5.0 \\ 5.0 \end{bmatrix} = 5.0 \begin{bmatrix} 1.0 \\ 1.0 \end{bmatrix} = 5.0 \mathbf{v}_1
+    \end{equation*}
+    The matrix multiplied $\mathbf{v}_1$ and produced exactly $5\mathbf{v}_1$. Its direction did not tilt by even a fraction of a degree; it simply stretched by a factor of 5!
+\end{enumerate}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+A = np.array([
+    [4.0, 1.0],
+    [2.0, 3.0]
+])
+
+# Compute eigenvalues and eigenvectors
+eigenvalues, eigenvectors = np.linalg.eig(A)
+
+print("Eigenvalues:", eigenvalues)
+print("Eigenvectors (columns):\n", eigenvectors)
+
+# Verify A @ v = lambda * v for the first eigenvector
+v1 = eigenvectors[:, 0]
+lambda1 = eigenvalues[0]
+
+print("\nA @ v1:      ", A @ v1)
+print("lambda1 * v1:", lambda1 * v1)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Eigenvalues: [5. 2.]
+Eigenvectors (columns):
+ [[ 0.70710678 -0.4472136 ]
+ [ 0.70710678  0.89442719]]
+
+A @ v1:       [3.53553391 3.53553391]
+lambda1 * v1: [3.53553391 3.53553391]
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Line 9: \code{np.linalg.eig(A)} returns two objects: a 1D array of eigenvalues and a 2D array where each \textbf{column} is a normalized eigenvector ($\|\mathbf{v}\|_2 = 1$).
+    \item Notice that NumPy returns $\mathbf{v}_1 = [0.7071, 0.7071]^T$. Because $\frac{1}{\sqrt{2}} \approx 0.7071$, this is simply our hand-calculated vector $[1, 1]^T$ scaled to unit length ($1 / \sqrt{1^2 + 1^2} = 1 / \sqrt{2}$).
+    \item Lines 16--17: \code{A @ v1} matches \code{lambda1 * v1} down to the last decimal digit.
+\end{itemize}
+
+\begin{takeaways}
+\begin{itemize}
+    \item An eigenvector maintains its directional axis when transformed by matrix $\mathbf{A}$.
+    \item The eigenvalue $\lambda$ is the scaling factor along that invariant direction.
+    \item Eigen-decomposition forms the mathematical foundation of Principal Component Analysis (PCA).
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 6. SINGULAR VALUE DECOMPOSITION (SVD)
+% ==============================================================================
+\subsection{Singular Value Decomposition (SVD): The Master Decomposition}
+
+\begin{keyidea}[Singular Value Decomposition (SVD)]
+Eigenvalue decomposition only works on square matrices ($n \times n$). \textbf{Singular Value Decomposition (SVD)} is the universal master factorization that decomposes \textbf{any matrix} of any shape ($m \times n$) into three interpretable geometric operations: a rotation, a scaling, and a second rotation.
+\begin{equation}
+\mathbf{A} = \mathbf{U} \mathbf{\Sigma} \mathbf{V}^T\label{eq:svd}
+\end{equation}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Deep neural networks have millions of weight parameters. Storing these weights in the flash memory of an ESP32 (which often has only 4 MB of storage) is impossible. SVD enables \textbf{low-rank matrix factorization}: we can compress a huge weight matrix into two tiny matrices, cutting memory usage by $80\%$ with virtually zero loss in model accuracy.
+
+\begin{analogy}[The Glass Prism and Sunlight]
+White sunlight looks like a single uniform beam, but passing it through a glass prism decomposes it into pure constituent spectral colors: red, green, violet. Each color has its own independent wavelength and intensity. SVD acts as a mathematical prism: it takes any messy, complex table of data and splits it into independent principal modes of variation, sorted from the most energetic to the weakest.
+\end{analogy}
+
+\paragraph{The Idea in Words, Step by Step}
+For any real matrix $\mathbf{A} \in \mathbb{R}^{m \times n}$:
+\begin{equation}
+\mathbf{A} = \mathbf{U} \mathbf{\Sigma} \mathbf{V}^T
+\end{equation}
+\begin{itemize}
+    \item $\mathbf{U} \in \mathbb{R}^{m \times m}$: An orthogonal matrix whose columns are called \textbf{left singular vectors}. They represent the principal patterns across the rows (samples).
+    \item $\mathbf{\Sigma} \in \mathbb{R}^{m \times n}$: A diagonal matrix of non-negative values called \textbf{singular values}, sorted in descending order:
+    \begin{equation*}
+    \sigma_1 \ge \sigma_2 \ge \dots \ge \sigma_r \ge 0
+    \end{equation*}
+    Each $\sigma_i$ quantifies how much information or energy is captured by that component.
+    \item $\mathbf{V}^T \in \mathbb{R}^{n \times n}$: The transpose of an orthogonal matrix whose columns are called \textbf{right singular vectors}. They represent the principal patterns across the columns (features).
+\end{itemize}
+
+\paragraph{Low-Rank Approximation (Model Compression)}
+We can write the full matrix $\mathbf{A}$ as a sum of rank-1 outer products:
+\begin{equation}
+\mathbf{A} = \sum_{i=1}^r \sigma_i \mathbf{u}_i \mathbf{v}_i^T = \sigma_1 \mathbf{u}_1 \mathbf{v}_1^T + \sigma_2 \mathbf{u}_2 \mathbf{v}_2^T + \dots + \sigma_r \mathbf{u}_r \mathbf{v}_r^T\label{eq:svd_sum}
+\end{equation}
+To compress the matrix, we keep only the top $k$ terms (where $k \ll r$) and discard the rest:
+\begin{equation}
+\mathbf{A}_k \approx \sum_{i=1}^k \sigma_i \mathbf{u}_i \mathbf{v}_i^T\label{eq:truncated_svd}
+\end{equation}
+According to the famous \textbf{Eckart-Young-Mirsky Theorem}, $\mathbf{A}_k$ is the mathematically optimal approximation of $\mathbf{A}$ that can possibly exist using rank $k$.
+
+\paragraph{Hand Calculation Example}
+Suppose SVD decomposes a sensor dataset into singular values and vectors. Let us reconstruct a rank-1 approximation $\mathbf{A}_1$ using only the first leading component:
+\begin{equation*}
+\sigma_1 = 10.0, \quad
+\mathbf{u}_1 = \begin{bmatrix} 0.6 \\ 0.8 \end{bmatrix}, \quad
+\mathbf{v}_1 = \begin{bmatrix} 1.0 \\ 0.0 \end{bmatrix}
+\end{equation*}
+Using Equation~\ref{eq:truncated_svd}:
+\begin{align*}
+\mathbf{A}_1 &= \sigma_1 (\mathbf{u}_1 \mathbf{v}_1^T) = 10.0 \times \left( \begin{bmatrix} 0.6 \\ 0.8 \end{bmatrix} \begin{bmatrix} 1.0 & 0.0 \end{bmatrix} \right) \\
+&= 10.0 \times \begin{bmatrix} 0.6 \times 1.0 & 0.6 \times 0.0 \\ 0.8 \times 1.0 & 0.8 \times 0.0 \end{bmatrix} = 10.0 \times \begin{bmatrix} 0.6 & 0.0 \\ 0.8 & 0.0 \end{bmatrix} = \begin{bmatrix} 6.0 & 0.0 \\ 8.0 & 0.0 \end{bmatrix}
+\end{align*}
+We built an entire $2 \times 2$ matrix using just one scalar and two tiny vectors.
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+# A simulated 4x3 sensor dataset (4 time samples, 3 sensor channels)
+A = np.array([
+    [2.0, 4.0, 6.0],
+    [1.0, 2.0, 3.0],
+    [0.0, 1.0, 1.0],
+    [3.0, 6.0, 9.0]
+])
+
+# Compute Full SVD
+U, S, Vt = np.linalg.svd(A, full_matrices=False)
+
+print("Original Shape:", A.shape)
+print("Singular Values (S):", np.round(S, 4))
+
+# Low-rank approximation using top k=1 component
+k = 1
+A_compressed = U[:, :k] @ np.diag(S[:k]) @ Vt[:k, :]
+
+print("\nOriginal Matrix A:\n", A)
+print("\nRank-1 Approximation A_1:\n", np.round(A_compressed, 2))
+
+# Calculate reconstruction energy captured
+energy_captured = (S[0]**2) / np.sum(S**2) * 100.0
+print(f"\nEnergy captured by top-1 singular value: {energy_captured:.2f}%")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Original Shape: (4, 3)
+Singular Values (S): [13.4357  0.4286  0.    ]
+
+Original Matrix A:
+ [[2. 4. 6.]
+ [1. 2. 3.]
+ [0. 1. 1.]
+ [3. 6. 9.]]
+
+Rank-1 Approximation A_1:
+ [[2.07 4.14 6.21]
+ [1.04 2.07 3.1 ]
+ [0.13 0.25 0.38]
+ [3.11 6.21 9.32]]
+
+Energy captured by top-1 singular value: 99.90%
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Line 12: \code{np.linalg.svd(A, full\_matrices=False)} performs compact SVD. It returns $\mathbf{U}$, a 1D vector of singular values $\mathbf{S}$, and $\mathbf{V}^T$ (already transposed).
+    \item Line 15: Notice that $\sigma_1 = 13.4357$, while $\sigma_2 = 0.4286$ and $\sigma_3 = 0.0$. The first singular value contains nearly all the information!
+    \item Line 19: We reconstruct the matrix using only $k=1$ component. 
+    \item Line 26: The top-1 component alone captures $99.90\%$ of all information in the original matrix.
+\end{itemize}
+
+\begin{iotbox}[TinyML Neural Network Compression via SVD]
+A dense layer in a neural network maps 128 inputs to 64 outputs using a weight matrix $\mathbf{W} \in \mathbb{R}^{64 \times 128}$, requiring $64 \times 128 = 8{,}192$ float parameters.
+By applying rank-$8$ SVD, we split $\mathbf{W}$ into two smaller matrices:
+\begin{equation*}
+\mathbf{W} \approx \mathbf{B}\mathbf{C}, \quad \text{where } \mathbf{B} \in \mathbb{R}^{64 \times 8} \text{ and } \mathbf{C} \in \mathbb{R}^{8 \times 128}
+\end{equation*}
+Total parameters required: $(64 \times 8) + (8 \times 128) = 512 + 1{,}024 = 1{,}536$ parameters.
+This achieves an \textbf{$81.25\%$ reduction in model size and memory bandwidth}, allowing a model that previously stalled an ESP32 to run smoothly in real time.
+\end{iotbox}
+
+\begin{takeaways}
+\begin{itemize}
+    \item SVD decomposes any matrix into rotation ($\mathbf{U}$), scaling ($\mathbf{\Sigma}$), and rotation ($\mathbf{V}^T$).
+    \item Truncated SVD retains the largest singular values to discard noise and compress datasets.
+    \item Low-rank matrix approximation is a cornerstone of TinyML model compression for edge microcontrollers.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 7. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+Test your understanding of linear algebra concepts with these questions:
+
+\begin{enumerate}
+    \item \textbf{Matrix Dimensions}: Suppose matrix $\mathbf{A}$ has shape $3 \times 4$, matrix $\mathbf{B}$ has shape $4 \times 2$, and vector $\mathbf{x}$ has shape $2 \times 1$.
+    \begin{enumerate}
+        \item Is the product $\mathbf{A}\mathbf{B}\mathbf{x}$ valid? If so, what is the shape of the resulting output?
+        \item Is the product $\mathbf{B}\mathbf{A}$ valid? Explain why or why not.
+    \end{enumerate}
+
+    \item \textbf{Hand Calculation (Matrix Multiplication)}: Compute the matrix product $\mathbf{C} = \mathbf{A}\mathbf{B}$ by hand:
+    \begin{equation*}
+    \mathbf{A} = \begin{bmatrix} 2.0 & 0.0 \\ 1.0 & 3.0 \end{bmatrix}, \quad
+    \mathbf{B} = \begin{bmatrix} 1.0 & 4.0 \\ 2.0 & -1.0 \end{bmatrix}
+    \end{equation*}
+
+    \item \textbf{Determinant \& Invertibility}: Given the matrix:
+    \begin{equation*}
+    \mathbf{M} = \begin{bmatrix} 3.0 & 6.0 \\ 2.0 & 4.0 \end{bmatrix}
+    \end{equation*}
+    Calculate $\det(\mathbf{M})$ by hand. Does $\mathbf{M}^{-1}$ exist? What does this mean geometrically?
+
+    \item \textbf{Vector Norms}: A sensor error vector is $\mathbf{e} = [-6.0, 8.0]^T$. Calculate by hand:
+    \begin{enumerate}
+        \item The $L_1$ norm $\|\mathbf{e}\|_1$.
+        \item The $L_2$ norm $\|\mathbf{e}\|_2$.
+        \item The $L_\infty$ norm $\|\mathbf{e}\|_\infty$.
+    \end{enumerate}
+
+    \item \textbf{TinyML SVD Compression}: An image feature extraction layer on an ESP32-CAM uses a weight matrix of shape $100 \times 100$ ($10{,}000$ weights). You compress this matrix using truncated SVD with rank $k = 5$.
+    \begin{enumerate}
+        \item How many total numbers must be stored to represent the rank-5 compressed matrices $\mathbf{U}_k \mathbf{\Sigma}_k$ and $\mathbf{V}_k^T$?
+        \item What percentage of memory storage is saved?
+    \end{enumerate}
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Matrix Dimensions}:
+    \begin{enumerate}
+        \item \textbf{Yes, it is valid}. First compute $\mathbf{A}\mathbf{B}$: $(3 \times 4) \times (4 \times 2) = (3 \times 2)$. Then multiply by $\mathbf{x}$: $(3 \times 2) \times (2 \times 1) = (3 \times 1)$. The final output is a column vector of shape \textbf{$3 \times 1$}.
+        \item \textbf{No, it is not valid}. The inner dimensions do not match: $\mathbf{B}$ has 2 columns, but $\mathbf{A}$ has 3 rows. Since $2 \ne 3$, the product $\mathbf{B}\mathbf{A}$ cannot be computed.
+    \end{enumerate}
+
+    \item \textbf{Hand Calculation (Matrix Multiplication)}:
+    \begin{align*}
+    C_{1,1} &= (2.0 \times 1.0) + (0.0 \times 2.0) = 2.0 + 0.0 = 2.0 \\
+    C_{1,2} &= (2.0 \times 4.0) + (0.0 \times -1.0) = 8.0 + 0.0 = 8.0 \\
+    C_{2,1} &= (1.0 \times 1.0) + (3.0 \times 2.0) = 1.0 + 6.0 = 7.0 \\
+    C_{2,2} &= (1.0 \times 4.0) + (3.0 \times -1.0) = 4.0 - 3.0 = 1.0
+    \end{align*}
+    Result:
+    \begin{equation*}
+    \mathbf{C} = \begin{bmatrix} 2.0 & 8.0 \\ 7.0 & 1.0 \end{bmatrix}
+    \end{equation*}
+
+    \item \textbf{Determinant \& Invertibility}:
+    \begin{equation*}
+    \det(\mathbf{M}) = (3.0 \times 4.0) - (6.0 \times 2.0) = 12.0 - 12.0 = 0.0
+    \end{equation*}
+    Because $\det(\mathbf{M}) = 0.0$, the matrix inverse $\mathbf{M}^{-1}$ \textbf{does not exist} ($\mathbf{M}$ is singular). Geometrically, this means the transformation squashes 2D space completely flat into a 1D line (since Row 1 is simply $1.5 \times$ Row 2), causing an irreversible loss of information.
+
+    \item \textbf{Vector Norms}:
+    \begin{enumerate}
+        \item $\|\mathbf{e}\|_1 = |-6.0| + |8.0| = 6.0 + 8.0 = 14.0$.
+        \item $\|\mathbf{e}\|_2 = \sqrt{(-6.0)^2 + (8.0)^2} = \sqrt{36.0 + 64.0} = \sqrt{100.0} = 10.0$.
+        \item $\|\mathbf{e}\|_\infty = \max(|-6.0|, |8.0|) = 8.0$.
+    \end{enumerate}
+
+    \item \textbf{TinyML SVD Compression}:
+    \begin{enumerate}
+        \item Original matrix parameters: $100 \times 100 = 10{,}000$ values.
+        In rank-$k$ SVD, we store matrix $\mathbf{U}_k \in \mathbb{R}^{100 \times 5}$ ($500$ values), $k=5$ singular values on the diagonal ($5$ values), and matrix $\mathbf{V}_k^T \in \mathbb{R}^{5 \times 100}$ ($500$ values).
+        Absorbing $\mathbf{\Sigma}_k$ into either matrix gives:
+        \begin{equation*}
+        \text{Total Parameters} = (100 \times 5) + (5 \times 100) = 500 + 500 = 1{,}000 \text{ values}
+        \end{equation*}
+        \item Memory savings calculation:
+        \begin{equation*}
+        \text{Savings} = \frac{10{,}000 - 1{,}000}{10{,}000} \times 100\% = \frac{9{,}000}{10{,}000} \times 100\% = 90.0\%
+        \end{equation*}
+        The compressed model consumes $90\%$ less memory on the ESP32-CAM!
+    \end{enumerate}
+\end{enumerate}

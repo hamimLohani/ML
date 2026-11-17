@@ -1,0 +1,652 @@
+% FILE: chapters/ch04_s1_regression.tex
+\chapter{Classical Machine Learning}\label{ch:classical_ml}
+\section{Supervised Learning: Regression}\label{sec:regression}
+
+In supervised machine learning, we act as a teacher. We provide an algorithm with a collection of historical examples containing both inputs (called \textbf{features}, denoted by $\mathbf{x}$) and the correct answers (called \textbf{labels} or \textbf{targets}, denoted by $y$). The algorithm's mission is to learn a mathematical function that maps any new, unseen input to its correct target.
+
+Supervised learning splits into two distinct domains based on the nature of the target:
+\begin{itemize}
+    \item \textbf{Classification}: Predicts a discrete category or class label (e.g., ``Is this bearing healthy or failing?'', ``Is this audio human speech or background noise?'').
+    \item \textbf{Regression}: Predicts a continuous numerical value (e.g., ``What will the greenhouse temperature be in two hours?'', ``How many minutes of battery runtime remain?'').
+\end{itemize}
+
+In this section, we study the foundation of all predictive mathematics: \textbf{Regression}. We start with simple and multiple linear regression, derive the closed-form Normal Equation, build gradient descent completely from scratch in pure Python, explore non-linear polynomial regression, and master Ridge and Lasso regularization to prevent overfitting.
+
+% ==============================================================================
+% 1. LINEAR REGRESSION AND THE NORMAL EQUATION
+% ==============================================================================
+\subsection{Linear Regression: The Line of Best Fit}
+
+\begin{keyidea}[Linear Regression]
+\textbf{Linear regression} models the relationship between one or more input features $\mathbf{x}$ and a continuous target $y$ by fitting a straight line (or flat hyperplane in higher dimensions) through the data points.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+In IoT systems, we constantly need to estimate physical variables that cannot be directly measured with a dedicated sensor. For example, measuring remaining battery capacity in an outdoor weather station directly requires costly chemical sensors. However, we can easily measure battery terminal voltage under load. Linear regression allows us to build a simple mathematical formula that predicts remaining amp-hours directly from voltage.
+
+\begin{analogy}[The Accelerator Pedal]
+Imagine driving a car on a flat highway. When you press the accelerator pedal down by $10\text{ degrees}$, the car cruises at $40\text{ km/h}$. When you press it down by $20\text{ degrees}$, the car cruises at $70\text{ km/h}$. You intuitively know that pressing it by $30\text{ degrees}$ will produce roughly $100\text{ km/h}$. You have constructed a linear mental model: speed equals base idle speed plus a constant multiplier times pedal angle.
+\end{analogy}
+
+\paragraph{The Idea in Words, Step by Step}
+For a single input feature $x$, the linear regression model predicts $\hat{y}$ (read: ``$y$-hat'', the predicted value) using the equation of a straight line:
+\begin{equation}
+\hat{y} = w x + b\label{eq:simple_linear}
+\end{equation}
+\begin{itemize}
+    \item $w$ is the \textbf{weight} (also called the slope or coefficient). It tells us how much $\hat{y}$ changes when $x$ increases by one unit.
+    \item $b$ is the \textbf{bias} (also called the $y$-intercept). It is the value of $\hat{y}$ when $x = 0$.
+\end{itemize}
+When we have multiple features $\mathbf{x} = [x_1, x_2, \dots, x_D]^T$, the formula generalizes to a dot product:
+\begin{equation}
+\hat{y} = \mathbf{w}^T \mathbf{x} + b = w_1 x_1 + w_2 x_2 + \dots + w_D x_D + b\label{eq:multiple_linear}
+\end{equation}
+
+\paragraph{The Loss Function: Mean Squared Error (MSE)}
+For each training point $(x_i, y_i)$, the difference between the true label and our prediction is the \textbf{residual error}:
+\begin{equation*}
+e_i = \hat{y}_i - y_i = (w x_i + b) - y_i
+\end{equation*}
+To measure overall model performance, we square each error (so negative errors do not cancel out positive errors) and take the average across all $N$ samples. This is the \textbf{Mean Squared Error (MSE)} cost function:
+\begin{equation}
+J(w, b) = \frac{1}{2N} \sum_{i=1}^N (\hat{y}_i - y_i)^2 = \frac{1}{2N} \sum_{i=1}^N (w x_i + b - y_i)^2\label{eq:mse_cost}
+\end{equation}
+\textit{Note on the $\frac{1}{2}$ factor}: The $\frac{1}{2}$ in front of $N$ is a mathematical convenience. When we take the derivative of $(\dots)^2$, the power of 2 cancels cleanly with $\frac{1}{2}$, simplifying our calculations.
+
+\paragraph{The Closed-Form Solution: The Normal Equation}
+Instead of guessing values for $w$ and $b$, can we solve for the optimal weights directly using calculus? Yes! By setting the matrix derivative of the cost function to zero, we obtain the famous \textbf{Normal Equation}:
+\begin{equation}
+\mathbf{w}_{\text{optimal}} = (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{y}\label{eq:normal_equation}
+\end{equation}
+where $\mathbf{X}$ is the $N \times (D+1)$ data matrix with a column of ones added to accommodate the bias intercept $b$.
+
+\paragraph{Hand Calculation Example}
+Let us fit a line $\hat{y} = w x + b$ to three sensor data points by hand:
+\begin{equation*}
+(x_1, y_1) = (1.0, 2.0), \quad (x_2, y_2) = (2.0, 4.0), \quad (x_3, y_3) = (3.0, 5.0)
+\end{equation*}
+For simple 1D linear regression, the closed-form formulas for slope $w$ and intercept $b$ are:
+\begin{equation}
+w = \frac{\sum_{i=1}^N (x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^N (x_i - \bar{x})^2}, \quad b = \bar{y} - w \bar{x}\label{eq:1d_slope_intercept}
+\end{equation}
+\begin{enumerate}
+    \item \textbf{Calculate Means}:
+    \begin{equation*}
+    \bar{x} = \frac{1.0 + 2.0 + 3.0}{3} = 2.0, \quad \bar{y} = \frac{2.0 + 4.0 + 5.0}{3} = \frac{11.0}{3} \approx 3.6667
+    \end{equation*}
+    \item \textbf{Compute Deviations and Products}:
+    \begin{align*}
+    x - \bar{x} &= [-1.0, 0.0, +1.0] \\
+    y - \bar{y} &= [2.0 - 3.6667, 4.0 - 3.6667, 5.0 - 3.6667] = [-1.6667, +0.3333, +1.3333]
+    \end{align*}
+    \item \textbf{Calculate Numerator}:
+    \begin{equation*}
+    \sum (x_i - \bar{x})(y_i - \bar{y}) = (-1.0 \times -1.6667) + (0.0 \times 0.3333) + (1.0 \times 1.3333) = 1.6667 + 1.3333 = 3.0
+    \end{equation*}
+    \item \textbf{Calculate Denominator}:
+    \begin{equation*}
+    \sum (x_i - \bar{x})^2 = (-1.0)^2 + (0.0)^2 + (1.0)^2 = 1.0 + 0.0 + 1.0 = 2.0
+    \end{equation*}
+    \item \textbf{Solve for Slope $w$ and Intercept $b$}:
+    \begin{align*}
+    w &= \frac{3.0}{2.0} = 1.50 \\
+    b &= \bar{y} - w\bar{x} = 3.6667 - (1.50 \times 2.0) = 3.6667 - 3.00 = 0.6667
+    \end{align*}
+    Our best-fit line equation is:
+    \begin{equation*}
+    \hat{y} = 1.50 x + 0.6667
+    \end{equation*}
+    \item \textbf{Predict for a New Sensor Input $x = 4.0$}:
+    \begin{equation*}
+    \hat{y} = 1.50(4.0) + 0.6667 = 6.0 + 0.6667 = 6.6667
+    \end{equation*}
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.1, >=Stealth]
+    % Axes
+    \draw[->, thick] (0,0) -- (4.5,0) node[right, font=\small\sffamily] {$x$ (Input)};
+    \draw[->, thick] (0,0) -- (0,6.5) node[above, font=\small\sffamily] {$y$ (Target)};
+    \draw[thin, gray!20] (0,0) grid (4,6);
+
+    % Best-fit line: y = 1.5x + 0.6667
+    \draw[very thick, keyideablue] (0, 0.667) -- (3.5, 5.917) node[right, font=\small\sffamily] {$\hat{y} = 1.5x + 0.67$};
+
+    % Data points: (1, 2), (2, 4), (3, 5)
+    \filldraw[warningred] (1, 2) circle (2.5pt) node[below right, font=\footnotesize] {$(1, 2)$};
+    \filldraw[warningred] (2, 4) circle (2.5pt) node[below right, font=\footnotesize] {$(2, 4)$};
+    \filldraw[warningred] (3, 5) circle (2.5pt) node[below right, font=\footnotesize] {$(3, 5)$};
+
+    % Residual error dashed lines
+    \draw[dashed, thick, warningred] (1, 2) -- (1, 2.167);
+    \draw[dashed, thick, warningred] (2, 4) -- (2, 3.667);
+    \draw[dashed, thick, warningred] (3, 5) -- (3, 5.167);
+    \node[warningred, font=\tiny\sffamily, rotate=90] at (0.8, 2.1) {Residual};
+\end{tikzpicture}
+\caption{Linear regression fitting the line of best fit by minimizing the sum of squared vertical residuals.}\label{fig:linear_fit}
+\end{figure}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+# 1. Training data
+X = np.array([[1.0], [2.0], [3.0]])  # Shape (3, 1): 2D feature matrix
+y = np.array([2.0, 4.0, 5.0])         # 1D target vector
+
+# 2. Fit model using Scikit-Learn
+model = LinearRegression()
+model.fit(X, y)
+
+w = model.coef_[0]
+b = model.intercept_
+
+print(f"Learned Weight (Slope w):     {w:.4f}")
+print(f"Learned Bias   (Intercept b): {b:.4f}")
+
+# 3. Predict for x = 4.0
+x_new = np.array([[4.0]])
+y_pred = model.predict(x_new)
+print(f"Prediction for x=4.0:         {y_pred[0]:.4f}")
+
+# 4. Verification with the Normal Equation in NumPy
+X_bias = np.c_[np.ones((3, 1)), X]  # Add column of ones for intercept b
+w_normal = np.linalg.inv(X_bias.T @ X_bias) @ X_bias.T @ y
+print(f"Normal Equation Solution:     b = {w_normal[0]:.4f}, w = {w_normal[1]:.4f}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Learned Weight (Slope w):     1.5000
+Learned Bias   (Intercept b): 0.6667
+Prediction for x=4.0:         6.6667
+Normal Equation Solution:     b = 0.6667, w = 1.5000
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Line 5: Scikit-learn requires input features $\mathbf{X}$ to be a 2D array of shape \code{(n\_samples, n\_features)}.
+    \item Lines 9--10: \code{LinearRegression()} instantiates the estimator, and \code{fit(X, y)} finds optimal parameters.
+    \item Lines 12--13: The slope is stored in \code{model.coef\_}, and the intercept is stored in \code{model.intercept\_}.
+    \item Line 22: \code{np.c\_[np.ones(...), X]} augments the feature matrix with a bias column, and the \code{@} operator computes Equation~\ref{eq:normal_equation}, matching scikit-learn exactly.
+\end{itemize}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Linear regression predicts continuous targets using weighted linear combinations.
+    \item The model is optimized by minimizing the Mean Squared Error (MSE) loss function.
+    \item The Normal Equation solves for the exact mathematical minimum in a single closed-form matrix operation.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 2. TRAINING FROM SCRATCH: GRADIENT DESCENT
+% ==============================================================================
+\subsection{Training from Scratch: Gradient Descent}
+
+\begin{keyidea}[Gradient Descent Optimization]
+\textbf{Gradient Descent} is a universal iterative optimization algorithm that finds the minimum of a cost function by repeatedly taking small steps in the direction of steepest downhill slope (the negative gradient).
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+The Normal Equation requires inverting the matrix $(\mathbf{X}^T \mathbf{X})$. For a dataset with $10{,}000$ features, inverting a $10{,}000 \times 10{,}000$ matrix requires roughly $10^{12}$ floating-point operations and gigabytes of RAM. On an embedded edge device or micro-gateway, calculating that inverse causes an immediate system crash. Gradient descent avoids matrix inversion completely by updating parameters iteratively one step at a time.
+
+\begin{analogy}[Hiking Down a Foggy Mountain]
+Imagine you are hiking on a mountain shrouded in thick fog. You cannot see the cabin at the bottom of the valley. How do you get down? You feel the terrain under your feet to determine which direction slopes most steeply downward. You take a step in that direction. You repeat this process step by step until the ground under your feet is completely flat. You have reached the valley bottom.
+\end{analogy}
+
+\paragraph{The Idea in Words, Step by Step}
+\begin{enumerate}
+    \item Start with arbitrary initial guesses for the parameters (e.g., $w = 0.0, b = 0.0$).
+    \item Compute model predictions for all samples: $\hat{y}_i = w x_i + b$.
+    \item Compute the \textbf{gradient} (partial derivatives) of the cost function with respect to $w$ and $b$. The gradient points in the direction of steepest \textit{ascent} (uphill).
+    \item Subtract a fraction of the gradient to step \textit{downhill}:
+    \begin{align}
+    w &:= w - \alpha \frac{\partial J}{\partial w}\label{eq:update_w} \\
+    b &:= b - \alpha \frac{\partial J}{\partial b}\label{eq:update_b}
+    \end{align}
+    where $\alpha$ (alpha) is the \textbf{learning rate}, a positive scalar that controls the step size.
+    \item Repeat steps 2--4 for a specified number of cycles (called \textbf{epochs}) until the loss stops decreasing (\textbf{convergence}).
+\end{enumerate}
+
+\paragraph{The Maths: Gradients of the MSE Loss}
+Taking the partial derivatives of Equation~\ref{eq:mse_cost}:
+\begin{align}
+\frac{\partial J}{\partial w} &= \frac{1}{N} \sum_{i=1}^N (\hat{y}_i - y_i) x_i\label{eq:grad_w} \\
+\frac{\partial J}{\partial b} &= \frac{1}{N} \sum_{i=1}^N (\hat{y}_i - y_i)\label{eq:grad_b}
+\end{align}
+Every sample contributes an error $(\hat{y}_i - y_i)$. The gradient for $w$ scales this error by the feature value $x_i$.
+
+\paragraph{Hand Calculation Example (One Gradient Descent Step)}
+Let us run one manual update iteration for a single training point $(x = 2.0, y = 5.0)$ with initial parameters $w = 0.0, b = 0.0$, and learning rate $\alpha = 0.1$:
+\begin{enumerate}
+    \item \textbf{Forward Pass (Prediction)}:
+    \begin{equation*}
+    \hat{y} = (0.0 \times 2.0) + 0.0 = 0.0
+    \end{equation*}
+    \item \textbf{Calculate Error}:
+    \begin{equation*}
+    \text{Error} = \hat{y} - y = 0.0 - 5.0 = -5.0
+    \end{equation*}
+    \item \textbf{Compute Gradients} (for $N = 1$ sample):
+    \begin{align*}
+    \frac{\partial J}{\partial w} &= (\hat{y} - y) x = (-5.0) \times 2.0 = -10.0 \\
+    \frac{\partial J}{\partial b} &= (\hat{y} - y) = -5.0
+    \end{align*}
+    \item \textbf{Update Parameters} using Equations~\ref{eq:update_w} and \ref{eq:update_b}:
+    \begin{align*}
+    w_{\text{new}} &= 0.0 - (0.1 \times -10.0) = 0.0 + 1.0 = 1.0 \\
+    b_{\text{new}} &= 0.0 - (0.1 \times -5.0) = 0.0 + 0.5 = 0.5
+    \end{align*}
+    \item \textbf{Evaluate Improvement}:
+    With our updated model $\hat{y} = 1.0 x + 0.5$, compute the new prediction for $x = 2.0$:
+    \begin{equation*}
+    \hat{y}_{\text{new}} = (1.0 \times 2.0) + 0.5 = 2.5
+    \end{equation*}
+    In a single step, our prediction improved from $0.0$ to $2.5$, cutting the error in half!
+\end{enumerate}
+
+\paragraph{Python Code from Scratch}
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+# Training dataset
+X = np.array([1.0, 2.0, 3.0])
+y = np.array([2.0, 4.0, 5.0])
+N = len(X)
+
+# Hyperparameters
+alpha = 0.1       # Learning rate
+epochs = 200      # Training iterations
+
+# Initialize parameters
+w = 0.0
+b = 0.0
+
+# Gradient Descent Training Loop
+for epoch in range(epochs):
+    # 1. Forward pass: compute predictions
+    y_pred = w * X + b
+    
+    # 2. Compute Mean Squared Error loss
+    loss = (1 / (2 * N)) * np.sum((y_pred - y) ** 2)
+    
+    # 3. Compute gradients (derivatives)
+    grad_w = (1 / N) * np.sum((y_pred - y) * X)
+    grad_b = (1 / N) * np.sum(y_pred - y)
+    
+    # 4. Parameter update rule
+    w -= alpha * grad_w
+    b -= alpha * grad_b
+    
+    # Print progress every 50 epochs
+    if (epoch + 1) % 50 == 0:
+        print(f"Epoch {epoch+1:3d} | Loss: {loss:.5f} | w: {w:.4f} | b: {b:.4f}")
+
+print(f"\nFinal Model: y_hat = {w:.4f} * x + {b:.4f}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Epoch  50 | Loss: 0.04026 | w: 1.3486 | b: 1.0111
+Epoch 100 | Loss: 0.02983 | w: 1.4517 | b: 0.7761
+Epoch 150 | Loss: 0.02804 | w: 1.4846 | b: 0.7015
+Epoch 200 | Loss: 0.02779 | w: 1.4951 | b: 0.6778
+
+Final Model: y_hat = 1.4951 * x + 0.6778
+\end{lstlisting}
+
+\begin{iotbox}[On-Device Online Learning for TinyML]
+In long-term IoT deployments (e.g., solar-powered agricultural stations), sensors slowly degrade and drift over months. Rather than shipping thousands of raw readings over expensive cellular links to retrain in the cloud, an ESP32 can run this exact 10-line gradient descent loop in MicroPython or C++ to recalibrate its internal slope $w$ on-device every night.
+\end{iotbox}
+
+\begin{warning}[The Danger of a Bad Learning Rate]
+\begin{itemize}
+    \item \textbf{Too Small ($\alpha = 10^{-6}$)}: Training takes millions of steps and crawls at a snail's pace.
+    \item \textbf{Too Large ($\alpha = 5.0$)}: Steps overshoot the valley and bounce upward, causing loss to explode to infinity (\code{Loss: NaN}).
+\end{itemize}
+Always begin with $\alpha = 0.01$ or $0.001$, and adjust by factors of 10 if needed.
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Gradient descent optimizes parameters iteratively without requiring matrix inversion.
+    \item The gradient points uphill; we subtract it to step downhill toward minimum loss.
+    \item The learning rate $\alpha$ dictates the step size and must be tuned carefully.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 3. POLYNOMIAL REGRESSION
+% ==============================================================================
+\subsection{Polynomial Regression: Modeling Non-Linear Relationships}
+
+\begin{keyidea}[Polynomial Regression]
+\textbf{Polynomial regression} models non-linear relationships by creating higher-order power terms (such as $x^2, x^3, \dots, x^d$) from existing features, while still using a linear algorithm to find the optimal weights.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Physical sensor behaviors are rarely purely linear straight lines:
+\begin{itemize}
+    \item Atmospheric pressure drops non-linearly with altitude.
+    \item Electrical power dissipation scales quadratically with current: $P = I^2 R$.
+    \item Soil evaporation rates accelerate exponentially in high heat and wind.
+\end{itemize}
+Fitting a straight line through curved physical data results in severe \textbf{underfitting}. Polynomial regression allows us to capture complex curves cleanly.
+
+\paragraph{The Idea in Words, Step by Step}
+Suppose we have a single feature $x$. A degree-2 polynomial model is:
+\begin{equation}
+\hat{y} = w_0 + w_1 x + w_2 x^2\label{eq:poly_degree2}
+\end{equation}
+Why is this still called \textit{linear} regression? Because the model is \textbf{linear in its parameters $\mathbf{w}$}. If we define two new synthetic variables $z_1 = x$ and $z_2 = x^2$, the equation becomes:
+\begin{equation*}
+\hat{y} = w_0 + w_1 z_1 + w_2 z_2
+\end{equation*}
+This is just standard multiple linear regression on an expanded feature space!
+
+\paragraph{The Trade-Off: Underfitting vs. Overfitting}
+\begin{itemize}
+    \item \textbf{Underfitting (High Bias)}: The model is too simple (e.g., a straight line through a parabolic curve). It performs poorly on both training and test data.
+    \item \textbf{Overfitting (High Variance)}: The polynomial degree is too high (e.g., degree 15). The curve bends chaotically to pass through every single noisy data point, failing completely on new test data.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.85]
+    % Underfitting (Degree 1)
+    \begin{scope}[shift={(0,0)}]
+        \draw[->, thick] (0,0) -- (3.5,0) node[right, font=\tiny] {$x$};
+        \draw[->, thick] (0,0) -- (0,3.5) node[above, font=\tiny] {$y$};
+        \foreach \x/\y in {0.5/0.8, 1.0/0.5, 1.5/0.6, 2.0/1.2, 2.5/2.1, 3.0/3.2}
+            \filldraw[black] (\x,\y) circle (1.8pt);
+        \draw[thick, warningred] (0.3, 0.4) -- (3.2, 2.6);
+        \node[font=\small\sffamily, align=center] at (1.75, -0.6) {Underfitting\\(Degree 1: Too Rigid)};
+    \end{scope}
+
+    % Good Fit (Degree 2)
+    \begin{scope}[shift={(5,0)}]
+        \draw[->, thick] (0,0) -- (3.5,0) node[right, font=\tiny] {$x$};
+        \draw[->, thick] (0,0) -- (0,3.5) node[above, font=\tiny] {$y$};
+        \foreach \x/\y in {0.5/0.8, 1.0/0.5, 1.5/0.6, 2.0/1.2, 2.5/2.1, 3.0/3.2}
+            \filldraw[black] (\x,\y) circle (1.8pt);
+        \draw[very thick, analogygreen, domain=0.4:3.1, samples=30] plot (\x, {0.6*(\x-1.1)*(\x-1.1) + 0.5});
+        \node[font=\small\sffamily, align=center] at (1.75, -0.6) {Optimal Fit\\(Degree 2: Captures Physics)};
+    \end{scope}
+
+    % Overfitting (Degree 10)
+    \begin{scope}[shift={(10,0)}]
+        \draw[->, thick] (0,0) -- (3.5,0) node[right, font=\tiny] {$x$};
+        \draw[->, thick] (0,0) -- (0,3.5) node[above, font=\tiny] {$y$};
+        \foreach \x/\y in {0.5/0.8, 1.0/0.5, 1.5/0.6, 2.0/1.2, 2.5/2.1, 3.0/3.2}
+            \filldraw[black] (\x,\y) circle (1.8pt);
+        \draw[thick, keyideablue, smooth] plot coordinates {
+            (0.3, 2.0) (0.5, 0.8) (0.7, 1.8) (1.0, 0.5) (1.3, 1.4) (1.5, 0.6) (1.8, 2.0) (2.0, 1.2) (2.3, 2.8) (2.5, 2.1) (2.8, 3.4) (3.0, 3.2)
+        };
+        \node[font=\small\sffamily, align=center] at (1.75, -0.6) {Overfitting\\(High Degree: Fits Noise)};
+    \end{scope}
+\end{tikzpicture}
+\caption{The Underfitting vs. Overfitting spectrum when selecting polynomial model capacity.}\label{fig:polynomial_spectrum}
+\end{figure}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
+
+# Simulated quadratic sensor curve (e.g., drag vs speed)
+np.random.seed(42)
+X = np.linspace(-3, 3, 20).reshape(-1, 1)
+y = 0.5 * (X.flatten() ** 2) + 2.0 + np.random.normal(0, 0.3, 20)
+
+# 1. Transform features to include x^2
+poly = PolynomialFeatures(degree=2, include_bias=False)
+X_poly = poly.fit_transform(X)
+
+# 2. Fit standard linear model on polynomial features
+model = LinearRegression()
+model.fit(X_poly, y)
+y_pred = model.predict(X_poly)
+
+print(f"Original shape:    {X.shape}")
+print(f"Expanded shape:    {X_poly.shape} (features: x, x^2)")
+print(f"Learned Weights:   w1={model.coef_[0]:.4f}, w2={model.coef_[1]:.4f}")
+print(f"Learned Intercept: b={model.intercept_:.4f}")
+print(f"R-squared Score:   {r2_score(y, y_pred):.4f}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Original shape:    (20, 1)
+Expanded shape:    (20, 2) (features: x, x^2)
+Learned Weights:   w1=0.0163, w2=0.4907
+Learned Intercept: b=2.0019
+R-squared Score:   0.9892
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Line 11: \code{PolynomialFeatures(degree=2)} automatically generates $[x, x^2]$ columns.
+    \item Line 16: We fit standard \code{LinearRegression()} on the expanded matrix \code{X\_poly}.
+    \item Line 20: The learned weight for $x^2$ is $0.4907$ and intercept is $2.0019$, matching the true underlying equation $y = 0.5x^2 + 2.0$.
+    \item Line 22: The $R^2$ score of $0.9892$ indicates that the model accounts for $98.92\%$ of variance in the data.
+\end{itemize}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Polynomial regression captures non-linear curvature using linear algorithms by expanding feature powers.
+    \item Higher degrees increase model capacity, risking severe overfitting on noisy data.
+    \item Always evaluate polynomial models on held-out validation data to avoid over-parameterization.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 4. REGULARIZATION: RIDGE AND LASSO
+% ==============================================================================
+\subsection{Regularization: Ridge ($L_2$) and Lasso ($L_1$)}
+
+\begin{keyidea}[Regularization]
+\textbf{Regularization} is a technique that discourages learning an overly complex or erratic model by adding a penalty term to the loss function proportional to the size of the weights:
+\begin{equation}
+\text{Total Cost} = \text{MSE Loss} + \text{Penalty on Weights}\label{eq:reg_general}
+\end{equation}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+When an overfitted model trains on noisy data, weights explode to absurd values (e.g., $w_1 = +45{,}000.0, w_2 = -44{,}998.0$) to weave through every training point. On a 16-bit or 32-bit microcontroller, multiplying by such huge coefficients causes numeric floating-point overflow and catastrophic prediction failures. Regularization keeps weights small and stable.
+
+\begin{analogy}[The Speed Governor]
+Imagine driving a sports car on an icy mountain road. If there are no rules, an aggressive driver accelerates recklessly, weaving around every pebble, risking a spin-out. Regularization acts as a mechanical speed governor on the engine: it allows the car to go fast enough to climb the hill, but penalizes extreme acceleration, keeping the ride smooth and safe.
+\end{analogy}
+
+\paragraph{The Idea in Words: Ridge vs. Lasso}
+There are two primary flavors of regularization in machine learning:
+\begin{enumerate}
+    \item \textbf{Ridge Regression ($L_2$ Regularization)}:
+    Penalizes the \textbf{sum of squared weights} ($\|\mathbf{w}\|_2^2$):
+    \begin{equation}
+    J_{\text{Ridge}}(\mathbf{w}) = \frac{1}{2N} \sum_{i=1}^N (\hat{y}_i - y_i)^2 + \frac{\lambda}{2} \sum_{j=1}^D w_j^2\label{eq:ridge_loss}
+    \end{equation}
+    \begin{itemize}
+        \item Shrinks all weights smoothly toward zero.
+        \item Weights become tiny, but \textbf{never reach exact zero}.
+        \item Ideal when you have many correlated features and want to keep all of them.
+    \end{itemize}
+
+    \item \textbf{Lasso Regression ($L_1$ Regularization)}:
+    Penalizes the \textbf{sum of absolute weights} ($\|\mathbf{w}\|_1$):
+    \begin{equation}
+    J_{\text{Lasso}}(\mathbf{w}) = \frac{1}{2N} \sum_{i=1}^N (\hat{y}_i - y_i)^2 + \lambda \sum_{j=1}^D |w_j|\label{eq:lasso_loss}
+    \end{equation}
+    \begin{itemize}
+        \item Drives the weights of less important features to \textbf{exactly zero}.
+        \item Performs \textbf{automatic feature selection}, discarding useless sensor channels completely!
+    \end{itemize}
+\end{enumerate}
+In both methods, $\lambda \ge 0$ (lambda, called \code{alpha} in scikit-learn) is the \textbf{regularization strength}:
+\begin{itemize}
+    \item If $\lambda = 0$: Regularization is disabled; we recover standard Ordinary Least Squares (OLS).
+    \item If $\lambda$ is huge: Penalties dominate, driving all weights to zero, resulting in a flat horizontal line (underfitting).
+\end{itemize}
+
+\paragraph{Hand Calculation Example}
+Compare the regularization penalties for two candidate models predicting output from two features ($D=2$), given $\lambda = 0.5$:
+\begin{itemize}
+    \item \textbf{Model A (Balanced weights)}: $\mathbf{w} = [1.0, 2.0]^T$
+    \item \textbf{Model B (Exploding weights)}: $\mathbf{w} = [10.0, -10.0]^T$
+\end{itemize}
+Let us calculate their Ridge ($L_2$) penalties:
+\begin{enumerate}
+    \item \textbf{Model A Penalty}:
+    \begin{equation*}
+    \text{Penalty}_A = \frac{\lambda}{2} (w_1^2 + w_2^2) = \frac{0.5}{2} (1.0^2 + 2.0^2) = 0.25 \times (1.0 + 4.0) = 0.25 \times 5.0 = 1.25
+    \end{equation*}
+    \item \textbf{Model B Penalty}:
+    \begin{equation*}
+    \text{Penalty}_B = \frac{\lambda}{2} (w_1^2 + w_2^2) = \frac{0.5}{2} (10.0^2 + (-10.0)^2) = 0.25 \times (100.0 + 100.0) = 0.25 \times 200.0 = 50.0
+    \end{equation*}
+\end{enumerate}
+Even if Model B achieves a slightly lower MSE on training data, its massive penalty ($50.0$ vs $1.25$) forces the algorithm to choose Model A.
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import numpy as np
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+
+# Simulated dataset with 1 useful feature and 3 noisy, useless features
+np.random.seed(42)
+N = 30
+x_signal = np.random.uniform(0, 10, N)
+X = np.column_stack([
+    x_signal,                                # Feature 0: True signal
+    np.random.normal(0, 1, N),               # Feature 1: Pure noise
+    np.random.normal(0, 1, N),               # Feature 2: Pure noise
+    x_signal + np.random.normal(0, 0.1, N)   # Feature 3: Redundant collinear signal
+])
+y = 3.0 * x_signal + 5.0 + np.random.normal(0, 0.5, N)
+
+# 1. Standard Linear Regression (no regularization)
+ols = LinearRegression().fit(X, y)
+
+# 2. Ridge Regression (L2 penalty)
+ridge = Ridge(alpha=10.0).fit(X, y)
+
+# 3. Lasso Regression (L1 penalty)
+lasso = Lasso(alpha=0.5).fit(X, y)
+
+print("--- Model Coefficients Comparison ---")
+print(f"OLS:   {ols.coef_.round(3)}")
+print(f"Ridge: {ridge.coef_.round(3)}")
+print(f"Lasso: {lasso.coef_.round(3)}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Model Coefficients Comparison ---
+OLS:   [ 1.492  0.038 -0.069  1.503]
+Ridge: [ 1.432  0.031 -0.063  1.442]
+Lasso: [ 2.955  0.    -0.     0.   ]
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Lines 7--12: We construct four features: Feature 0 is the true physical driver, Features 1 and 2 are random noise, and Feature 3 is an almost identical redundant copy.
+    \item Line 24: OLS splits the true slope ($3.0$) awkwardly across both redundant features ($1.492$ and $1.503$).
+    \item Line 25: Ridge smoothly shrinks weights while keeping all features active.
+    \item Line 26: \textbf{Lasso sets Features 1, 2, and 3 to exact zero!} It automatically determined that Feature 0 alone drives the output, recovering the true slope $\approx 3.0$.
+\end{itemize}
+
+\begin{iotbox}[Pruning Sensor Channels for TinyML Deployment]
+When designing battery-powered IoT devices, reading analog pins consumes energy. By running Lasso regression during offline model development, any sensor channel whose learned weight is driven to $0.0$ can be physically deleted from the hardware schematic. Removing 5 unnecessary sensors extends battery life from 2 weeks to 6 months!
+\end{iotbox}
+
+\begin{warning}[Never Regularize the Bias Intercept Term]
+In both Ridge and Lasso, the regularization penalty sums across features from $j=1$ to $D$. We \textbf{never penalize the bias intercept $b$} (or $w_0$). The bias simply shifts the prediction up and down to match the dataset's global mean. Penalizing the bias forces predictions toward zero regardless of the physical scale.
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Regularization prevents overfitting by penalizing large weights.
+    \item Ridge ($L_2$) shrinks coefficients smoothly, stabilizing collinear features.
+    \item Lasso ($L_1$) drives non-essential weights to exact zero, performing automatic feature pruning for TinyML.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 5. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+Test your understanding of linear and regularized regression:
+
+\begin{enumerate}
+    \item \textbf{Residual and Cost Calculation}: You fit a candidate line $\hat{y} = 2.0x + 1.0$ to three points: $(1, 3), (2, 6), (3, 7)$.
+    \begin{enumerate}
+        \item Compute the predicted $\hat{y}_i$ and residual error $e_i = \hat{y}_i - y_i$ for each point.
+        \item Compute the Mean Squared Error cost $J = \frac{1}{2N} \sum e_i^2$.
+    \end{enumerate}
+
+    \item \textbf{Gradient Descent Hand Step}: A model has $w = 2.0$ and $b = 1.0$. For a single point $(x = 3.0, y = 8.0)$, compute the new parameters $w_{\text{new}}$ and $b_{\text{new}}$ after one gradient update step with learning rate $\alpha = 0.05$.
+
+    \item \textbf{Polynomial Feature Expansion}: A sensor gives a reading $x = 2.0$. If expanded using degree-3 polynomial features (with bias term included), what is the resulting feature vector $\mathbf{x}_{\text{poly}}$?
+
+    \item \textbf{Lasso vs. Ridge Selection}: You are deploying an anomaly detector to an ESP8266 microcontroller with only $80\text{ KB}$ of RAM. Your dataset contains 40 environmental metrics, but you only have memory to compute 5 features in real time. Should you use Ridge or Lasso regression to train your model? Explain why.
+
+    \item \textbf{Regularization Parameter Behavior}: What happens to the learned weights of a Ridge regression model as $\lambda \to \infty$? What does the model predict for any input $\mathbf{x}$?
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Residual and Cost Calculation}:
+    \begin{enumerate}
+        \item For each point with $\hat{y} = 2.0x + 1.0$:
+        \begin{itemize}
+            \item Point 1 $(1, 3)$: $\hat{y}_1 = 2(1) + 1 = 3.0 \implies e_1 = 3.0 - 3.0 = 0.0$.
+            \item Point 2 $(2, 6)$: $\hat{y}_2 = 2(2) + 1 = 5.0 \implies e_2 = 5.0 - 6.0 = -1.0$.
+            \item Point 3 $(3, 7)$: $\hat{y}_3 = 2(3) + 1 = 7.0 \implies e_3 = 7.0 - 7.0 = 0.0$.
+        \end{itemize}
+        \item Sum of squared errors:
+        \begin{equation*}
+        \sum_{i=1}^3 e_i^2 = 0.0^2 + (-1.0)^2 + 0.0^2 = 1.0
+        \end{equation*}
+        Cost $J = \frac{1}{2N} \sum e_i^2 = \frac{1}{2 \times 3} (1.0) = \frac{1}{6} \approx 0.1667$.
+    \end{enumerate}
+
+    \item \textbf{Gradient Descent Hand Step}:
+    \begin{itemize}
+        \item Prediction: $\hat{y} = 2.0(3.0) + 1.0 = 6.0 + 1.0 = 7.0$.
+        \item Error: $\hat{y} - y = 7.0 - 8.0 = -1.0$.
+        \item Gradients ($N=1$):
+        \begin{align*}
+        \frac{\partial J}{\partial w} &= (\hat{y} - y) x = (-1.0) \times 3.0 = -3.0 \\
+        \frac{\partial J}{\partial b} &= (\hat{y} - y) = -1.0
+        \end{align*}
+        \item Updates ($\alpha = 0.05$):
+        \begin{align*}
+        w_{\text{new}} &= 2.0 - (0.05 \times -3.0) = 2.0 + 0.15 = \mathbf{2.15} \\
+        b_{\text{new}} &= 1.0 - (0.05 \times -1.0) = 1.0 + 0.05 = \mathbf{1.05}
+        \end{align*}
+    \end{itemize}
+
+    \item \textbf{Polynomial Feature Expansion}:
+    For degree 3 with bias, the terms are $[x^0, x^1, x^2, x^3]$.
+    For $x = 2.0$:
+    \begin{equation*}
+    \mathbf{x}_{\text{poly}} = [1.0, 2.0, 2.0^2, 2.0^3] = [\mathbf{1.0, 2.0, 4.0, 8.0}]
+    \end{equation*}
+
+    \item \textbf{Lasso vs. Ridge Selection}:
+    You must use \textbf{Lasso regression ($L_1$)}. Lasso drives non-essential feature weights to \textbf{exact zero}, automatically pruning them from the equation. Ridge shrinks weights to small numbers, but leaves all 40 features active, requiring the ESP8266 to read and compute math for all 40 sensors. Lasso allows you to discard 35 sensors completely.
+
+    \item \textbf{Regularization Parameter Behavior}:
+    As $\lambda \to \infty$, the penalty on weight magnitudes dominates completely over the MSE loss. To avoid an infinite penalty, the optimizer drives all feature weights to zero: $\mathbf{w} \to \mathbf{0}$.
+    The model collapses to:
+    \begin{equation*}
+    \hat{y} = \mathbf{0}^T \mathbf{x} + b = b
+    \end{equation*}
+    Since the bias $b$ is unpenalized, it converges to the global mean of the target variable: $\hat{y} = \bar{y}$. For any input $\mathbf{x}$, the model simply predicts the average of the training data.
+\end{enumerate}

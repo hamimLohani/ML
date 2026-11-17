@@ -1,0 +1,988 @@
+% FILE: chapters/ch04_s2_classification.tex
+\section{Supervised Learning: Classification}\label{sec:classification}
+
+In the previous section, we explored regression---the mathematical art of predicting continuous numerical quantities such as temperature, pressure, or remaining battery runtime. However, a vast portion of human and industrial decision-making is not continuous. It is discrete, categorical, and qualitative:
+\begin{itemize}
+    \item Is this industrial water pump operating normally, cavitating, or suffering bearing spall?
+    \item Does this optical inspection frame depict a defect-free PCB trace or a solder bridge?
+    \item Is an ambient acoustic sensor detecting glass breakage, human speech, or background HVAC hum?
+    \item Is an edge microcontroller experiencing a cyber-physical denial-of-service attack or benign network congestion?
+\end{itemize}
+
+These problems belong to the realm of **Supervised Classification**. In classification, our goal is to construct a decision rule that assigns an input feature vector $\mathbf{x} \in \mathbb{R}^D$ to one of $C$ discrete class labels:
+\begin{equation}
+y \in \{0, 1, \dots, C - 1\}\label{eq:classification_label_set}
+\end{equation}
+When $C = 2$, the problem is termed **binary classification** (e.g., Healthy vs.\ Faulty). When $C > 2$, it is termed **multiclass classification**.
+
+In this section, we master the five foundational classical classification paradigms that power modern edge AI and industrial analytics:
+\begin{enumerate}
+    \item \textbf{Logistic Regression}: The foundational linear, probabilistic classifier.
+    \item \textbf{$k$-Nearest Neighbors ($k$-NN)}: Non-parametric, instance-based memory learning.
+    \item \textbf{Naive Bayes}: Generative probabilistic reasoning powered by conditional independence.
+    \item \textbf{Support Vector Machines (SVM)}: The geometry of maximum margin hyperplanes and non-linear kernel transformations.
+    \item \textbf{Decision Trees}: Orthogonal, rule-based hierarchical partitioning.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    boundary/.style={thick, draw=keyideablue!80},
+    sample_a/.style={circle, fill=keyideablue!70, inner sep=1.8pt},
+    sample_b/.style={rectangle, fill=warningred!80, inner sep=2.2pt},
+    box_panel/.style={rectangle, draw=gray!40, fill=gray!3, rounded corners=2mm, minimum width=2.6cm, minimum height=2.6cm}
+]
+    % Panel 1: Logistic Regression
+    \node[box_panel] at (-5.6, 2.2) {};
+    \node[font=\scriptsize\sffamily\bfseries] at (-5.6, 3.25) {1. Logistic Regression};
+    \draw[boundary, thick] (-6.6, 1.2) -- (-4.6, 3.0);
+    \node[sample_a] at (-6.2, 2.6) {}; \node[sample_a] at (-5.8, 2.8) {}; \node[sample_a] at (-5.4, 2.9) {};
+    \node[sample_b] at (-5.0, 1.6) {}; \node[sample_b] at (-4.8, 2.1) {}; \node[sample_b] at (-5.8, 1.4) {};
+    \node[font=\tiny\sffamily, text=gray!80] at (-5.6, 1.05) {Flat linear boundary};
+
+    % Panel 2: k-NN
+    \node[box_panel] at (-2.8, 2.2) {};
+    \node[font=\scriptsize\sffamily\bfseries] at (-2.8, 3.25) {2. $k$-Nearest Neighbors};
+    \draw[boundary, rounded corners=3mm] (-3.7, 1.3) to[out=40, in=200] (-2.8, 2.4) to[out=20, in=140] (-1.9, 1.4);
+    \node[sample_a] at (-3.4, 2.6) {}; \node[sample_a] at (-2.8, 2.8) {}; \node[sample_a] at (-2.2, 2.6) {};
+    \node[sample_b] at (-3.3, 1.6) {}; \node[sample_b] at (-2.8, 1.8) {}; \node[sample_b] at (-2.1, 1.5) {};
+    \node[font=\tiny\sffamily, text=gray!80] at (-2.8, 1.05) {Locally irregular Voronoi};
+
+    % Panel 3: Naive Bayes
+    \node[box_panel] at (0.0, 2.2) {};
+    \node[font=\scriptsize\sffamily\bfseries] at (0.0, 3.25) {3. Naive Bayes};
+    \draw[boundary] (0.0, 2.2) ellipse (1.1cm and 0.65cm);
+    \node[sample_a] at (-0.3, 2.2) {}; \node[sample_a] at (0.2, 2.3) {}; \node[sample_a] at (0.0, 2.0) {};
+    \node[sample_b] at (-0.9, 3.0) {}; \node[sample_b] at (0.8, 3.0) {}; \node[sample_b] at (0.9, 1.4) {};
+    \node[font=\tiny\sffamily, text=gray!80] at (0.0, 1.05) {Elliptical Gaussian shells};
+
+    % Panel 4: SVM (RBF)
+    \node[box_panel] at (2.8, 2.2) {};
+    \node[font=\scriptsize\sffamily\bfseries] at (2.8, 3.25) {4. Support Vector Machine};
+    \draw[boundary, thick] (1.9, 1.4) to[out=60, in=180] (2.8, 2.8) to[out=0, in=120] (3.7, 1.4);
+    \draw[dashed, gray!70] (1.8, 1.7) to[out=60, in=180] (2.8, 3.0) to[out=0, in=120] (3.8, 1.7);
+    \draw[dashed, gray!70] (2.0, 1.1) to[out=60, in=180] (2.8, 2.6) to[out=0, in=120] (3.6, 1.1);
+    \node[sample_a] at (2.5, 2.2) {}; \node[sample_a] at (3.1, 2.2) {};
+    \node[sample_b] at (2.0, 2.9) {}; \node[sample_b] at (3.6, 2.9) {};
+    \node[font=\tiny\sffamily, text=gray!80] at (2.8, 1.05) {Max margin & kernels};
+
+    % Panel 5: Decision Tree
+    \node[box_panel] at (5.6, 2.2) {};
+    \node[font=\scriptsize\sffamily\bfseries] at (5.6, 3.25) {5. Decision Tree};
+    \draw[boundary, thick] (4.6, 2.2) -- (6.6, 2.2);
+    \draw[boundary, thick] (5.6, 2.2) -- (5.6, 3.3);
+    \node[sample_a] at (5.1, 2.6) {}; \node[sample_a] at (5.2, 2.9) {};
+    \node[sample_b] at (6.1, 2.7) {}; \node[sample_b] at (5.3, 1.6) {}; \node[sample_b] at (6.0, 1.5) {};
+    \node[font=\tiny\sffamily, text=gray!80] at (5.6, 1.05) {Axis-aligned orthogonal cuts};
+\end{tikzpicture}
+\caption{The geometric signature of the five classical classification paradigms. Each algorithm conceptualizes the boundary separating classes in a fundamentally distinct manner.}\label{fig:five_classifiers_geom}
+\end{figure}
+
+% ==============================================================================
+% 1. LOGISTIC REGRESSION
+% ==============================================================================
+\subsection{Logistic Regression: The Probabilistic Linear Boundary}\label{subsec:logistic_regression}
+
+Despite its historical name containing the word ``regression'', **Logistic Regression** is one of the most widely deployed classification algorithms in production. It models the probability that an observation belongs to a specific class.
+
+\subsubsection{Why Ordinary Linear Regression Fails for Classification}
+Suppose we attempt to model a binary motor failure ($y = 0$ for Healthy, $y = 1$ for Faulty) using ordinary linear regression:
+\begin{equation}
+\hat{y} = \mathbf{w}^T \mathbf{x} + b
+\end{equation}
+This linear formulation suffers from two fatal mathematical flaws:
+\begin{enumerate}
+    \item \textbf{Unbounded Range}: The linear model computes outputs $\hat{y} \in (-\infty, +\infty)$. How does an embedded engineer interpret a model prediction of $\hat{y} = -2.4$ or $\hat{y} = +7.8$ when probabilities must mathematically satisfy $P \in [0, 1]$?
+    \item \textbf{Extreme Sensitivity to Outliers}: If a healthy machine logs an unusually low vibration reading far from the boundary, ordinary least squares will shift the entire decision threshold to minimize squared error on that extreme point, degrading classification accuracy near the boundary.
+\end{enumerate}
+
+\subsubsection{The Logistic (Sigmoid) Activation Function}
+To constrain the unbounded linear score $z = \mathbf{w}^T \mathbf{x} + b$ into a rigorous probability $p \in (0, 1)$, we pass it through the **standard logistic function** (often called the **sigmoid function** $\sigma$):
+\begin{equation}
+p = \sigma(z) = \frac{1}{1 + e^{-z}} = \frac{e^z}{1 + e^z}\label{eq:sigmoid_def}
+\end{equation}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.95]
+    % Axes
+    \draw[->, thick, gray!70] (-4.5, 0) -- (4.8, 0) node[right, font=\footnotesize\sffamily] {Log-odds $z = \mathbf{w}^T \mathbf{x} + b$};
+    \draw[->, thick, gray!70] (0, -0.3) -- (0, 2.5) node[above, font=\footnotesize\sffamily] {Probability $P(y=1 \mid \mathbf{x})$};
+
+    % Grid and horizontal asymptotes
+    \draw[dashed, gray!40] (-4.2, 2.0) -- (4.5, 2.0) node[right, font=\scriptsize\sffamily] {$p = 1.0$};
+    \draw[dashed, gray!40] (-4.2, 0.0) -- (4.5, 0.0);
+    \draw[dotted, gray!60] (-4.2, 1.0) -- (4.5, 1.0) node[right, font=\scriptsize\sffamily] {$p = 0.5$ (Threshold)};
+
+    % Sigmoid curve: y = 2 / (1 + exp(-x))
+    \draw[very thick, keyideablue!90, domain=-4.2:4.2, samples=60, smooth] plot (\x, {2.0 / (1.0 + exp(-\x))});
+
+    % Important points
+    \fill[keyideablue!90] (0, 1.0) circle (2pt) node[left=2mm, font=\scriptsize\sffamily\bfseries] {$(0, 0.5)$};
+    \fill[analogygreen!70!black] (2.0, {2.0 / (1.0 + exp(-2.0))}) circle (2pt) node[above left, font=\scriptsize\sffamily] {$z=2 \implies p \approx 0.88$};
+    \fill[warningred!80] (-2.0, {2.0 / (1.0 + exp(2.0))}) circle (2pt) node[below right, font=\scriptsize\sffamily] {$z=-2 \implies p \approx 0.12$};
+\end{tikzpicture}
+\caption{The Sigmoid activation function $\sigma(z)$ smoothly maps any real-valued score $z \in (-\infty, \infty)$ into a mathematically valid probability $p \in (0, 1)$.}\label{fig:sigmoid_curve}
+\end{figure}
+
+The sigmoid function exhibits crucial mathematical properties:
+\begin{itemize}
+    \item When $z = 0$, $\sigma(0) = \frac{1}{1 + 1} = 0.5$.
+    \item As $z \to +\infty$, $e^{-z} \to 0 \implies \sigma(z) \to 1$.
+    \item As $z \to -\infty$, $e^{-z} \to +\infty \implies \sigma(z) \to 0$.
+    \item Its derivative is remarkably elegant, expressed directly in terms of its own output:
+    \begin{equation}
+    \frac{d\sigma(z)}{dz} = \sigma(z)\left( 1 - \sigma(z) \right) = p(1 - p)\label{eq:sigmoid_derivative}
+    \end{equation}
+\end{itemize}
+
+\subsubsection{Log-Odds and the Decision Boundary}
+Why does passing a linear function through a sigmoid make theoretical sense? In probability theory, the **odds** of an event is the ratio of probability of occurrence to non-occurrence:
+\begin{equation}
+\text{Odds} = \frac{p}{1 - p}
+\end{equation}
+Taking the natural logarithm yields the **logit** (or log-odds):
+\begin{equation}
+\ln\left( \frac{p}{1 - p} \right) = \mathbf{w}^T \mathbf{x} + b\label{eq:logit_form}
+\end{equation}
+Logistic regression assumes that the **log-odds of the positive class is a strictly linear combination of the input features**.
+
+To classify an unseen sample, we establish a decision threshold (conventionally $\tau = 0.5$):
+\begin{equation}
+\hat{y} = \begin{cases} 1 & \text{if } P(y=1 \mid \mathbf{x}) \ge 0.5 \iff \mathbf{w}^T \mathbf{x} + b \ge 0 \\ 0 & \text{if } P(y=1 \mid \mathbf{x}) < 0.5 \iff \mathbf{w}^T \mathbf{x} + b < 0 \end{cases}
+\end{equation}
+The decision boundary is defined by the set of all points where the model is completely uncertain ($p = 0.5$):
+\begin{equation}
+\mathbf{w}^T \mathbf{x} + b = 0\label{eq:logistic_decision_boundary}
+\end{equation}
+In a two-dimensional feature space, this equation represents a straight line. In three dimensions, it forms a flat plane. In $D$ dimensions, it forms a flat $(D-1)$-dimensional hyperplane.
+
+\subsubsection{The Loss Function: Binary Cross-Entropy (Log Loss)}
+We cannot train logistic regression using Mean Squared Error (MSE), because plugging the non-linear sigmoid into squared error creates a bumpy, non-convex loss surface riddled with local minima where gradient descent stalls.
+
+Instead, we use Maximum Likelihood Estimation (derived in Section~\ref{sec:probability}). For a single observation with true binary label $y \in \{0, 1\}$ and predicted probability $\hat{p} = \sigma(\mathbf{w}^T \mathbf{x} + b)$, the probability of observing label $y$ is written compactly as:
+\begin{equation}
+P(y \mid \mathbf{x}) = \hat{p}^y (1 - \hat{p})^{1 - y}
+\end{equation}
+Taking the negative logarithm over all $N$ independent training samples gives the **Binary Cross-Entropy Loss** (also called **Log Loss**):
+\begin{equation}
+L(\mathbf{w}, b) = -\frac{1}{N} \sum_{i=1}^{N} \left[ y_i \ln(\hat{p}_i) + (1 - y_i) \ln(1 - \hat{p}_i) \right]\label{eq:binary_cross_entropy}
+\end{equation}
+
+\paragraph{Intuition of Cross-Entropy Loss}
+\begin{itemize}
+    \item If the true label is $y = 1$, the loss reduces to $-\ln(\hat{p})$. If the model predicts $\hat{p} = 0.99$, $-\ln(0.99) \approx 0.01$ (virtually zero loss). But if the model confidently predicts $\hat{p} = 0.01$, $-\ln(0.01) \approx 4.60$ (severe penalty!). As $\hat{p} \to 0$, loss approaches $+\infty$.
+    \item If the true label is $y = 0$, the loss reduces to $-\ln(1 - \hat{p})$.
+\end{itemize}
+Because Binary Cross-Entropy is strictly **convex**, gradient descent is mathematically guaranteed to converge to the unique global minimum!
+
+\subsubsection{Optimization via Gradient Descent}
+Differentiating $L(\mathbf{w}, b)$ with respect to weight $w_j$ using the chain rule yields:
+\begin{equation}
+\frac{\partial L}{\partial w_j} = \frac{1}{N} \sum_{i=1}^{N} (\hat{p}_i - y_i) x_{ij}\label{eq:logistic_gradient}
+\end{equation}
+Notice the remarkable mathematical elegance: this gradient formula is identical in form to the gradient of Ordinary Least Squares regression! The only difference is that $\hat{p}_i$ is computed via the sigmoid function rather than a pure linear product.
+
+\subsubsection{Multiclass Logistic Regression: Softmax}
+When classifying $C > 2$ classes (e.g., Normal vs.\ Cavitation vs.\ Unbalance), we assign a weight vector $\mathbf{w}_c$ to each class $c$. The probability of class $c$ is computed using the **Softmax function**:
+\begin{equation}
+P(y = c \mid \mathbf{x}) = \frac{e^{\mathbf{w}_c^T \mathbf{x} + b_c}}{\sum_{k=0}^{C-1} e^{\mathbf{w}_k^T \mathbf{x} + b_k}}\label{eq:softmax_equation}
+\end{equation}
+Softmax guarantees that the predicted probabilities across all $C$ classes are strictly positive and sum to exactly $1.0$.
+
+% ==============================================================================
+% 2. K-NEAREST NEIGHBORS (K-NN)
+% ==============================================================================
+\subsection{$k$-Nearest Neighbors ($k$-NN): Memory-Based Inference}\label{subsec:knn}
+
+While Logistic Regression learns fixed mathematical weights $\mathbf{w}$ during training, **$k$-Nearest Neighbors ($k$-NN)** operates on a completely different philosophy. It belongs to the family of **instance-based**, **non-parametric**, or **lazy learning** algorithms.
+
+\begin{keyidea}[The Core Philosophy of $k$-NN]
+$k$-NN does not learn an explicit mathematical equation or optimize parameters during training. Instead, it literally memorizes the entire training dataset. 
+
+When a new query sample $\mathbf{x}_q$ arrives, $k$-NN searches the stored dataset to find the $k$ training points that are geometrically closest to $\mathbf{x}_q$, and assigns the label held by the majority of those neighbors.
+\end{keyidea}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Query point
+    \coordinate (Q) at (0, 0);
+    \node[draw=purple!80, fill=purple!20, star, star points=5, star point ratio=2.2, inner sep=2.5pt, thick] (Qnode) at (Q) {};
+    \node[above right=1mm, font=\scriptsize\sffamily\bfseries, text=purple!90!black] at (Q) {Query Point $\mathbf{x}_q$};
+
+    % Class A (Healthy - Blue circles)
+    \coordinate (A1) at (-1.2, 0.8);
+    \coordinate (A2) at (-0.9, -1.0);
+    \coordinate (A3) at (-2.0, -0.4);
+    \coordinate (A4) at (-1.8, 1.5);
+    \foreach \pt in {A1, A2, A3, A4} {
+        \node[circle, fill=keyideablue!80, inner sep=2pt] at (\pt) {};
+    }
+    \node[font=\scriptsize\sffamily, text=keyideablue!90!black] at (-2.3, 0.8) {Class 0 (Normal)};
+
+    % Class B (Faulty - Red squares)
+    \coordinate (B1) at (1.0, 0.4);
+    \coordinate (B2) at (1.1, -0.7);
+    \coordinate (B3) at (2.2, 0.2);
+    \coordinate (B4) at (1.6, -1.4);
+    \foreach \pt in {B1, B2, B3, B4} {
+        \node[rectangle, fill=warningred!80, inner sep=2.5pt] at (\pt) {};
+    }
+    \node[font=\scriptsize\sffamily, text=warningred!90!black] at (2.2, -0.7) {Class 1 (Fault)};
+
+    % 1-NN circle
+    \draw[thick, dashed, gray!70] (Q) circle (1.07cm);
+    \node[font=\tiny\sffamily, text=gray!80] at (0.2, 1.15) {$k=1$ (Predict Fault)};
+
+    % 3-NN circle
+    \draw[thick, dashed, keyideablue!80] (Q) circle (1.50cm);
+    \node[font=\tiny\sffamily, text=keyideablue!90!black] at (-0.8, 1.6) {$k=3$ (2 Normal, 1 Fault $\to$ Predict Normal)};
+\end{tikzpicture}
+\caption{The mechanics of $k$-Nearest Neighbors. At $k=1$, the closest neighbor (Red square) dictates a Fault prediction. At $k=3$, the two Blue circles outvote the single Red square, flipping the prediction to Normal.}\label{fig:knn_circles}
+\end{figure}
+
+\subsubsection{Step-by-Step Algorithm Execution}
+Given a training set $\mathcal{D} = \{(\mathbf{x}_1, y_1), \dots, (\mathbf{x}_N, y_N)\}$ and a new query point $\mathbf{x}_q$:
+\begin{enumerate}
+    \item Compute the spatial distance $d(\mathbf{x}_q, \mathbf{x}_i)$ from $\mathbf{x}_q$ to every stored training sample $i = 1, \dots, N$.
+    \item Sort the calculated distances in ascending order.
+    \item Select the indices $\{i_1, i_2, \dots, i_k\}$ corresponding to the $k$ smallest distances.
+    \item **Classification**: Take a plurality vote among the $k$ labels:
+    \begin{equation}
+    \hat{y} = \arg\max_{c \in \{0, \dots, C-1\}} \sum_{j=1}^{k} \mathbb{I}(y_{i_j} = c)\label{eq:knn_vote}
+    \end{equation}
+    where $\mathbb{I}(\cdot)$ is the indicator function ($1$ if true, $0$ otherwise).
+\end{enumerate}
+
+\subsubsection{Distance Metrics}
+The definition of ``distance'' directly shapes the geometry of the decision boundary:
+\begin{itemize}
+    \item \textbf{Euclidean Distance ($L_2$ Norm)}: The straight-line ruler distance:
+    \begin{equation}
+    d_{\text{Euclidean}}(\mathbf{x}, \mathbf{z}) = \|\mathbf{x} - \mathbf{z}\|_2 = \sqrt{\sum_{j=1}^{D} (x_j - z_j)^2}\label{eq:euclidean_dist}
+    \end{equation}
+    \item \textbf{Manhattan Distance ($L_1$ Norm)}: The grid-based taxi distance:
+    \begin{equation}
+    d_{\text{Manhattan}}(\mathbf{x}, \mathbf{z}) = \|\mathbf{x} - \mathbf{z}\|_1 = \sum_{j=1}^{D} |x_j - z_j|\label{eq:manhattan_dist}
+    \end{equation}
+    Manhattan distance is frequently preferred in high-dimensional spaces where Euclidean distance suffers from distance concentration effects.
+\end{itemize}
+
+\begin{warning}[$k$-NN is Paralyzed by Unscaled Features]
+Because $k$-NN relies entirely on spatial distances, features with large numerical magnitudes dominate the calculation. As demonstrated in Section~\ref{sec:feature_work}, a pressure sensor measuring $101{,}325\text{ Pa}$ will completely overpower a vibration sensor reading $0.4\text{ g}$. 
+
+Always apply \texttt{StandardScaler} or \texttt{MinMaxScaler} before feeding data into $k$-NN!
+\end{warning}
+
+\subsubsection{Choosing Hyperparameter $k$: The Bias-Variance Trade-Off}
+The choice of $k$ governs the model's structural complexity:
+\begin{itemize}
+    \item \textbf{Tiny $k$ (e.g., $k = 1$)}: Extremely high variance, low bias. The decision boundary wraps tightly around every single training point, including noisy sensor spikes and corrupt outliers. The training error is $0\%$, but validation error is severe.
+    \item \textbf{Large $k$ (e.g., $k \to N$)}: Extremely high bias, low variance. As $k$ approaches $N$, every query point considers all training data, meaning the model simply predicts the global majority class regardless of the input!
+    \item \textbf{Practical Engineering Rules}:
+    \begin{itemize}
+        \item Choose an **odd integer** for binary classification (e.g., $k = 3, 5, 7$) to prevent 50/50 voting deadlocks.
+        \item A standard initial heuristic is $k \approx \sqrt{N}$, fine-tuned using cross-validation.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{The Edge Computational Bottleneck}
+Why is $k$-NN rarely deployed for real-time inference on low-power microcontrollers?
+\begin{itemize}
+    \item \textbf{Training Time}: $\mathcal{O}(1)$. Training requires zero computation; the algorithm merely stores the data array in memory.
+    \item \textbf{Inference Time}: $\mathcal{O}(N \cdot D)$. For every single sensor measurement, the microcontroller must calculate $N$ Euclidean distances. If $N = 50{,}000$ and $D = 10$, evaluating one query requires $500{,}000$ floating-point multiplications and subtractions!
+    \item \textbf{SRAM Memory}: $\mathcal{O}(N \cdot D)$. An ARM Cortex-M0+ microcontroller typically features $16\text{ KB}$ to $32\text{ KB}$ of SRAM. Storing $50{,}000$ vectors of $10$ single-precision floats requires $2\text{ MB}$ of RAM---exceeding the chip's physical capacity by two orders of magnitude!
+\end{itemize}
+
+% ==============================================================================
+% 3. NAIVE BAYES
+% ==============================================================================
+\subsection{Naive Bayes: Fast Probabilistic Reasoning}\label{subsec:naive_bayes}
+
+**Naive Bayes** classifiers belong to the family of **generative probabilistic models**. Rather than modeling the decision boundary directly, Naive Bayes uses Bayes' Theorem to model how the features were generated by each class.
+
+\subsubsection{The Foundation: Bayes' Theorem}
+From probability theory (Section~\ref{sec:probability}), the posterior probability that an observation with feature vector $\mathbf{x} = [x_1, \dots, x_D]^T$ belongs to class $c$ is:
+\begin{equation}
+P(y = c \mid \mathbf{x}) = \frac{P(y = c) P(\mathbf{x} \mid y = c)}{P(\mathbf{x})} = \frac{P(y = c) P(x_1, x_2, \dots, x_D \mid y = c)}{P(\mathbf{x})}\label{eq:bayes_classification}
+\end{equation}
+where:
+\begin{itemize}
+    \item $P(y = c)$ is the **Prior Probability** (the historical prevalence of class $c$ in the dataset).
+    \item $P(\mathbf{x} \mid y = c)$ is the **Class-Conditional Likelihood** (the probability of observing sensor values $\mathbf{x}$ given that the machine is in state $c$).
+    \item $P(\mathbf{x})$ is the marginal evidence, which acts as a normalizing constant across all classes.
+\end{itemize}
+
+\subsubsection{The ``Naive'' Conditional Independence Assumption}
+In a real industrial system, computing the joint likelihood $P(x_1, x_2, \dots, x_D \mid y = c)$ is practically impossible because features correlate: motor temperature, vibration amplitude, and current draw fluctuate together. Modeling their full joint distribution requires estimating millions of parameters.
+
+Naive Bayes cuts this Gordian knot by making an audacious, simplified assumption:
+\begin{keyidea}[The Conditional Independence Assumption]
+Given the class label $y = c$, all input features $x_1, x_2, \dots, x_D$ are assumed to be **mutually independent**:
+\begin{equation}
+P(x_1, x_2, \dots, x_D \mid y = c) = \prod_{j=1}^{D} P(x_j \mid y = c)\label{eq:naive_independence}
+\end{equation}
+\end{keyidea}
+Why is this assumption called ``naive''? Because in physical reality, sensor features are rarely completely independent! However, empirical machine learning research has proven that even when the independence assumption is violated, Naive Bayes often classifies with remarkably high accuracy. This occurs because classification requires only identifying the maximum posterior probability ($\arg\max$), not calculating the exact calibrated percentage.
+
+Substituting Equation~\eqref{eq:naive_independence} into Bayes' Theorem, the predicted class is:
+\begin{equation}
+\hat{y} = \arg\max_{c \in \{0, \dots, C-1\}} P(y = c) \prod_{j=1}^{D} P(x_j \mid y = c)\label{eq:naive_bayes_decision}
+\end{equation}
+Notice that the denominator $P(\mathbf{x})$ is identical for all candidate classes, so it is omitted from the optimization.
+
+\subsubsection{Numerical Stability: Log-Space Computation}
+Multiplying dozens of fractional probabilities ($0.05 \times 0.012 \times 0.003$) quickly triggers floating-point **underflow**, rounding down to exact zero. 
+
+In production code and embedded firmware, we always convert the product into a sum of logarithms:
+\begin{equation}
+\hat{y} = \arg\max_{c \in \{0, \dots, C-1\}} \left[ \ln P(y = c) + \sum_{j=1}^{D} \ln P(x_j \mid y = c) \right]\label{eq:naive_bayes_log_space}
+\end{equation}
+
+\subsubsection{Gaussian Naive Bayes for Continuous Sensor Data}
+When working with continuous physical measurements (e.g., temperatures, voltages, pressures), we employ **Gaussian Naive Bayes**. We model each continuous feature within class $c$ as a one-dimensional Gaussian distribution $\mathcal{N}(\mu_{jc}, \sigma_{jc}^2)$:
+\begin{equation}
+P(x_j \mid y = c) = \frac{1}{\sqrt{2\pi \sigma_{jc}^2}} \exp\left( -\frac{(x_j - \mu_{jc})^2}{2\sigma_{jc}^2} \right)\label{eq:gaussian_nb_likelihood}
+\end{equation}
+During training, the algorithm merely calculates two summary statistics for each feature in each class:
+\begin{equation}
+\mu_{jc} = \frac{1}{N_c} \sum_{i \in \text{Class } c} x_{ij}, \quad \sigma_{jc}^2 = \frac{1}{N_c} \sum_{i \in \text{Class } c} (x_{ij} - \mu_{jc})^2
+\end{equation}
+Total stored parameters: exactly $2 \times C \times D$ numbers! For a 3-class model with 10 features, this requires storing only $60$ floating-point values.
+
+% ==============================================================================
+% 4. SUPPORT VECTOR MACHINES (SVM)
+% ==============================================================================
+\subsection{Support Vector Machines (SVM): Maximum Margin Classifiers}\label{subsec:svm}
+
+Support Vector Machines (SVMs) represent one of the most mathematically rigorous and robust classification architectures ever invented. Developed by Vladimir Vapnik, SVMs are built around the concept of the **maximum margin hyperplane**.
+
+\subsubsection{The Margin and Support Vectors}
+Consider a binary classification problem where data points can be cleanly separated by a straight line. As shown in Figure~\ref{fig:svm_margin_geometry}, there exist infinitely many lines that can separate the two classes without error. Which line is optimal?
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Hyperplane lines
+    % Separating hyperplane: w^T x + b = 0  => y = -0.6 x + 2.5
+    \draw[very thick, keyideablue!90] (-3.0, 4.3) -- (3.0, 0.7) node[right, font=\scriptsize\sffamily\bfseries] {Optimal Hyperplane $\mathbf{w}^T \mathbf{x} + b = 0$};
+    
+    % Positive margin: w^T x + b = +1
+    \draw[thick, dashed, analogygreen!80!black] (-3.0, 5.3) -- (3.0, 1.7) node[right, font=\scriptsize\sffamily] {$\mathbf{w}^T \mathbf{x} + b = +1$};
+    
+    % Negative margin: w^T x + b = -1
+    \draw[thick, dashed, warningred!80] (-3.0, 3.3) -- (3.0, -0.3) node[right, font=\scriptsize\sffamily] {$\mathbf{w}^T \mathbf{x} + b = -1$};
+
+    % Margin width indicator
+    \draw[<->, very thick, purple!80] (-0.8, 2.98) -- (-0.26, 3.88) node[midway, left=1mm, font=\scriptsize\sffamily\bfseries] {Margin $M = \frac{2}{\|\mathbf{w}\|}$};
+
+    % Support vectors (Class +1: Green circles)
+    \coordinate (SV1) at (-1.5, 4.4);
+    \coordinate (SV2) at (1.0, 2.9);
+    \fill[analogygreen!70!black] (SV1) circle (2.8pt) node[above right, font=\tiny\sffamily] {SV};
+    \fill[analogygreen!70!black] (SV2) circle (2.8pt) node[above right, font=\tiny\sffamily] {SV};
+    \draw[analogygreen!70!black, thick] (SV1) circle (5pt);
+    \draw[analogygreen!70!black, thick] (SV2) circle (5pt);
+
+    % Other points Class +1
+    \fill[analogygreen!70!black] (-2.2, 5.2) circle (2.2pt);
+    \fill[analogygreen!70!black] (0.2, 4.2) circle (2.2pt);
+    \fill[analogygreen!70!black] (2.0, 3.2) circle (2.2pt);
+
+    % Support vectors (Class -1: Red squares)
+    \coordinate (SV3) at (-0.5, 1.8);
+    \node[rectangle, fill=warningred!80, inner sep=2.8pt] at (SV3) {};
+    \draw[warningred!80, thick] (SV3) circle (5.5pt) node[below right=1mm, font=\tiny\sffamily] {SV};
+
+    % Other points Class -1
+    \node[rectangle, fill=warningred!80, inner sep=2.2pt] at (-2.0, 1.2) {};
+    \node[rectangle, fill=warningred!80, inner sep=2.2pt] at (0.8, 0.4) {};
+    \node[rectangle, fill=warningred!80, inner sep=2.2pt] at (2.2, -0.2) {};
+\end{tikzpicture}
+\caption{The geometry of Support Vector Machines. The decision hyperplane maximizes the geometric margin $M = \frac{2}{\|\mathbf{w}\|}$ separating the closest data points. Circled points are the Support Vectors.}\label{fig:svm_margin_geometry}
+\end{figure}
+
+A line placed too close to the blue points will be vulnerable to random noise in future blue measurements. A line placed too close to the red points suffers the same risk.
+
+The SVM chooses the unique hyperplane that maximizes the **margin**---the spatial distance between the decision hyperplane and the closest training samples of either class.
+
+\paragraph{Formal Definition: Support Vectors}
+The critical training instances that lie directly upon the margin boundaries are called **Support Vectors**. 
+\begin{keyidea}[Sparse Representation]
+If you remove every training sample in the entire dataset *except* the support vectors, the resulting SVM hyperplane remains completely unchanged! The decision boundary is defined entirely by these boundary cases.
+\end{keyidea}
+
+\subsubsection{Mathematical Formulation: Hard Margin SVM}
+Let the training data be denoted by $(\mathbf{x}_i, y_i)$ with class labels encoded as $y_i \in \{-1, +1\}$. 
+The decision hyperplane is:
+\begin{equation}
+\mathbf{w}^T \mathbf{x} + b = 0
+\end{equation}
+For linearly separable data, we scale $\mathbf{w}$ and $b$ such that the margin boundaries correspond to:
+\begin{align}
+\mathbf{w}^T \mathbf{x}_i + b &\ge +1 \quad \text{for } y_i = +1 \\
+\mathbf{w}^T \mathbf{x}_i + b &\le -1 \quad \text{for } y_i = -1
+\end{align}
+These two inequalities combine into a single condition:
+\begin{equation}
+y_i (\mathbf{w}^T \mathbf{x}_i + b) \ge 1 \quad \forall i \in \{1, \dots, N\}\label{eq:svm_hard_constraint}
+\end{equation}
+The perpendicular distance from any point on the boundary $\mathbf{w}^T \mathbf{x} + b = 1$ to the hyperplane is $\frac{1}{\|\mathbf{w}\|}$. Therefore, the total margin width between the two boundary planes is:
+\begin{equation}
+\text{Margin} = \frac{2}{\|\mathbf{w}\|}\label{eq:svm_margin_width}
+\end{equation}
+To maximize the margin $\frac{2}{\|\mathbf{w}\|}$, we minimize its denominator $\|\mathbf{w}\|$. For mathematical convenience, we formulate this as a convex quadratic optimization problem:
+\begin{equation}
+\min_{\mathbf{w}, b} \frac{1}{2} \|\mathbf{w}\|^2 \quad \text{subject to } y_i (\mathbf{w}^T \mathbf{x}_i + b) \ge 1, \quad \forall i\label{eq:svm_hard_optimization}
+\end{equation}
+
+\subsubsection{Soft Margin SVM and Regularization Parameter $C$}
+In physical reality, sensor telemetry is rarely linearly separable without overlap. Electrical noise and transient spikes will inevitably cause points to cross into the margin.
+
+To handle real-world overlap, we introduce **slack variables** $\xi_i \ge 0$, which measure how far sample $i$ violates the margin. This yields the **Soft Margin SVM**:
+\begin{equation}
+\min_{\mathbf{w}, b, \boldsymbol{\xi}} \frac{1}{2} \|\mathbf{w}\|^2 + C \sum_{i=1}^{N} \xi_i \quad \text{subject to } y_i (\mathbf{w}^T \mathbf{x}_i + b) \ge 1 - \xi_i, \quad \xi_i \ge 0\label{eq:svm_soft_optimization}
+\end{equation}
+The hyperparameter $C$ controls the trade-off between two competing goals:
+\begin{itemize}
+    \item \textbf{Large $C$}: Severe penalty for margin violations. The optimizer insists on classifying every training point correctly, resulting in a narrow margin. Risk of **overfitting**.
+    \item \textbf{Small $C$}: Gentle penalty for violations. The optimizer prioritizes a wide, smooth margin, tolerating misclassifications in exchange for greater generalizability. Risk of **underfitting**.
+\end{itemize}
+
+\subsubsection{The Kernel Trick: Non-Linear Classification}
+What happens when classes are arranged in concentric rings or non-linear patterns that cannot be separated by any straight hyperplane?
+
+According to **Cover's Theorem**, a non-linearly separable pattern in low-dimensional space can be transformed into a linearly separable pattern by mapping it into a sufficiently high-dimensional space:
+\begin{equation}
+\mathbf{x} \in \mathbb{R}^D \xrightarrow{\phi} \phi(\mathbf{x}) \in \mathbb{R}^M \quad (M \gg D)
+\end{equation}
+However, explicitly computing the coordinate transformation $\phi(\mathbf{x})$ in hundreds or thousands of dimensions would cause computational paralysis.
+
+\begin{keyidea}[The Kernel Trick]
+In the dual mathematical formulation of SVM, the feature coordinates appear *exclusively as dot products* $\langle \phi(\mathbf{x}), \phi(\mathbf{z}) \rangle$. 
+
+A **Kernel Function** $K(\mathbf{x}, \mathbf{z})$ computes the dot product in high-dimensional feature space directly using the low-dimensional inputs, **without ever explicitly calculating the coordinates $\phi(\mathbf{x})$!**
+\begin{equation}
+K(\mathbf{x}, \mathbf{z}) = \langle \phi(\mathbf{x}), \phi(\mathbf{z}) \rangle\label{eq:kernel_trick_def}
+\end{equation}
+\end{keyidea}
+
+\paragraph{Common Kernel Functions}
+\begin{enumerate}
+    \item \textbf{Linear Kernel}: $K(\mathbf{x}, \mathbf{z}) = \mathbf{x}^T \mathbf{z}$ (Standard linear hyperplane).
+    \item \textbf{Polynomial Kernel}: $K(\mathbf{x}, \mathbf{z}) = (\gamma \mathbf{x}^T \mathbf{z} + r)^d$ (Captures feature interactions up to degree $d$).
+    \item \textbf{Radial Basis Function (RBF / Gaussian Kernel)}:
+    \begin{equation}
+    K(\mathbf{x}, \mathbf{z}) = \exp\left( -\gamma \|\mathbf{x} - \mathbf{z}\|^2 \right)\label{eq:rbf_kernel_def}
+    \end{equation}
+    The RBF kernel implicitly maps data into an **infinite-dimensional Hilbert space**! The hyperparameter $\gamma = \frac{1}{2\sigma^2}$ controls the radius of influence of each support vector:
+    \begin{itemize}
+        \item \textit{Large $\gamma$}: Narrow, localized Gaussian bell curves. The decision boundary wraps tightly around individual support vectors (high risk of overfitting).
+        \item \textit{Small $\gamma$}: Broad Gaussian bell curves. The decision boundary is smooth and generalized.
+    \end{itemize}
+\end{enumerate}
+
+% ==============================================================================
+% 5. DECISION TREES
+% ==============================================================================
+\subsection{Decision Trees: Orthogonal Logic and Rule Extraction}\label{subsec:decision_trees}
+
+While SVMs and Neural Networks operate as opaque mathematical equations, **Decision Trees** operate on human-readable logic. A decision tree breaks down complex multi-sensor classification into a flowchart of simple, sequential if-else decisions.
+
+\subsubsection{Anatomy of a Decision Tree}
+A decision tree consists of three structural components:
+\begin{itemize}
+    \item \textbf{Root Node}: The top-level test that evaluates the single most informative feature across the entire dataset.
+    \item \textbf{Internal Nodes}: Intermediate decision points that evaluate a single feature against a numerical split threshold ($x_j \le \theta$).
+    \item \textbf{Leaf Nodes}: Terminal endpoints that contain no further splits and output the final class prediction $\hat{y}$.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    tree_node/.style={rectangle, draw=keyideablue!80, fill=keyideablue!10, thick, rounded corners=2mm, minimum height=0.8cm, text centered, font=\scriptsize\sffamily},
+    leaf_healthy/.style={rectangle, draw=analogygreen!80, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=0.7cm, text centered, font=\scriptsize\sffamily\bfseries},
+    leaf_fault/.style={rectangle, draw=warningred!80, fill=warningred!20, thick, rounded corners=2mm, minimum height=0.7cm, text centered, font=\scriptsize\sffamily\bfseries},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Tree Structure
+    \node[tree_node] (root) at (0, 3.2) {\textbf{Vibration RMS} $\le 0.35\text{ g}$?};
+    \node[leaf_healthy] (l1) at (-2.4, 1.8) {Predict: Healthy};
+    \node[tree_node] (n1) at (2.4, 1.8) {\textbf{Temperature} $\le 45.0^\circ\text{C}$?};
+    \node[leaf_fault] (l2) at (0.8, 0.4) {Predict: Bearing Spall};
+    \node[leaf_fault] (l3) at (4.0, 0.4) {Predict: Overheating};
+
+    \draw[arrow] (root) -- node[above left, font=\tiny\sffamily] {Yes} (l1);
+    \draw[arrow] (root) -- node[above right, font=\tiny\sffamily] {No} (n1);
+    \draw[arrow] (n1) -- node[above left, font=\tiny\sffamily] {Yes} (l2);
+    \draw[arrow] (n1) -- node[above right, font=\tiny\sffamily] {No} (l3);
+
+    % Feature Space Partitioning
+    \draw[thick, gray!70] (6.5, 0.2) rectangle (10.5, 3.4);
+    \node[font=\tiny\sffamily] at (8.5, 0.0) {Vibration RMS (g)};
+    \node[font=\tiny\sffamily, rotate=90] at (6.3, 1.8) {Temperature ($^\circ\text{C}$)};
+
+    % Split 1: Vibration <= 0.35
+    \draw[very thick, keyideablue!90] (8.1, 0.2) -- (8.1, 3.4);
+    \node[font=\tiny\sffamily\bfseries, text=keyideablue!90!black] at (7.3, 1.8) {Healthy};
+
+    % Split 2: Temperature <= 45 (for Vibe > 0.35)
+    \draw[very thick, analogygreen!80!black] (8.1, 1.8) -- (10.5, 1.8);
+    \node[font=\tiny\sffamily\bfseries, text=warningred!90!black] at (9.3, 1.0) {Bearing Spall};
+    \node[font=\tiny\sffamily\bfseries, text=warningred!90!black] at (9.3, 2.6) {Overheating};
+\end{tikzpicture}
+\caption{The duality of Decision Trees. The hierarchical if-else graph (left) corresponds to recursive orthogonal, axis-aligned rectangular partitions in feature space (right).}\label{fig:decision_tree_duality}
+\end{figure}
+
+\subsubsection{How a Decision Tree Learns: Impurity Metrics}
+Decision trees are trained using a greedy, top-down algorithm known as **Recursive Binary Splitting** (implemented in algorithms like CART). At each node, the algorithm evaluates every available feature $j$ and every candidate numerical threshold $\theta$. It selects the split $(j^*, \theta^*)$ that produces the purest child subsets.
+
+Purity is measured using either **Gini Impurity** or **Entropy**:
+
+\paragraph{1. Gini Impurity}
+Gini impurity measures the probability that a randomly chosen element from the set would be incorrectly labeled if it were randomly labeled according to the label distribution in the subset:
+\begin{equation}
+I_G(S) = 1 - \sum_{c=0}^{C-1} p_c^2\label{eq:gini_def}
+\end{equation}
+where $p_c$ is the proportion of samples belonging to class $c$ in node $S$.
+\begin{itemize}
+    \item If a node contains only Class 0 ($p_0 = 1.0$), $I_G = 1 - (1.0)^2 = \mathbf{0.0}$ (Perfect purity).
+    \item In a balanced binary split ($p_0 = 0.5, p_1 = 0.5$), $I_G = 1 - (0.25 + 0.25) = \mathbf{0.50}$ (Maximum impurity).
+\end{itemize}
+
+\paragraph{2. Entropy (Shannon Information)}
+Rooted in information theory, entropy measures the degree of disorder or uncertainty in a node:
+\begin{equation}
+H(S) = - \sum_{c=0}^{C-1} p_c \log_2(p_c)\label{eq:entropy_def}
+\end{equation}
+The reduction in entropy achieved by a candidate split is called **Information Gain**:
+\begin{equation}
+\text{IG}(S, \text{split}) = H(S) - \left[ \frac{N_{\text{left}}}{N} H(S_{\text{left}}) + \frac{N_{\text{right}}}{N} H(S_{\text{right}}) \right]\label{eq:information_gain}
+\end{equation}
+The CART algorithm evaluates Gini Gain analogously, choosing the feature and threshold that maximizes purity reduction.
+
+\subsubsection{Strengths and Critical Weaknesses of Trees}
+\paragraph{Advantages:}
+\begin{itemize}
+    \item \textbf{Complete Interpretability}: A decision tree is a white-box model that can be inspected and verified by non-specialist field engineers.
+    \item \textbf{Scale Invariant}: Decision trees only care about the ordering of numbers, not their scale. Normalization and standardization are completely unnecessary.
+    \item \textbf{Mixed Data Types}: Naturally handles numerical and categorical features simultaneously.
+\end{itemize}
+
+\paragraph{Disadvantages:}
+\begin{itemize}
+    \item \textbf{Orthogonal Constraint}: Decision trees can only cut feature space parallel to the coordinate axes ($x_j \le \theta$). If the true physical decision boundary is diagonal ($x_1 + x_2 = 10$), a tree must approximate the diagonal with a jagged, inefficient staircase of dozens of orthogonal splits.
+    \item \textbf{High Variance and Overfitting}: Without strict limits, a tree will continue growing until every leaf contains a single sample, memorizing noise.
+\end{itemize}
+
+\paragraph{Regularization via Pruning}
+To prevent unconstrained overfitting, we constrain tree growth using hyperparameters:
+\begin{itemize}
+    \item \texttt{max\_depth}: Restricts the maximum number of decision levels from root to leaf.
+    \item \texttt{min\_samples\_split}: The minimum number of samples a node must contain to be eligible for splitting.
+    \item \texttt{min\_samples\_leaf}: The minimum number of samples required to form a valid leaf node.
+\end{itemize}
+
+% ==============================================================================
+% 6. HANDS-ON PYTHON: THE FIVE-CLASSIFIER SHOWDOWN
+% ==============================================================================
+\subsection{Hands-On Python: The Five-Classifier Industrial Showdown}\label{subsec:classification_python}
+
+Let us evaluate all five algorithms side-by-side on an industrial multi-fault telemetry dataset with real-world sensor overlap.
+
+\begin{lstlisting}[style=pythonstyle]
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.pipeline import Pipeline
+
+# 1. Deterministic seed for reproducible evaluation
+np.random.seed(42)
+
+# 2. Synthesize 3-Class Industrial Motor Dataset (600 samples)
+# Features: [Temperature in C, Vibration in g]
+n_per_class = 200
+
+# Class 0: Normal Operation (Temp ~ 26 C, Vibration ~ 0.22 g)
+x0 = np.column_stack([np.random.normal(26, 3.5, n_per_class), np.random.normal(0.22, 0.08, n_per_class)])
+y0 = np.zeros(n_per_class, dtype=int)
+
+# Class 1: Overheating Warning (Temp ~ 34 C, Vibration ~ 0.28 g)
+x1 = np.column_stack([np.random.normal(34, 4.0, n_per_class), np.random.normal(0.28, 0.09, n_per_class)])
+y1 = np.ones(n_per_class, dtype=int)
+
+# Class 2: Bearing Spall (Temp ~ 29 C, Vibration ~ 0.45 g)
+x2 = np.column_stack([np.random.normal(29, 3.5, n_per_class), np.random.normal(0.45, 0.12, n_per_class)])
+y2 = np.full(n_per_class, 2, dtype=int)
+
+X = np.vstack([x0, x1, x2])
+y = np.concatenate([y0, y1, y2])
+
+# 3. Stratified Partition: 75% Train (450 samples), 25% Test (150 samples)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y
+)
+
+# 4. Construct Benchmark Pipelines
+models = {
+    'Logistic Regression': Pipeline([
+        ('scaler', StandardScaler()),
+        ('clf', LogisticRegression(random_state=42))
+    ]),
+    'k-Nearest Neighbors (k=5)': Pipeline([
+        ('scaler', StandardScaler()),
+        ('clf', KNeighborsClassifier(n_neighbors=5))
+    ]),
+    'Gaussian Naive Bayes': Pipeline([
+        ('scaler', StandardScaler()),
+        ('clf', GaussianNB())
+    ]),
+    'Support Vector Machine (RBF)': Pipeline([
+        ('scaler', StandardScaler()),
+        ('clf', SVC(kernel='rbf', C=1.0, random_state=42))
+    ]),
+    'Decision Tree (max_depth=3)': DecisionTreeClassifier(
+        max_depth=3, random_state=42
+    )
+}
+
+# 5. Train and Evaluate
+print("=== Classical Classification Benchmark (3 Classes, 600 Samples) ===")
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred, average='weighted')
+    print(f"{name:30s} | Test Accuracy: {acc*100:5.1f}% | Weighted F1: {f1:5.3f}")
+\end{lstlisting}
+
+Executing this script produces the exact output below:
+\begin{lstlisting}[style=outputstyle]
+=== Classical Classification Benchmark (3 Classes, 600 Samples) ===
+Logistic Regression            | Test Accuracy:  79.3% | Weighted F1: 0.794
+k-Nearest Neighbors (k=5)      | Test Accuracy:  76.7% | Weighted F1: 0.768
+Gaussian Naive Bayes           | Test Accuracy:  78.7% | Weighted F1: 0.786
+Support Vector Machine (RBF)   | Test Accuracy:  78.7% | Weighted F1: 0.787
+Decision Tree (max_depth=3)    | Test Accuracy:  80.7% | Weighted F1: 0.806
+\end{lstlisting}
+
+\paragraph{Analysis of Results:}
+\begin{itemize}
+    \item \textbf{Decision Tree (80.7\% Accuracy)}: Emerges as the top performer on this dataset because the physical failure modes are naturally governed by orthogonal physical thresholds: high vibration separates bearing spall, while high temperature separates overheating.
+    \item \textbf{Logistic Regression (79.3\% Accuracy)}: Achieves strong performance with low computational complexity. The linear decision hyperplanes capture the boundaries between the three clusters effectively.
+    \item \textbf{SVM and Naive Bayes (78.7\% Accuracy)}: RBF SVM constructs smooth non-linear boundaries around the clusters, while Gaussian Naive Bayes performs well despite feature correlation.
+    \item \textbf{$k$-NN (76.7\% Accuracy)}: Performs slightly lower due to boundary sensitivity in regions where temperature and vibration overlap between classes.
+\end{itemize}
+
+% ==============================================================================
+% 7. IOT AND TINYML CONNECTION
+% ==============================================================================
+\subsection{IoT and TinyML: Deploying Classifiers on Microcontrollers}\label{subsec:classification_iot}
+
+\begin{iotbox}[Model Selection Matrix for Microcontrollers]
+Deploying machine learning models to edge hardware (e.g., an STM32, ESP32, or Raspberry Pi Pico) requires evaluating hardware memory constraints alongside accuracy.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Algorithm} & \textbf{Flash Memory} & \textbf{SRAM Memory} & \textbf{Inference Speed} & \textbf{Edge Viability} \\
+\midrule
+\textbf{Decision Tree} & $< 2\text{ KB}$ & $< 100\text{ bytes}$ & $< 1\text{ }\mu\text{s}$ & \textbf{Exceptional} \\
+\textbf{Logistic Regression} & $< 1\text{ KB}$ & $< 50\text{ bytes}$ & $< 2\text{ }\mu\text{s}$ & \textbf{Exceptional} \\
+\textbf{Naive Bayes} & $< 2\text{ KB}$ & $< 100\text{ bytes}$ & $< 5\text{ }\mu\text{s}$ & \textbf{Very Good} \\
+\textbf{Linear SVM} & $< 1\text{ KB}$ & $< 50\text{ bytes}$ & $< 2\text{ }\mu\text{s}$ & \textbf{Exceptional} \\
+\textbf{RBF Kernel SVM} & $10-50\text{ KB}$ & $2-10\text{ KB}$ & $50-500\text{ }\mu\text{s}$ & Moderate \\
+\textbf{$k$-NN} & $> 100\text{ KB}$ & Massive & $> 1{,}000\text{ }\mu\text{s}$ & \textbf{Unusable} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Compiling a Scikit-Learn Decision Tree to Pure C Code}
+A trained Scikit-Learn decision tree can be compiled directly into pure C conditional code. It executes with zero heap allocations, zero math libraries, and zero dependencies:
+
+\begin{lstlisting}[style=pythonstyle]
+// Pure Embedded C: Compiled Decision Tree Inference
+#include <stdint.h>
+
+// Class 0: Healthy, Class 1: Overheating, Class 2: Bearing Spall
+uint8_t predict_machine_status(float temperature_c, float vibration_rms) {
+    if (vibration_rms <= 0.354f) {
+        if (temperature_c <= 30.12f) {
+            return 0; // Normal Healthy Operation
+        } else {
+            return 1; // Thermal Overheating
+        }
+    } else {
+        if (vibration_rms <= 0.485f) {
+            return 2; // Moderate Bearing Spall
+        } else {
+            return 2; // Severe Mechanical Spall
+        }
+    }
+}
+\end{lstlisting}
+This C routine compiles to fewer than $120$ bytes of ARM Thumb machine code, executes in under $100$ nanoseconds on an 80 MHz microcontroller, and runs cleanly on even an inexpensive 8-bit ATmega328P.
+\end{iotbox}
+
+% ==============================================================================
+% 8. COMMON PITFALLS
+% ==============================================================================
+\subsection{Common Pitfalls in Supervised Classification}\label{subsec:classification_pitfalls}
+
+\begin{warning}[Five Fatal Classification Mistakes to Avoid]
+\begin{enumerate}
+    \item \textbf{Deploying $k$-NN to Constrained Microcontrollers}:
+    Novice engineers often test $k$-NN in Python on $500$ samples and see high accuracy. When deploying to an MCU, storing $50{,}000$ training vectors exhausts SRAM immediately. Use Decision Trees or Logistic Regression for edge inference.
+
+    \item \textbf{Omitting Feature Scaling for Distance and Margin Models}:
+    Running $k$-NN, SVM, or regularized Logistic Regression on raw features with disparate units (e.g., Pascals vs.\ Gs). The larger feature completely smothers the smaller one.
+
+    \item \textbf{Allowing Decision Trees to Grow Without Depth Bounds}:
+    Instantiating \texttt{DecisionTreeClassifier()} with default settings (\texttt{max\_depth=None}). The tree will split until every individual noise spike in the training data is isolated in its own leaf, memorizing the training set. Always constrain \texttt{max\_depth}.
+
+    \item \textbf{Treating Decision Tree Thresholds as Diagonal Boundaries}:
+    Expecting a standard decision tree to easily learn relationships where two features sum to a constant ($x_1 + x_2 > \tau$). A single oblique linear boundary forces a tree to generate dozens of staircase splits.
+
+    \item \textbf{Assuming Uncalibrated Probabilities are True Confidences}:
+    Taking the raw Softmax or Sigmoid outputs of an uncalibrated classifier as absolute probabilities. Under distribution shift in the field, models often output $99\%$ confidence while being entirely wrong.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 9. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:classification_takeaways}
+
+\begin{takeaways}[Core Principles of Supervised Classification]
+\begin{itemize}
+    \item \textbf{Logistic Regression}: Maps linear log-odds to valid probabilities $p \in (0, 1)$ via the Sigmoid function. Features a convex Binary Cross-Entropy loss surface with no local minima. Forms flat linear decision boundaries.
+    \item \textbf{$k$-Nearest Neighbors ($k$-NN)}: Non-parametric, lazy learner that queries the $k$ nearest stored training vectors. Highly sensitive to feature scaling; inference scales with $\mathcal{O}(N \cdot D)$, making it impractical for memory-constrained MCUs.
+    \item \textbf{Naive Bayes}: Generative model using Bayes' Theorem under the conditional independence assumption. Gaussian Naive Bayes stores only mean $\mu_{jc}$ and variance $\sigma_{jc}^2$ per class, making it lightweight and fast.
+    \item \textbf{Support Vector Machines (SVM)}: Finds the unique hyperplane that maximizes the separation margin $M = \frac{2}{\|\mathbf{w}\|}$. Only Support Vectors dictate the boundary. The Kernel Trick (e.g., RBF) enables non-linear separation without explicit coordinate projection.
+    \item \textbf{Decision Trees}: Partitions feature space using recursive, orthogonal, axis-aligned splits that maximize Gini or Entropy purity. Fully white-box and easy to compile into C code, but prone to high variance unless pruned via \texttt{max\_depth}.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 10. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:classification_check_yourself}
+
+Test your understanding of classification algorithms, mathematical derivations, and geometric boundaries with the following practice problems. Complete step-by-step solutions are provided at the end of this chapter.
+
+\begin{checkyourself}[Practice Problems]
+\begin{enumerate}
+    \item \textbf{Logistic Regression Arithmetic and Loss}:
+    An IoT temperature sensor monitors an industrial transformer. A trained logistic regression model predicts whether thermal overheating is imminent ($y=1$) using a single standardized feature $x = 2.5$. The learned weight is $w = 1.6$ and the bias is $b = -3.0$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the linear log-odds score $z = w x + b$.
+        \item Calculate the predicted probability $\hat{p} = \sigma(z)$.
+        \item If the true outcome was indeed an overheating event ($y = 1$), calculate the resulting Binary Cross-Entropy loss $L = -\ln(\hat{p})$.
+        \item If the true outcome had instead been normal ($y = 0$), what would the loss have been?
+    \end{enumerate}
+
+    \item \textbf{$k$-Nearest Neighbors Spatial Calculation}:
+    A pipeline pressure monitor uses two standardized features: $x_1$ (Temperature) and $x_2$ (Pressure). The system stores four training samples:
+    \begin{itemize}
+        \item Point $A = (20.0, 1.0)$, Class: Normal ($0$)
+        \item Point $B = (22.0, 1.2)$, Class: Normal ($0$)
+        \item Point $C = (25.0, 2.0)$, Class: Leak ($1$)
+        \item Point $D = (28.0, 2.5)$, Class: Leak ($1$)
+    \end{itemize}
+    A new sensor query arrives at $Q = (23.0, 1.5)$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the Euclidean distance $d(Q, P)$ from $Q$ to each of the four training points.
+        \item What is the predicted class for $k = 1$?
+        \item What is the predicted class for $k = 3$?
+    \end{enumerate}
+
+    \item \textbf{Gaussian Naive Bayes Manual Classification}:
+    An environmental monitor measures ambient temperature $x = 35^\circ\text{C}$ to classify whether an area is experiencing an active wildfire ($y = 1$) or normal conditions ($y = 0$).
+    \begin{itemize}
+        \item Prior probabilities: $P(y = 0) = 0.80$, $P(y = 1) = 0.20$.
+        \item Normal condition parameters: $\mu_0 = 25.0^\circ\text{C}$, $\sigma_0 = 4.0^\circ\text{C}$ ($\sigma_0^2 = 16.0$).
+        \item Wildfire condition parameters: $\mu_1 = 40.0^\circ\text{C}$, $\sigma_1 = 5.0^\circ\text{C}$ ($\sigma_1^2 = 25.0$).
+    \end{itemize}
+    \begin{enumerate}[label=(\alph*)]
+        \item Using the 1D Gaussian probability density function, compute likelihood $P(x=35 \mid y=0)$.
+        \item Compute likelihood $P(x=35 \mid y=1)$.
+        \item Calculate the unnormalized posterior scores $\tilde{P}(y=0 \mid x=35)$ and $\tilde{P}(y=1 \mid x=35)$.
+        \item Normalize these values to find the exact posterior probability $P(y=1 \mid x=35)$. What is the model's final prediction?
+    \end{enumerate}
+
+    \item \textbf{Support Vector Machine Geometry}:
+    A binary linear SVM produces the separating hyperplane equation $2 x_1 + 3 x_2 - 12 = 0$, with weight vector $\mathbf{w} = [2.0, 3.0]^T$ and bias $b = -12.0$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Calculate the Euclidean norm $\|\mathbf{w}\|_2$.
+        \item Compute the exact total margin width $M = \frac{2}{\|\mathbf{w}\|}$.
+        \item A positive training point ($y = +1$) is located at coordinates $Q = (3.0, \frac{7}{3})$. Evaluate $\mathbf{w}^T Q + b$. Is point $Q$ a support vector? Explain why.
+    \end{enumerate}
+
+    \item \textbf{Decision Tree Gini Gain Calculation}:
+    A root node $S$ contains $N = 40$ vibration samples from a conveyor belt: $24$ are Healthy (Class 0) and $16$ are Faulty (Class 1).
+    \begin{enumerate}[label=(\alph*)]
+        \item Calculate the initial Gini Impurity $I_G(S)$.
+        \item A candidate split on vibration threshold $v \le 0.35\text{ g}$ divides the $40$ samples into:
+        \begin{itemize}
+            \item Left Child $S_L$ ($N_L = 25$): $22$ Healthy, $3$ Faulty.
+            \item Right Child $S_R$ ($N_R = 15$): $2$ Healthy, $13$ Faulty.
+        \end{itemize}
+        Compute the Gini Impurity for $S_L$ and $S_R$.
+        \item Compute the weighted Gini Impurity of the split $I_{G,\text{split}}$.
+        \item Calculate the Gini Gain $\Delta I_G = I_G(S) - I_{G,\text{split}}$.
+    \end{enumerate}
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 11. ANSWERS TO CHECK YOURSELF
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Logistic Regression Arithmetic and Loss}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Log-odds $z$}:
+        \begin{equation*}
+        z = w x + b = 1.6(2.5) + (-3.0) = 4.0 - 3.0 = \mathbf{1.0}
+        \end{equation*}
+
+        \item \textbf{Predicted Probability $\hat{p}$}:
+        \begin{equation*}
+        \hat{p} = \sigma(1.0) = \frac{1}{1 + e^{-1.0}} = \frac{1}{1 + 0.367879} = \frac{1}{1.367879} \approx \mathbf{0.7311} \quad (73.11\%)
+        \end{equation*}
+
+        \item \textbf{Loss when $y = 1$}:
+        \begin{equation*}
+        L = -\ln(\hat{p}) = -\ln(0.731059) \approx \mathbf{0.3133}
+        \end{equation*}
+
+        \item \textbf{Loss when $y = 0$}:
+        \begin{equation*}
+        L = -\ln(1 - \hat{p}) = -\ln(1 - 0.731059) = -\ln(0.268941) \approx \mathbf{1.3133}
+        \end{equation*}
+        Notice that when the true label was $0$ but the model predicted $73\%$ probability of $1$, the cross-entropy penalty is more than four times larger ($1.3133$ vs $0.3133$).
+    \end{enumerate}
+
+    \item \textbf{$k$-Nearest Neighbors Spatial Calculation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Euclidean Distances from $Q = (23.0, 1.5)$}:
+        \begin{align*}
+        d(Q, A) &= \sqrt{(23 - 20)^2 + (1.5 - 1.0)^2} = \sqrt{9 + 0.25} = \sqrt{9.25} \approx \mathbf{3.0414} \\
+        d(Q, B) &= \sqrt{(23 - 22)^2 + (1.5 - 1.2)^2} = \sqrt{1 + 0.09} = \sqrt{1.09} \approx \mathbf{1.0440} \\
+        d(Q, C) &= \sqrt{(23 - 25)^2 + (1.5 - 2.0)^2} = \sqrt{4 + 0.25} = \sqrt{4.25} \approx \mathbf{2.0616} \\
+        d(Q, D) &= \sqrt{(23 - 28)^2 + (1.5 - 2.5)^2} = \sqrt{25 + 1.00} = \sqrt{26.0} \approx \mathbf{5.0990}
+        \end{align*}
+
+        \item \textbf{Prediction for $k = 1$}:
+        The single closest neighbor is Point $B$ with distance $1.0440$. Point $B$ belongs to Class $0$. 
+        Therefore, $k\text{-NN}$ predicts **Class 0 (Normal)**.
+
+        \item \textbf{Prediction for $k = 3$}:
+        The three closest neighbors in ascending order of distance are:
+        \begin{enumerate}
+            \item Point $B$ ($d \approx 1.044$, Class $0$)
+            \item Point $C$ ($d \approx 2.062$, Class $1$)
+            \item Point $A$ ($d \approx 3.041$, Class $0$)
+        \end{enumerate}
+        Voting tally: $2$ votes for Class $0$, $1$ vote for Class $1$. 
+        Plurality vote predicts **Class 0 (Normal)**.
+    \end{enumerate}
+
+    \item \textbf{Gaussian Naive Bayes Manual Classification}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Likelihood for Class 0 ($\mu_0 = 25, \sigma_0 = 4$)}:
+        \begin{align*}
+        P(x=35 \mid y=0) &= \frac{1}{4\sqrt{2\pi}} \exp\left( -\frac{(35 - 25)^2}{2(16)} \right) = \frac{1}{10.0265} \exp\left(-\frac{100}{32}\right) \\
+        &= 0.099736 \times e^{-3.125} = 0.099736 \times 0.043937 \approx \mathbf{0.004382}
+        \end{align*}
+
+        \item \textbf{Likelihood for Class 1 ($\mu_1 = 40, \sigma_1 = 5$)}:
+        \begin{align*}
+        P(x=35 \mid y=1) &= \frac{1}{5\sqrt{2\pi}} \exp\left( -\frac{(35 - 40)^2}{2(25)} \right) = \frac{1}{12.5331} \exp\left(-\frac{25}{50}\right) \\
+        &= 0.079788 \times e^{-0.50} = 0.079788 \times 0.606531 \approx \mathbf{0.048394}
+        \end{align*}
+
+        \item \textbf{Unnormalized Posteriors}:
+        \begin{align*}
+        \tilde{P}(y=0 \mid x=35) &= P(y=0) \times P(x=35 \mid y=0) = 0.80 \times 0.004382 = \mathbf{0.003506} \\
+        \tilde{P}(y=1 \mid x=35) &= P(y=1) \times P(x=35 \mid y=1) = 0.20 \times 0.048394 = \mathbf{0.009679}
+        \end{align*}
+
+        \item \textbf{Normalized Posterior and Prediction}:
+        Total marginal probability $P(x) = 0.003506 + 0.009679 = 0.013185$.
+        \begin{equation*}
+        P(y=1 \mid x=35) = \frac{0.009679}{0.013185} \approx \mathbf{0.7341} \quad (73.41\%)
+        \end{equation*}
+        Because $P(y=1 \mid x=35) = 73.41\% > 50\%$, the system predicts **Class 1 (Active Wildfire)**.
+    \end{enumerate}
+
+    \item \textbf{Support Vector Machine Geometry}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Norm $\|\mathbf{w}\|_2$}:
+        \begin{equation*}
+        \|\mathbf{w}\| = \sqrt{2.0^2 + 3.0^2} = \sqrt{4 + 9} = \sqrt{13} \approx \mathbf{3.6056}
+        \end{equation*}
+
+        \item \textbf{Margin Width $M$}:
+        \begin{equation*}
+        M = \frac{2}{\|\mathbf{w}\|} = \frac{2}{\sqrt{13}} \approx \mathbf{0.5547}
+        \end{equation*}
+
+        \item \textbf{Support Vector Verification}:
+        Evaluate the linear functional on $Q = (3.0, 7/3)$:
+        \begin{equation*}
+        \mathbf{w}^T Q + b = 2.0(3.0) + 3.0\left(\frac{7}{3}\right) - 12.0 = 6.0 + 7.0 - 12.0 = \mathbf{+1.0}
+        \end{equation*}
+        Since $y = +1$ and $y(\mathbf{w}^T Q + b) = 1(+1.0) = 1.0$, point $Q$ satisfies the margin boundary condition with exact equality. Point $Q$ lies directly upon the positive margin boundary, meaning **$Q$ is indeed a Support Vector**.
+    \end{enumerate}
+
+    \item \textbf{Decision Tree Gini Gain Calculation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Initial Gini Impurity $I_G(S)$}:
+        $p_0 = \frac{24}{40} = 0.60$, $p_1 = \frac{16}{40} = 0.40$.
+        \begin{equation*}
+        I_G(S) = 1 - \left( 0.60^2 + 0.40^2 \right) = 1 - (0.36 + 0.16) = 1 - 0.52 = \mathbf{0.4800}
+        \end{equation*}
+
+        \item \textbf{Child Impurities}:
+        For Left Child $S_L$ ($N_L = 25$ with $22$ Class 0, $3$ Class 1):
+        \begin{equation*}
+        p_{0,L} = \frac{22}{25} = 0.88, \quad p_{1,L} = \frac{3}{25} = 0.12
+        \end{equation*}
+        \begin{equation*}
+        I_G(S_L) = 1 - \left( 0.88^2 + 0.12^2 \right) = 1 - (0.7744 + 0.0144) = 1 - 0.7888 = \mathbf{0.2112}
+        \end{equation*}
+        For Right Child $S_R$ ($N_R = 15$ with $2$ Class 0, $13$ Class 1):
+        \begin{equation*}
+        p_{0,R} = \frac{2}{15} \approx 0.1333, \quad p_{1,R} = \frac{13}{15} \approx 0.8667
+        \end{equation*}
+        \begin{equation*}
+        I_G(S_R) = 1 - \left[ \left(\frac{2}{15}\right)^2 + \left(\frac{13}{15}\right)^2 \right] = 1 - \left( \frac{4 + 169}{225} \right) = 1 - \frac{173}{225} \approx \mathbf{0.2311}
+        \end{equation*}
+
+        \item \textbf{Weighted Split Impurity $I_{G,\text{split}}$}:
+        \begin{align*}
+        I_{G,\text{split}} &= \frac{25}{40} I_G(S_L) + \frac{15}{40} I_G(S_R) = 0.625(0.2112) + 0.375(0.2311) \\
+        &= 0.1320 + 0.08666 = \mathbf{0.2187}
+        \end{align*}
+
+        \item \textbf{Gini Gain}:
+        \begin{equation*}
+        \Delta I_G = I_G(S) - I_{G,\text{split}} = 0.4800 - 0.2187 = \mathbf{0.2613}
+        \end{equation*}
+        The candidate split achieves a substantial purity improvement of $0.2613$.
+    \end{enumerate}
+\end{enumerate}

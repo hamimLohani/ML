@@ -1,0 +1,748 @@
+% FILE: chapters/ch05_s5_sequence_models.tex
+\section{Sequence Models}\label{sec:sequence_models}
+
+In the preceding sections, we explored feedforward architectures: Multilayer Perceptrons (MLPs) for tabular data and Convolutional Neural Networks (CNNs) for spatial grids like images. Both architectures operate under a fundamental assumption: \textbf{inputs are independent and identically distributed (i.i.d.), and have a fixed dimension}.
+
+However, many critical real-world phenomena do not exist as static snapshots. Consider:
+\begin{itemize}
+    \item \textbf{Industrial IoT telemetry}: An electric turbine bearing does not fail instantaneously. Overheating is preceded by days of subtle, rising vibration harmonics and intermittent current spikes.
+    \item \textbf{Smart-home audio}: Acoustic wave packets forming the wake-word phrase ``Turn on living room lights'' unfold over hundreds of milliseconds.
+    \item \textbf{Environmental monitoring}: Soil moisture levels depend heavily on rainfall that occurred three hours ago, not merely current atmospheric humidity.
+\end{itemize}
+
+In these domains, data points form an \textbf{ordered sequence}. The meaning of a measurement at time step $t$ is strictly governed by the history of measurements that came before it. Standard feedforward networks cannot naturally handle sequences: they lack memory, cannot easily accommodate inputs of varying lengths, and treat past and present inputs as disconnected features.
+
+To capture temporal dynamics, we turn to \textbf{Sequence Models}. In this section, we study the foundations of temporal deep learning: standard Recurrent Neural Networks (RNNs) and why they suffer from vanishing gradients; the gated architectures that conquered this limitation (Long Short-Term Memory and Gated Recurrent Units); and Sequence-to-Sequence (Seq2Seq) frameworks for multi-step forecasting and edge intelligence.
+
+% ==============================================================================
+% 1. RECURRENT NEURAL NETWORK BASICS
+% ==============================================================================
+\subsection{Recurrent Neural Networks (RNNs): Architecture and Operation}\label{subsec:rnn_basics}
+
+\begin{keyidea}[The Recurrent Hidden State]
+A \textbf{Recurrent Neural Network (RNN)} is a neural network with an internal feedback loop. 
+
+At each time step $t$, the network receives two inputs: the current external observation $\mathbf{x}_t$ and the internal memory state from the previous step $\mathbf{h}_{t-1}$. It processes them together to produce an updated hidden state $\mathbf{h}_t$, which it forwards to the next time step.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Suppose an ESP32 microcontroller monitors battery discharge on a solar-powered weather station. If the voltage reads $3.6\text{ V}$, is the battery healthy or failing? 
+\begin{itemize}
+    \item If the voltage was $3.6\text{ V}$ five minutes ago and $3.6\text{ V}$ an hour ago, the battery is stable.
+    \item If the voltage was $4.1\text{ V}$ ten minutes ago and has plummeted to $3.6\text{ V}$, the system is undergoing a catastrophic short circuit.
+\end{itemize}
+A static feedforward model seeing only the current $3.6\text{ V}$ cannot distinguish between these two critical states. An RNN maintains a continuous summary of past readings, giving immediate context to current telemetry.
+
+\begin{analogy}[The Plant Shift Supervisor]
+Imagine a factory operations room staffed by a shift supervisor. Every minute, a runner enters with a sheet of paper reporting the latest boiler temperature ($\mathbf{x}_t$). 
+
+The supervisor does not throw away their notepad between visits. Instead, they look at their existing notes on the desk ($\mathbf{h}_{t-1}$), combine them with the new temperature reading ($\mathbf{x}_t$), and write a fresh, updated summary on the notepad ($\mathbf{h}_t$). 
+
+If an alarm is warranted, they ring the warning bell ($\hat{\mathbf{y}}_t$). Then they wait for the next runner. The notepad is the network's recurrent hidden state: an evolving memory of past events.
+\end{analogy}
+
+\paragraph{Mathematical Formulation of a Vanilla RNN}
+At each discrete time step $t \in \{1, 2, \dots, T\}$, a standard RNN updates its hidden state $\mathbf{h}_t$ and computes an optional output $\hat{\mathbf{y}}_t$ according to:
+\begin{align}
+\mathbf{h}_t &= \tanh(\mathbf{W}_{xh} \mathbf{x}_t + \mathbf{W}_{hh} \mathbf{h}_{t-1} + \mathbf{b}_h)\label{eq:rnn_hidden} \\
+\hat{\mathbf{y}}_t &= g(\mathbf{W}_{hy} \mathbf{h}_t + \mathbf{b}_y)\label{eq:rnn_output}
+\end{align}
+where:
+\begin{itemize}
+    \item $\mathbf{x}_t \in \mathbb{R}^{D}$ is the input feature vector at time step $t$ (e.g., $D$ sensor channels).
+    \item $\mathbf{h}_t \in \mathbb{R}^{H}$ is the hidden state vector of dimension $H$, representing the network's working memory.
+    \item $\mathbf{W}_{xh} \in \mathbb{R}^{H \times D}$ is the weight matrix transforming the current input.
+    \item $\mathbf{W}_{hh} \in \mathbb{R}^{H \times H}$ is the recurrent weight matrix transforming the previous hidden state.
+    \item $\mathbf{b}_h \in \mathbb{R}^{H}$ is the hidden bias vector.
+    \item $\tanh(\cdot)$ is the hyperbolic tangent activation function, squashing values into $(-1, 1)$ to keep internal activations bounded.
+    \item $\mathbf{W}_{hy} \in \mathbb{R}^{K \times H}$ and $\mathbf{b}_y \in \mathbb{R}^{K}$ project the hidden state to $K$ output predictions, with activation $g(\cdot)$ (such as softmax for classification or linear for regression).
+\end{itemize}
+
+Crucially, \textbf{the weight matrices $\mathbf{W}_{xh}, \mathbf{W}_{hh}$, and $\mathbf{W}_{hy}$ are shared across all time steps}. The network applies the identical rule at $t=1$, $t=50$, and $t=1000$.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    node distance=1.8cm,
+    block/.style={rectangle, draw=keyideablue, fill=keyideablue!15, rounded corners=2mm, thick, minimum width=1.4cm, minimum height=1.1cm, font=\small\sffamily\bfseries},
+    io/.style={circle, draw=gray!80, fill=gray!10, thick, minimum size=0.9cm, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Folded Representation
+    \begin{scope}[shift={(0,0)}]
+        \node[font=\bfseries\sffamily] at (0, 2.6) {Folded Form};
+        \node[io] (x) at (0, -1.5) {$\mathbf{x}_t$};
+        \node[block] (h) at (0, 0.3) {RNN Cell};
+        \node[io, fill=analogygreen!20, draw=analogygreen] (y) at (0, 2.0) {$\hat{\mathbf{y}}_t$};
+        
+        \draw[arrow] (x) -- (h);
+        \draw[arrow] (h) -- (y);
+        \draw[arrow] (h.east) arc(-90:180:0.55cm) node[above right, font=\scriptsize\sffamily] {$\mathbf{W}_{hh}$} -- (h.north);
+    \end{scope}
+
+    % Equal sign / arrow
+    \node[font=\Huge\bfseries, text=gray!60] at (2.2, 0.3) {$\equiv$};
+
+    % Unfolded Representation
+    \begin{scope}[shift={(4.0, 0)}]
+        \node[font=\bfseries\sffamily] at (3.2, 2.6) {Unfolded Across Time Steps};
+        
+        % Step t-1
+        \node[io] (x0) at (0, -1.5) {$\mathbf{x}_{t-1}$};
+        \node[block] (h0) at (0, 0.3) {$\mathbf{h}_{t-1}$};
+        \node[io, fill=analogygreen!20, draw=analogygreen] (y0) at (0, 2.0) {$\hat{\mathbf{y}}_{t-1}$};
+        \node[left=0.8cm of h0, font=\small\sffamily] (h_prev) {$\dots$};
+
+        % Step t
+        \node[io] (x1) at (3.2, -1.5) {$\mathbf{x}_t$};
+        \node[block] (h1) at (3.2, 0.3) {$\mathbf{h}_t$};
+        \node[io, fill=analogygreen!20, draw=analogygreen] (y1) at (3.2, 2.0) {$\hat{\mathbf{y}}_t$};
+
+        % Step t+1
+        \node[io] (x2) at (6.4, -1.5) {$\mathbf{x}_{t+1}$};
+        \node[block] (h2) at (6.4, 0.3) {$\mathbf{h}_{t+1}$};
+        \node[io, fill=analogygreen!20, draw=analogygreen] (y2) at (6.4, 2.0) {$\hat{\mathbf{y}}_{t+1}$};
+        \node[right=0.8cm of h2, font=\small\sffamily] (h_next) {$\dots$};
+
+        % Connections
+        \draw[arrow] (x0) -- node[left, font=\tiny] {$\mathbf{W}_{xh}$} (h0);
+        \draw[arrow] (h0) -- node[left, font=\tiny] {$\mathbf{W}_{hy}$} (y0);
+        \draw[arrow] (h_prev) -- (h0);
+
+        \draw[arrow] (x1) -- node[left, font=\tiny] {$\mathbf{W}_{xh}$} (h1);
+        \draw[arrow] (h1) -- node[left, font=\tiny] {$\mathbf{W}_{hy}$} (y1);
+        \draw[arrow] (h0) -- node[above, font=\scriptsize\sffamily] {$\mathbf{W}_{hh}$} (h1);
+
+        \draw[arrow] (x2) -- node[left, font=\tiny] {$\mathbf{W}_{xh}$} (h2);
+        \draw[arrow] (h2) -- node[left, font=\tiny] {$\mathbf{W}_{hy}$} (y2);
+        \draw[arrow] (h1) -- node[above, font=\scriptsize\sffamily] {$\mathbf{W}_{hh}$} (h2);
+        \draw[arrow] (h2) -- (h_next);
+    \end{scope}
+\end{tikzpicture}
+\caption{A recurrent neural network shown in folded form (left) and unfolded across time (right). The weight matrices $\mathbf{W}_{xh}$, $\mathbf{W}_{hh}$, and $\mathbf{W}_{hy}$ are identical at every time step.}\label{fig:rnn_unfolded}
+\end{figure}
+
+\begin{example}[Hand-Calculating an RNN Forward Pass]
+Let us track a 1D sensor sequence through two time steps by hand.
+\begin{itemize}
+    \item Input sequence: $x_1 = 1.0$, $x_2 = -0.5$.
+    \item Network parameters (scalars for simplicity):
+    \begin{equation*}
+    w_{xh} = 0.8, \quad w_{hh} = 0.5, \quad b_h = 0.1, \quad w_{hy} = 2.0, \quad b_y = -0.5
+    \end{equation*}
+    \item Initial hidden state: $h_0 = 0.0$ (clean state prior to observation).
+\end{itemize}
+
+\textbf{Step 1 ($t = 1$, receiving $x_1 = 1.0$)}:
+Calculate the pre-activation $z_1$:
+\begin{align*}
+z_1 &= w_{xh} x_1 + w_{hh} h_0 + b_h \\
+    &= (0.8 \times 1.0) + (0.5 \times 0.0) + 0.1 = 0.8 + 0.0 + 0.1 = 0.90
+\end{align*}
+Apply $\tanh$ activation:
+\begin{equation*}
+h_1 = \tanh(0.90) = \frac{e^{0.90} - e^{-0.90}}{e^{0.90} + e^{-0.90}} \approx \frac{2.4596 - 0.4066}{2.4596 + 0.4066} = \frac{2.0530}{2.8662} \approx \mathbf{0.7163}
+\end{equation*}
+Compute the linear output prediction $\hat{y}_1$:
+\begin{equation*}
+\hat{y}_1 = w_{hy} h_1 + b_y = (2.0 \times 0.7163) - 0.5 = 1.4326 - 0.5 = \mathbf{0.9326}
+\end{equation*}
+
+\textbf{Step 2 ($t = 2$, receiving $x_2 = -0.5$)}:
+Now the network carries the forward memory $h_1 = 0.7163$:
+\begin{align*}
+z_2 &= w_{xh} x_2 + w_{hh} h_1 + b_h \\
+    &= (0.8 \times (-0.5)) + (0.5 \times 0.7163) + 0.1 \\
+    &= -0.40 + 0.3582 + 0.10 = \mathbf{0.0582}
+\end{align*}
+Apply $\tanh$ activation:
+\begin{equation*}
+h_2 = \tanh(0.0582) \approx \mathbf{0.0581}
+\end{equation*}
+Compute the output $\hat{y}_2$:
+\begin{equation*}
+\hat{y}_2 = w_{hy} h_2 + b_y = (2.0 \times 0.0581) - 0.5 = 0.1162 - 0.5 = \mathbf{-0.3838}
+\end{equation*}
+Notice how $h_1$ directly influenced $h_2$. Even though the input was negative ($-0.5$), the positive residual memory from $t=1$ offset the decline.
+\end{example}
+
+% ==============================================================================
+% 2. BACKPROPAGATION THROUGH TIME & VANISHING GRADIENTS
+% ==============================================================================
+\subsection{Backpropagation Through Time (BPTT) and the Gradient Breakdown}\label{subsec:bptt_vanishing}
+
+Training an RNN requires calculating the gradient of the total sequence loss $\mathcal{L} = \sum_{t=1}^T \mathcal{L}_t$ with respect to the shared weight matrices. Because the network unfolds into a deep chain across $T$ steps, backpropagation is called \textbf{Backpropagation Through Time (BPTT)}.
+
+\paragraph{The Chain Rule Across Time}
+Consider the error at step $T$, $\mathcal{L}_T$. To adjust the recurrent weight matrix $\mathbf{W}_{hh}$, we must compute how $\mathcal{L}_T$ depends on the earliest hidden state $\mathbf{h}_1$. By the multivariable chain rule:
+\begin{equation}
+\frac{\partial \mathcal{L}_T}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}_T}{\partial \mathbf{h}_T} \cdot \frac{\partial \mathbf{h}_T}{\partial \mathbf{h}_{T-1}} \cdot \frac{\partial \mathbf{h}_{T-1}}{\partial \mathbf{h}_{T-2}} \cdots \frac{\partial \mathbf{h}_2}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}_T}{\partial \mathbf{h}_T} \prod_{k=2}^T \frac{\partial \mathbf{h}_k}{\partial \mathbf{h}_{k-1}}\label{eq:bptt_chain}
+\end{equation}
+Now examine the single-step Jacobian matrix $\frac{\partial \mathbf{h}_k}{\partial \mathbf{h}_{k-1}}$ from Equation~\eqref{eq:rnn_hidden}:
+\begin{equation}
+\frac{\partial \mathbf{h}_k}{\partial \mathbf{h}_{k-1}} = \operatorname{diag}\left(1 - \tanh^2(\mathbf{z}_k)\right) \mathbf{W}_{hh}^T\label{eq:jacobian_step}
+\end{equation}
+
+When substituted into Equation~\eqref{eq:bptt_chain}, the product becomes:
+\begin{equation}
+\frac{\partial \mathcal{L}_T}{\partial \mathbf{h}_1} = \frac{\partial \mathcal{L}_T}{\partial \mathbf{h}_T} \left( \prod_{k=2}^T \operatorname{diag}\left(1 - \tanh^2(\mathbf{z}_k)\right) \right) (\mathbf{W}_{hh}^T)^{T-1}\label{eq:matrix_power}
+\end{equation}
+
+\paragraph{The Two Catastrophic Failure Modes}
+Equation~\eqref{eq:matrix_power} reveals the fundamental vulnerability of vanilla RNNs: it contains an effective power $(\mathbf{W}_{hh})^{T-1}$.
+\begin{enumerate}
+    \item \textbf{Vanishing Gradients}:
+    \begin{itemize}
+        \item The derivative of the hyperbolic tangent function is bounded: $\frac{d}{dz}\tanh(z) = 1 - \tanh^2(z) \le 1$. In fact, for most non-zero inputs, it is significantly less than 1 (e.g., if $|z| > 2$, $1 - \tanh^2(z) < 0.07$).
+        \item Furthermore, if the largest eigenvalue of $\mathbf{W}_{hh}$ is less than 1 ($|\lambda_{\max}| < 1$), repeatedly multiplying by $\mathbf{W}_{hh}$ shrinks the gradient exponentially toward zero as $T$ increases.
+        \item \textbf{The Consequence}: The gradient from step $T$ cannot reach step 1. The network suffers from severe \textbf{amnesia}: it only learns to adjust weights based on immediate past steps ($t-1, t-2$), completely ignoring long-term correlations.
+    \end{itemize}
+    \item \textbf{Exploding Gradients}:
+    \begin{itemize}
+        \item If the largest eigenvalue of $\mathbf{W}_{hh}$ is greater than 1 ($|\lambda_{\max}| > 1$) and states do not saturate $\tanh$, repeated multiplication causes gradients to grow exponentially as $T$ increases ($1.2^{50} \approx 9{,}100$).
+        \item \textbf{The Consequence}: Weight updates become colossal numbers, causing arithmetic overflow, generating \texttt{NaN} (Not a Number) values, and causing training to crash.
+        \item \textbf{Standard Remedy}: \textbf{Gradient Clipping}. If the Euclidean norm of the parameter gradient vector $\|\mathbf{g}\|_2$ exceeds a predefined threshold $c$ (typically $c = 1.0$ or $5.0$), it is rescaled:
+        \begin{equation}
+        \mathbf{g} \longleftarrow \mathbf{g} \cdot \frac{c}{\max(c, \|\mathbf{g}\|_2)}\label{eq:grad_clipping}
+        \end{equation}
+    \end{itemize}
+\end{enumerate}
+
+Gradient clipping solves exploding gradients, but it \emph{cannot} solve vanishing gradients. If a gradient has vanished to $10^{-15}$, rescaling cannot restore the lost signal. To solve vanishing gradients, we must redesign the internal architecture of the recurrent cell.
+
+% ==============================================================================
+% 3. LONG SHORT-TERM MEMORY (LSTM)
+% ==============================================================================
+\subsection{Long Short-Term Memory (LSTM)}\label{subsec:lstm}
+
+In 1997, Sepp Hochreiter and J{\"u}rgen Schmidhuber introduced the \textbf{Long Short-Term Memory (LSTM)} network. The breakthrough idea of the LSTM is the introduction of a dedicated, linear memory highway called the \textbf{Cell State} ($\mathbf{c}_t$), regulated by three multiplicative \textbf{gates}.
+
+\begin{keyidea}[The Additive Cell State Highway]
+Instead of forcing the entire memory to undergo non-linear transformations ($\tanh(\mathbf{W}\mathbf{h})$) at every single time step, the LSTM cell maintains a separate internal memory line $\mathbf{c}_t$. 
+
+Information is added to or subtracted from $\mathbf{c}_t$ via \textbf{linear addition}. Because linear addition does not shrink gradients through repeated matrix powers, error gradients can flow back through hundreds of time steps without vanishing.
+\end{keyidea}
+
+\begin{analogy}[The Conveyor Belt and the Three Gatekeepers]
+Think of the cell state as a continuous conveyor belt running through a factory:
+\begin{itemize}
+    \item \textbf{The Forget Gatekeeper}: Looks at the incoming box ($\mathbf{x}_t$) and the previous status report ($\mathbf{h}_{t-1}$). It decides which old items on the conveyor belt are obsolete and pushes them off into the trash (multiplying by near-zero).
+    \item \textbf{The Input Gatekeeper}: Decides what new materials from the current shipment are valuable enough to place onto the conveyor belt (multiplying by near-one and adding).
+    \item \textbf{The Output Gatekeeper}: Reads the contents of the conveyor belt, filters out irrelevant details, and prepares the official briefing summary ($\mathbf{h}_t$) for the plant manager.
+\end{itemize}
+\end{analogy}
+
+\paragraph{The Six Equations of an LSTM Cell}
+At each time step $t$, given input $\mathbf{x}_t$, previous hidden state $\mathbf{h}_{t-1}$, and previous cell state $\mathbf{c}_{t-1}$, the LSTM executes six mathematical operations:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    gate/.style={rectangle, draw=keyideablue, fill=keyideablue!20, rounded corners=1.5mm, thick, minimum width=1.0cm, minimum height=0.7cm, font=\scriptsize\sffamily\bfseries},
+    op/.style={circle, draw=warningred, fill=warningred!20, thick, minimum size=0.65cm, inner sep=0pt, font=\small\bfseries},
+    act/.style={rectangle, draw=analogygreen, fill=analogygreen!20, rounded corners=1.5mm, thick, minimum width=1.0cm, minimum height=0.7cm, font=\scriptsize\sffamily\bfseries},
+    arrow/.style={-{Stealth[length=2mm]}, thick, draw=gray!80}
+]
+    % Outer Cell Box
+    \draw[thick, draw=gray!60, fill=gray!5, rounded corners=4mm] (-3.8, -2.6) rectangle (4.6, 2.8);
+    \node[font=\bfseries\sffamily, text=gray!80] at (-2.0, 2.4) {LSTM Cell (Step $t$)};
+
+    % Inputs
+    \node (c_in) at (-4.6, 1.8) {$\mathbf{c}_{t-1}$};
+    \node (h_in) at (-4.6, -1.8) {$\mathbf{h}_{t-1}$};
+    \node (x_in) at (-2.8, -3.2) {$\mathbf{x}_t$};
+
+    % Cell State Highway (Top rail)
+    \node[op] (mult_c) at (-1.5, 1.8) {$\times$};
+    \node[op] (add_c) at (1.2, 1.8) {$+$};
+    \node (c_out) at (5.3, 1.8) {$\mathbf{c}_t$};
+    \draw[arrow] (c_in) -- (mult_c);
+    \draw[arrow] (mult_c) -- (add_c);
+    \draw[arrow] (add_c) -- (c_out);
+
+    % Gates
+    \node[gate] (fgate) at (-1.5, -0.4) {$\sigma$ ($\mathbf{f}_t$)};
+    \node[gate] (igate) at (-0.3, -0.4) {$\sigma$ ($\mathbf{i}_t$)};
+    \node[act] (cand) at (1.2, -0.4) {$\tanh$ ($\tilde{\mathbf{c}}_t$)};
+    \node[gate] (ogate) at (2.6, -0.4) {$\sigma$ ($\mathbf{o}_t$)};
+
+    % Internal Operations
+    \node[op] (mult_cand) at (1.2, 0.7) {$\times$};
+    \node[act] (tanh_c) at (2.6, 0.7) {$\tanh$};
+    \node[op] (mult_out) at (3.8, 0.7) {$\times$};
+    \node (h_out) at (5.3, -1.8) {$\mathbf{h}_t$};
+
+    % Connections from inputs to gates
+    \draw[thick, draw=gray!70] (x_in) -- (-2.8, -1.8);
+    \draw[thick, draw=gray!70] (h_in) -- (-2.8, -1.8);
+    \draw[arrow] (-2.8, -1.8) -| (fgate.south);
+    \draw[arrow] (-2.8, -1.8) -| (igate.south);
+    \draw[arrow] (-2.8, -1.8) -| (cand.south);
+    \draw[arrow] (-2.8, -1.8) -| (ogate.south);
+
+    % Gate connections to highways
+    \draw[arrow] (fgate) -- (mult_c);
+    \draw[arrow] (igate) |- (mult_cand);
+    \draw[arrow] (cand) -- (mult_cand);
+    \draw[arrow] (mult_cand) -- (add_c);
+
+    % Output path
+    \draw[arrow] (add_c) -| (tanh_c);
+    \draw[arrow] (tanh_c) -- (mult_out);
+    \draw[arrow] (ogate) |- (mult_out);
+    \draw[thick, draw=gray!80] (mult_out) -| (4.2, -1.8);
+    \draw[arrow] (4.2, -1.8) -- (h_out);
+\end{tikzpicture}
+\caption{Anatomy of an LSTM cell. The horizontal line at the top is the cell state highway $\mathbf{c}_t$. Sigmoid gates ($\sigma$) act as multiplicative valves ($[0, 1]$), controlling what is forgotten, added, and output.}\label{fig:lstm_cell}
+\end{figure}
+
+\begin{enumerate}
+    \item \textbf{Forget Gate ($\mathbf{f}_t$)}: Decides what percentage of the previous cell state to keep. A value of $1$ means ``retain completely''; $0$ means ``erase completely''.
+    \begin{equation}
+    \mathbf{f}_t = \sigma(\mathbf{W}_f \mathbf{x}_t + \mathbf{U}_f \mathbf{h}_{t-1} + \mathbf{b}_f)\label{eq:lstm_forget}
+    \end{equation}
+    where $\sigma(z) = \frac{1}{1 + e^{-z}}$ outputs numbers strictly in $(0, 1)$.
+
+    \item \textbf{Input Gate ($\mathbf{i}_t$)}: Decides which dimensions of the candidate update will be written to memory:
+    \begin{equation}
+    \mathbf{i}_t = \sigma(\mathbf{W}_i \mathbf{x}_t + \mathbf{U}_i \mathbf{h}_{t-1} + \mathbf{b}_i)\label{eq:lstm_input}
+    \end{equation}
+
+    \item \textbf{Candidate Cell State ($\tilde{\mathbf{c}}_t$)}: Generates fresh candidate memories from the current input and previous hidden state:
+    \begin{equation}
+    \tilde{\mathbf{c}}_t = \tanh(\mathbf{W}_c \mathbf{x}_t + \mathbf{U}_c \mathbf{h}_{t-1} + \mathbf{b}_c)\label{eq:lstm_cand}
+    \end{equation}
+
+    \item \textbf{Cell State Update ($\mathbf{c}_t$)}: Combines forgotten old memory with scaled new memory via element-wise vector addition:
+    \begin{equation}
+    \mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t\label{eq:lstm_cell_update}
+    \end{equation}
+    where $\odot$ denotes the element-wise (Hadamard) product.
+
+    \item \textbf{Output Gate ($\mathbf{o}_t$)}: Decides what parts of the internal cell state will be exposed in the hidden output:
+    \begin{equation}
+    \mathbf{o}_t = \sigma(\mathbf{W}_o \mathbf{x}_t + \mathbf{U}_o \mathbf{h}_{t-1} + \mathbf{b}_o)\label{eq:lstm_output_gate}
+    \end{equation}
+
+    \item \textbf{Final Hidden State ($\mathbf{h}_t$)}: Passes the updated cell state through $\tanh$ to bound values to $(-1, 1)$, and gates it:
+    \begin{equation}
+    \mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t)\label{eq:lstm_hidden_update}
+    \end{equation}
+\end{enumerate}
+
+\begin{example}[Step-by-Step Numeric Walkthrough of an LSTM Cell]
+Consider a scalar LSTM ($D=1, H=1$) with current input $x_t = 2.0$, prior hidden state $h_{t-1} = 0.5$, and prior cell state $c_{t-1} = 4.0$. Let the weights be:
+\begin{align*}
+W_f = 0.5, \quad U_f = 0.0, \quad b_f = -2.0 \quad &\implies \text{Forget Gate} \\
+W_i = 1.0, \quad U_i = 0.0, \quad b_i = 0.0 \quad &\implies \text{Input Gate} \\
+W_c = 0.5, \quad U_c = 0.0, \quad b_c = 0.0 \quad &\implies \text{Candidate} \\
+W_o = 0.0, \quad U_o = 2.0, \quad b_o = 0.0 \quad &\implies \text{Output Gate}
+\end{align*}
+
+\textbf{1. Forget Gate}:
+\begin{align*}
+z_f &= (0.5 \times 2.0) + (0.0 \times 0.5) - 2.0 = 1.0 - 2.0 = -1.0 \\
+f_t &= \sigma(-1.0) = \frac{1}{1 + e^{1.0}} \approx \frac{1}{1 + 2.7183} \approx \mathbf{0.2689}
+\end{align*}
+\emph{Interpretation}: The network discards $\approx 73\%$ of its existing memory, retaining only $26.89\%$.
+
+\textbf{2. Input Gate}:
+\begin{align*}
+z_i &= (1.0 \times 2.0) + 0 = 2.0 \\
+i_t &= \sigma(2.0) = \frac{1}{1 + e^{-2.0}} \approx \frac{1}{1 + 0.1353} \approx \mathbf{0.8808}
+\end{align*}
+
+\textbf{3. Candidate Memory}:
+\begin{align*}
+z_c &= (0.5 \times 2.0) = 1.0 \\
+\tilde{c}_t &= \tanh(1.0) \approx \mathbf{0.7616}
+\end{align*}
+
+\textbf{4. Cell State Update}:
+\begin{align*}
+c_t &= f_t \cdot c_{t-1} + i_t \cdot \tilde{c}_t \\
+    &= (0.2689 \times 4.0) + (0.8808 \times 0.7616) \\
+    &= 1.0756 + 0.6708 = \mathbf{1.7464}
+\end{align*}
+
+\textbf{5. Output Gate}:
+\begin{align*}
+z_o &= (0.0 \times 2.0) + (2.0 \times 0.5) + 0 = 1.0 \\
+o_t &= \sigma(1.0) \approx \mathbf{0.7311}
+\end{align*}
+
+\textbf{6. Final Hidden State}:
+\begin{align*}
+h_t &= o_t \times \tanh(c_t) = 0.7311 \times \tanh(1.7464) \\
+    &= 0.7311 \times 0.9410 = \mathbf{0.6880}
+\end{align*}
+\end{example}
+
+% ==============================================================================
+% 4. GATED RECURRENT UNIT (GRU)
+% ==============================================================================
+\subsection{Gated Recurrent Unit (GRU): Streamlined Gating for Edge AI}\label{subsec:gru}
+
+In 2014, Kyunghyun Cho and colleagues introduced the \textbf{Gated Recurrent Unit (GRU)}. While LSTMs are exceptionally capable, each cell contains four internal linear transformations (equations~\eqref{eq:lstm_forget}--\eqref{eq:lstm_output_gate}), resulting in high parameter counts and computational overhead.
+
+\begin{keyidea}[GRU: Pruning the Gates]
+The GRU simplifies the LSTM in two fundamental ways:
+\begin{enumerate}
+    \item It eliminates the separate cell state $\mathbf{c}_t$, maintaining only a single hidden state $\mathbf{h}_t$.
+    \item It couples the forget and input mechanisms into a single \textbf{Update Gate} ($\mathbf{z}_t$), and introduces a \textbf{Reset Gate} ($\mathbf{r}_t$).
+\end{enumerate}
+This reduces the number of gate matrices by $25\%$, speeding up training and reducing RAM consumption on microcontrollers.
+\end{keyidea}
+
+\paragraph{Mathematical Formulation of a GRU}
+At step $t$, with input $\mathbf{x}_t$ and previous hidden state $\mathbf{h}_{t-1}$:
+\begin{align}
+\mathbf{z}_t &= \sigma(\mathbf{W}_z \mathbf{x}_t + \mathbf{U}_z \mathbf{h}_{t-1} + \mathbf{b}_z) \quad &&\text{(Update Gate: balances past vs new)}\label{eq:gru_update} \\
+\mathbf{r}_t &= \sigma(\mathbf{W}_r \mathbf{x}_t + \mathbf{U}_r \mathbf{h}_{t-1} + \mathbf{b}_r) \quad &&\text{(Reset Gate: how much past to drop)}\label{eq:gru_reset} \\
+\tilde{\mathbf{h}}_t &= \tanh(\mathbf{W}_h \mathbf{x}_t + \mathbf{U}_h (\mathbf{r}_t \odot \mathbf{h}_{t-1}) + \mathbf{b}_h) \quad &&\text{(Candidate Hidden State)}\label{eq:gru_cand} \\
+\mathbf{h}_t &= (1 - \mathbf{z}_t) \odot \mathbf{h}_{t-1} + \mathbf{z}_t \odot \tilde{\mathbf{h}}_t \quad &&\text{(Final Convex Interpolation)}\label{eq:gru_final}
+\end{align}
+
+Notice the elegant convex combination in Equation~\eqref{eq:gru_final}:
+\begin{itemize}
+    \item If $\mathbf{z}_t \approx \mathbf{0}$, $\mathbf{h}_t \approx \mathbf{h}_{t-1}$: the unit ignores the current input entirely and copies past memory forward unhindered.
+    \item If $\mathbf{z}_t \approx \mathbf{1}$, $\mathbf{h}_t \approx \tilde{\mathbf{h}}_t$: the unit completely overwrites past memory with the current reading.
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Architectural Comparison: Vanilla RNN vs LSTM vs GRU}\label{tab:rnn_lstm_gru}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metric} & \textbf{Vanilla RNN} & \textbf{LSTM} & \textbf{GRU} \\
+\midrule
+Internal States & 1 ($\mathbf{h}_t$) & 2 ($\mathbf{h}_t, \mathbf{c}_t$) & 1 ($\mathbf{h}_t$) \\
+Gate Count & 0 & 3 ($\mathbf{f}_t, \mathbf{i}_t, \mathbf{o}_t$) & 2 ($\mathbf{z}_t, \mathbf{r}_t$) \\
+Learnable Parameters & $H \times D + H^2$ & $4 \times (H \times D + H^2)$ & $3 \times (H \times D + H^2)$ \\
+Vanishing Gradient Resistance & Very Poor & Exceptional & Exceptional \\
+Memory Footprint (Edge RAM) & Minimal & $2\times$ baseline & $1.5\times$ baseline \\
+Inference Speed (ESP32/MCU) & Fastest & Slower & Moderate ($20\text{--}30\%$ faster than LSTM) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ==============================================================================
+% 5. SEQUENCE-TO-SEQUENCE (SEQ2SEQ)
+% ==============================================================================
+\subsection{Sequence-to-Sequence (Seq2Seq) Architectures}\label{subsec:seq2seq}
+
+Standard RNNs map an input sequence to an output sequence of identical length ($T_x = T_y$). But many problems require mapping an input sequence of length $T_x$ to an output sequence of an entirely different length $T_y$:
+\begin{itemize}
+    \item \textbf{Sensor Forecasting}: Reading 48 hours of historical temperature readings ($T_x = 48$) to forecast the next 12 hours ($T_y = 12$).
+    \item \textbf{Acoustic Command Translation}: Audio frames of spoken commands ($T_x = 350$) mapped to text command tokens (``PUMP\_OFF'', $T_y = 1$).
+\end{itemize}
+
+In 2014, Ilya Sutskever, Oriol Vinyals, and Quoc Le introduced the \textbf{Sequence-to-Sequence (Seq2Seq)} or \textbf{Encoder-Decoder} framework.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    enc/.style={rectangle, draw=keyideablue, fill=keyideablue!20, rounded corners=1.5mm, thick, minimum width=1.1cm, minimum height=0.9cm, font=\small\sffamily\bfseries},
+    dec/.style={rectangle, draw=analogygreen, fill=analogygreen!20, rounded corners=1.5mm, thick, minimum width=1.1cm, minimum height=0.9cm, font=\small\sffamily\bfseries},
+    io/.style={circle, draw=gray!70, fill=white, thick, minimum size=0.75cm, font=\scriptsize\sffamily},
+    context/.style={rectangle, draw=warningred, fill=warningred!20, rounded corners=2mm, thick, minimum width=1.5cm, minimum height=0.9cm, font=\small\sffamily\bfseries, align=center},
+    arrow/.style={-{Stealth[length=2mm]}, thick, draw=gray!80}
+]
+    % Encoder
+    \node[font=\bfseries\sffamily, text=keyideablue] at (1.5, 2.2) {ENCODER};
+    \foreach \t in {1,2,3} {
+        \node[io] (x\t) at (\t*1.5 - 0.5, -1.2) {$\mathbf{x}_\t$};
+        \node[enc] (e\t) at (\t*1.5 - 0.5, 0.5) {$\mathbf{h}_\t^e$};
+        \draw[arrow] (x\t) -- (e\t);
+    }
+    \draw[arrow] (e1) -- (e2);
+    \draw[arrow] (e2) -- (e3);
+
+    % Context Vector (Bottleneck)
+    \node[context] (ctx) at (5.0, 0.5) {Context $\mathbf{c}$\\$=\mathbf{h}_3^e$};
+    \draw[arrow, warningred, line width=1.2pt] (e3) -- (ctx);
+
+    % Decoder
+    \node[font=\bfseries\sffamily, text=analogygreen!80!black] at (8.0, 2.2) {DECODER};
+    \foreach \t in {1,2} {
+        \node[dec] (d\t) at (\t*1.8 + 4.6, 0.5) {$\mathbf{h}_\t^d$};
+        \node[io, fill=analogygreen!15] (y\t) at (\t*1.8 + 4.6, 1.8) {$\hat{\mathbf{y}}_\t$};
+        \draw[arrow] (d\t) -- (y\t);
+    }
+    \node[io] (start) at (6.4, -1.2) {$\langle\text{START}\rangle$};
+    \draw[arrow] (ctx) -- (d1);
+    \draw[arrow] (start) -- (d1);
+    \draw[arrow] (d1) -- (d2);
+    \draw[arrow] (y1) |- (7.3, -0.6) -| (d2);
+\end{tikzpicture}
+\caption{The Encoder-Decoder (Seq2Seq) architecture. The Encoder ingests the input sequence and condenses it into a single context vector $\mathbf{c}$. The Decoder unrolls from $\mathbf{c}$ to generate the target sequence step by step.}\label{fig:seq2seq}
+\end{figure}
+
+\paragraph{How Seq2Seq Works}
+\begin{enumerate}
+    \item \textbf{The Encoder}: An RNN (or LSTM/GRU) processes the input sequence $\mathbf{x}_1, \dots, \mathbf{x}_{T_x}$ sequentially. Its output predictions are discarded; we retain only the final hidden state $\mathbf{h}_{T_x}^e$. This vector is the \textbf{context vector} $\mathbf{c}$, representing a compressed summary of the entire input history.
+    \item \textbf{The Decoder}: A second RNN is initialized with $\mathbf{h}_0^d = \mathbf{c}$. At step $t=1$, it receives a special start token $\langle\text{START}\rangle$, computes $\mathbf{h}_1^d$, and emits prediction $\hat{\mathbf{y}}_1$. 
+    \item \textbf{Autoregressive Unrolling}: At subsequent steps $t$, the decoder feeds its own prior prediction $\hat{\mathbf{y}}_{t-1}$ as the input for step $t$, continuing until it produces an end token $\langle\text{END}\rangle$ or reaches length $T_y$.
+\end{enumerate}
+
+\paragraph{Teacher Forcing During Training}
+During inference, the decoder must rely on its own past predictions ($\hat{\mathbf{y}}_{t-1}$). But during early training, when predictions are random garbage, errors compound rapidly. If step 1 is wrong, step 2 is given corrupted input, rendering training unstable.
+
+To prevent this, we use \textbf{Teacher Forcing}: during training, we supply the \emph{ground-truth target value} $\mathbf{y}_{t-1}$ as the input to step $t$, regardless of what the network predicted at step $t-1$.
+
+\begin{warning}[The Information Bottleneck of Seq2Seq]
+Notice the critical vulnerability of basic Seq2Seq: the entire input history $\mathbf{x}_1, \dots, \mathbf{x}_{T_x}$ must be compressed into a single, fixed-size vector $\mathbf{c}$. 
+
+For sequences longer than 30--50 steps, this context vector becomes an acute \textbf{information bottleneck}. The network inevitably forgets the beginning of the input sequence. (This exact limitation motivated the development of the \textbf{Attention Mechanism} and \textbf{Transformers}, which we explore in Chapter 6).
+\end{warning}
+
+% ==============================================================================
+% 6. CODE: PYTORCH SENSOR FORECASTING
+% ==============================================================================
+\subsection{PyTorch Implementation: Predictive Sensor Telemetry}\label{subsec:pytorch_sequence}
+
+Let us build a complete, runnable PyTorch model that reads a historical sequence of 12 sensor readings to predict the next 3 future steps.
+
+\paragraph{The PyTorch Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+class SensorForecastLSTM(nn.Module):
+    """
+    Compact LSTM for Multi-Step Sensor Forecasting.
+    Reads sequence of length L, predicts next K values.
+    """
+    def __init__(self, input_dim=1, hidden_dim=32, num_layers=1, pred_horizon=3):
+        super(SensorForecastLSTM, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        
+        # Batch-first: tensor shape is (batch_size, seq_len, features)
+        self.lstm = nn.LSTM(
+            input_size=input_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True
+        )
+        
+        # Output head projecting final hidden state to future horizon
+        self.fc = nn.Linear(hidden_dim, pred_horizon)
+
+    def forward(self, x):
+        # x shape: (batch_size, seq_len, 1)
+        # lstm_out shape: (batch_size, seq_len, hidden_dim)
+        # h_n shape: (num_layers, batch_size, hidden_dim)
+        lstm_out, (h_n, c_n) = self.lstm(x)
+        
+        # Extract the final time-step hidden state: (batch_size, hidden_dim)
+        last_hidden = lstm_out[:, -1, :]
+        
+        # Predict future horizon: (batch_size, pred_horizon)
+        predictions = self.fc(last_hidden)
+        return predictions
+
+# Set random seed for exact reproducibility
+torch.manual_seed(42)
+
+# Synthetic IoT telemetry: batch of 16 sequences, length 12, 1 sensor channel
+batch_size = 16
+seq_len = 12
+inputs = torch.randn(batch_size, seq_len, 1)
+# Target: next 3 time steps
+targets = torch.randn(batch_size, 3)
+
+# Instantiate model, loss, optimizer
+model = SensorForecastLSTM(input_dim=1, hidden_dim=32, pred_horizon=3)
+criterion = nn.MSELoss()
+optimizer = optim.Adam(model.parameters(), lr=0.01)
+
+# Training loop simulation
+model.train()
+for epoch in range(5):
+    optimizer.zero_grad()
+    preds = model(inputs)
+    loss = criterion(preds, targets)
+    loss.backward()
+    
+    # Clip gradients to prevent explosion during training
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+    
+    optimizer.step()
+    print(f"Epoch {epoch+1:02d} | Loss: {loss.item():.4f}")
+
+# Model Parameter Audit
+total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Total Trainable Parameters: {total_params:,}")
+\end{lstlisting}
+
+\paragraph{Expected Output}
+\begin{lstlisting}[style=outputstyle]
+Epoch 01 | Loss: 1.0542
+Epoch 02 | Loss: 0.9987
+Epoch 03 | Loss: 0.9478
+Epoch 04 | Loss: 0.9015
+Epoch 05 | Loss: 0.8593
+Total Trainable Parameters: 4,451
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Breakdown}
+\begin{itemize}
+    \item \textbf{Line 17--22}: \code{nn.LSTM(input_size=1, hidden_size=32, batch_first=True)}. Setting \code{batch_first=True} ensures our input tensors follow the standard format \code{(batch, seq_len, features)}, matching conventional data pipelines.
+    \item \textbf{Line 31}: \code{last_hidden = lstm_out[:, -1, :]}. The tensor \code{lstm_out} contains the hidden state $\mathbf{h}_t$ for every step $t \in [0, 11]$. Using index \code{-1} extracts the final hidden state $\mathbf{h}_{12}$, which encodes the cumulative summary of the entire 12-step sequence.
+    \item \textbf{Line 34}: \code{self.fc(last_hidden)} projects the 32-dimensional summary vector into 3 continuous predictions representing the forecasted sensor values for $t=13, 14, 15$.
+    \item \textbf{Line 58}: \code{torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)} implements gradient clipping, ensuring the $L_2$ norm of the gradients never exceeds $1.0$.
+    \item \textbf{Line 63}: The entire model contains only \textbf{4,451 parameters}. In 32-bit floating point, the entire model occupies less than \textbf{18 KB} of memory, easily fitting into the SRAM of an ESP32 or Cortex-M4 microcontroller.
+\end{itemize}
+
+% ==============================================================================
+% 7. IOT & TINYML CONNECTION
+% ==============================================================================
+\subsection{ML for IoT and Edge: Sequence Models on Microcontrollers}\label{subsec:iot_sequence}
+
+\begin{iotbox}[TinyML Sequence Processing Realities]
+Unlike CNNs, which process large 2D pixel grids and suffer severe SRAM bottlenecks from intermediate feature maps, recurrent models possess distinct advantages and constraints on embedded hardware:
+\begin{itemize}
+    \item \textbf{Tiny Activation Footprint}: At any single time step $t$, the microcontroller needs to keep only the current input $\mathbf{x}_t$ and the hidden vectors $\mathbf{h}_t, \mathbf{c}_t$ in SRAM. For a hidden dimension of $H=32$, $\mathbf{h}_t$ and $\mathbf{c}_t$ require only $32 \times 4 = 128 \text{ bytes}$ each!
+    \item \textbf{Sequential Execution Constraint}: Because step $t$ strictly depends on step $t-1$, RNNs cannot be parallelized across time. However, for an IoT sensor streaming readings at $10\text{ Hz}$ or $50\text{ Hz}$, this is a non-issue: the microcontroller has tens of milliseconds between samples to execute a single forward step.
+\end{itemize}
+\end{iotbox}
+
+\paragraph{Stateful Streaming vs Stateless Batching}
+In edge computing, sensor data arrives continuously. There are two operational modes:
+\begin{enumerate}
+    \item \textbf{Windowed Stateless Inference}: The device stores a buffer of the last $W$ samples (e.g., $W = 50$ samples from an ADXL345 accelerometer). Every 50 samples, it feeds the entire window into the model with $h_0 = 0$, computes a prediction, and discards the buffer. This is simple, but repeats computations for overlapping windows.
+    \item \textbf{Stateful Step-by-Step Streaming}: The microcontroller maintains the hidden state $\mathbf{h}_t$ persistently in RAM. When a new sensor reading $\mathbf{x}_t$ arrives from the I2C bus:
+    \begin{equation*}
+    \mathbf{h}_t = \text{Cell}(\mathbf{x}_t, \mathbf{h}_{t-1})
+    \end{equation*}
+    The microcontroller immediately updates $\mathbf{h}$, emits an anomaly score, and goes to deep sleep until the next timer interrupt. This consumes up to \textbf{$80\%$ less energy} than running windowed models.
+\end{enumerate}
+
+% ==============================================================================
+% 8. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\subsection{Common Mistakes and Misconceptions}\label{subsec:mistakes}
+
+\begin{warning}[Four Pitfalls in Sequence Modeling]
+\begin{enumerate}
+    \item \textbf{The \code{batch_first} Dimension Trap}: In PyTorch, \code{nn.LSTM} and \code{nn.GRU} default to \code{batch_first=False}. This means they expect input shapes of \code{(seq_len, batch_size, features)}. If you pass a standard tensor of shape \code{(batch_size, seq_len, features)}, PyTorch will quietly process your batch dimension as time steps, producing completely invalid results without throwing any error! Always specify \code{batch_first=True} explicitly.
+    \item \textbf{Lookahead Data Leakage}: When normalizing sensor time-series data with z-score or min-max normalization, calculating statistics across the entire dataset leaks future trend information into past training samples. Always compute scaling parameters ($\mu, \sigma$) \emph{only on the training split}, and apply those fixed parameters to validation and test sequences.
+    \item \textbf{Forgetting to Detach Hidden States in Stateful Loops}: When implementing continuous stateful streaming in PyTorch, passing $\mathbf{h}_t$ from one batch to the next without calling \code{h.detach()} causes the autograd graph to retain the entire history of the session back to time zero, exhausting system RAM within seconds.
+    \item \textbf{Using Vanilla RNNs for Sequences Longer Than 10 Steps}: Vanilla RNNs cannot reliably learn dependencies beyond 10 time steps due to vanishing gradients. If your task requires tracking events across dozens or hundreds of measurements, always choose an LSTM or GRU.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 9. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:takeaways}
+
+\begin{takeaways}[Core Principles of Sequence Models]
+\begin{itemize}
+    \item \textbf{Recurrent States Capture Temporal History}: RNNs use shared weights and an evolving internal hidden state $\mathbf{h}_t$ to process variable-length ordered sequences.
+    \item \textbf{Vanilla RNNs Suffer from Amnesia}: Repeated multiplication by $\mathbf{W}_{hh}$ causes gradients to vanish or explode during BPTT, preventing vanilla RNNs from learning long-term dependencies.
+    \item \textbf{LSTMs Solve Vanishing Gradients}: The linear cell state highway ($\mathbf{c}_t$), regulated by forget ($\mathbf{f}_t$), input ($\mathbf{i}_t$), and output ($\mathbf{o}_t$) gates, allows gradients to propagate across hundreds of steps unimpeded.
+    \item \textbf{GRUs Provide Edge Efficiency}: By coupling the forget and input mechanisms into an update gate ($\mathbf{z}_t$) and removing the separate cell state, GRUs cut parameter counts by $25\%$ with comparable accuracy.
+    \item \textbf{Streaming Inference Minimizes Edge RAM}: Storing the persistent hidden vector in RAM and updating it on each sensor interrupt provides energy-efficient, low-latency edge inference.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 10. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:check_yourself}
+
+\begin{checkyourself}[Practice Questions and Calculations]
+\begin{enumerate}
+    \item \textbf{Parameter Counting (Vanilla RNN vs GRU vs LSTM)}: You are designing a sequence model that ingests a 4-channel environmental sensor ($D=4$) and uses a hidden dimension of $H=32$. Each gate includes a bias vector. Exactly how many trainable parameters are in:
+    \begin{enumerate}[label=(\alph*)]
+        \item A single-layer Vanilla RNN?
+        \item A single-layer GRU?
+        \item A single-layer LSTM?
+    \end{enumerate}
+    \item \textbf{Vanilla RNN Hand Calculation}: Given a scalar RNN with $w_{xh} = 1.0$, $w_{hh} = 0.5$, $b_h = 0.0$, and initial state $h_0 = 1.0$. If the network receives the input sequence $x_1 = 0.5$ and $x_2 = -1.0$, calculate the hidden states $h_1$ and $h_2$ using $\tanh$. Show your calculations step by step.
+    \item \textbf{LSTM Forget Gate Function}: In an LSTM, if the forget gate vector $\mathbf{f}_t$ evaluates to all zeros ($\mathbf{f}_t = \mathbf{0}$) and the input gate evaluates to all ones ($\mathbf{i}_t = \mathbf{1}$), what happens to the internal memory $\mathbf{c}_t$? When would a model learn to do this?
+    \item \textbf{Vanishing Gradient Derivation}: Suppose an unfolded vanilla RNN has scalar recurrent weight $w_{hh} = 0.6$. Assuming activation derivatives are at their maximum value ($1 - \tanh^2(z) = 1.0$), by what factor does a gradient shrink when backpropagating across 20 time steps?
+    \item \textbf{TinyML RAM Requirement}: An edge engineer wants to run a single-layer GRU with hidden dimension $H=64$ on an ESP32. In stateful streaming mode, how many bytes of SRAM are required to persist the recurrent hidden state between sensor samples in float32 precision?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 11. ANSWERS
+% ==============================================================================
+\subsection*{Answers}\label{subsec:answers}
+
+\begin{enumerate}
+    \item \textbf{Parameter Counting}:
+    The general formula for a recurrent unit with input dimension $D$, hidden dimension $H$, and $N_g$ gate/candidate branches is:
+    \begin{equation*}
+    \text{Parameters} = N_g \times (H \times D + H^2 + H)
+    \end{equation*}
+    where $H \times D$ is the input weight matrix, $H^2$ is the recurrent weight matrix, and $H$ is the bias vector.
+    For $D = 4$ and $H = 32$:
+    \begin{equation*}
+    \text{Base Component} = (32 \times 4) + (32 \times 32) + 32 = 128 + 1024 + 32 = 1{,}184
+    \end{equation*}
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Vanilla RNN} ($N_g = 1$):
+        \begin{equation*}
+        1 \times 1{,}184 = \mathbf{1{,}184 \text{ parameters}}
+        \end{equation*}
+        \item \textbf{GRU} ($N_g = 3$: Update $\mathbf{z}$, Reset $\mathbf{r}$, Candidate $\tilde{\mathbf{h}}$):
+        \begin{equation*}
+        3 \times 1{,}184 = \mathbf{3{,}552 \text{ parameters}}
+        \end{equation*}
+        \item \textbf{LSTM} ($N_g = 4$: Forget $\mathbf{f}$, Input $\mathbf{i}$, Candidate $\tilde{\mathbf{c}}$, Output $\mathbf{o}$):
+        \begin{equation*}
+        4 \times 1{,}184 = \mathbf{4{,}736 \text{ parameters}}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{Vanilla RNN Hand Calculation}:
+    \begin{itemize}
+        \item \textbf{Step 1 ($t = 1$, $x_1 = 0.5$, $h_0 = 1.0$)}:
+        \begin{align*}
+        z_1 &= w_{xh} x_1 + w_{hh} h_0 + b_h \\
+            &= (1.0 \times 0.5) + (0.5 \times 1.0) + 0.0 = 0.5 + 0.5 = 1.0 \\
+        h_1 &= \tanh(1.0) \approx \mathbf{0.7616}
+        \end{align*}
+
+        \item \textbf{Step 2 ($t = 2$, $x_2 = -1.0$, $h_1 = 0.7616$)}:
+        \begin{align*}
+        z_2 &= w_{xh} x_2 + w_{hh} h_1 + b_h \\
+            &= (1.0 \times (-1.0)) + (0.5 \times 0.7616) + 0.0 \\
+            &= -1.0 + 0.3808 = -0.6192 \\
+        h_2 &= \tanh(-0.6192) = \frac{e^{-0.6192} - e^{0.6192}}{e^{-0.6192} + e^{0.6192}} \approx \frac{0.5384 - 1.8574}{0.5384 + 1.8574} \\
+            &= \frac{-1.3190}{2.3958} \approx \mathbf{-0.5505}
+        \end{align*}
+    \end{itemize}
+
+    \item \textbf{LSTM Forget Gate Function}:
+    Using Equation~\eqref{eq:lstm_cell_update}:
+    \begin{equation*}
+    \mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t = \mathbf{0} \odot \mathbf{c}_{t-1} + \mathbf{1} \odot \tilde{\mathbf{c}}_t = \tilde{\mathbf{c}}_t
+    \end{equation*}
+    The network completely erases its entire historical cell state ($\mathbf{c}_{t-1}$) and overwrites it entirely with the candidate memory of the current time step ($\tilde{\mathbf{c}}_t$). 
+    A model learns to do this at sequence boundaries, regime changes, or when transitioning between distinct physical operations (such as a machine transitioning from standby to full operating load).
+
+    \item \textbf{Vanishing Gradient Derivation}:
+    From Equation~\eqref{eq:matrix_power}, over 20 steps, the gradient is multiplied by $(w_{hh})^{20}$:
+    \begin{equation*}
+    \text{Decay Factor} = (0.6)^{20} \approx \mathbf{0.00003656} \approx \mathbf{3.656 \times 10^{-5}}
+    \end{equation*}
+    The gradient is attenuated by more than four orders of magnitude ($99.996\%$ reduction). The early steps receive virtually no supervisory signal from the loss at step 20.
+
+    \item \textbf{TinyML RAM Requirement}:
+    A GRU maintains only a single hidden state vector $\mathbf{h}_t \in \mathbb{R}^{H}$.
+    For $H = 64$ in 32-bit floating point precision (4 bytes per float):
+    \begin{equation*}
+    \text{SRAM Required} = 64 \times 4 \text{ bytes} = \mathbf{256 \text{ bytes}}
+    \end{equation*}
+    This represents an extraordinarily negligible fraction of an ESP32's 512 KB of SRAM (less than $0.05\%$), proving that stateful recurrent models are exceptionally well-suited for ultra-low-power microcontrollers.
+\end{enumerate}

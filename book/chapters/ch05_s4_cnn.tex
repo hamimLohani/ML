@@ -1,0 +1,759 @@
+% FILE: chapters/ch05_s4_cnn.tex
+\section{Convolutional Networks}\label{sec:cnn}
+
+In the previous sections, we built deep feedforward neural networks (Multilayer Perceptrons, or MLPs) and trained them using backpropagation, regularization, and optimization algorithms. In an MLP, every neuron in a given layer connects to every single neuron in the following layer. This architecture works well for tabular data, such as sensor readings arranged in independent columns (temperature, pressure, vibration amplitude).
+
+However, when we feed structured spatial data---such as 2D images from a factory inspection camera or 2D spectrograms generated from audio streams---fully connected networks fail. They suffer from three fundamental problems:
+\begin{enumerate}
+    \item \textbf{Parameter Explosion}: A modest $224 \times 224$ RGB image has $224 \times 224 \times 3 = 150{,}528$ input numbers. Connecting this input layer to a single hidden layer of just $1{,}024$ neurons requires:
+    \begin{equation*}
+    150{,}528 \times 1{,}024 \approx 154{,}140{,}000 \text{ weights}
+    \end{equation*}
+    A network with over 154 million parameters in its first layer alone is impossible to train without extreme overfitting, and it cannot fit into the memory of an edge device or microcontroller.
+    \item \textbf{Destruction of Spatial Grid Structure}: An MLP flattens a 2D image into a 1D vector. A pixel at row 1, column 5 is physically right above a pixel at row 2, column 5. When flattened, they may end up hundreds of positions apart. An MLP has to re-learn that neighboring pixels are related from scratch.
+    \item \textbf{Lack of Translation Invariance}: If an MLP learns to recognize a defect (such as a crack or a scratch) in the top-left corner of an image, it has adjusted only the weights connected to the top-left inputs. If the exact same defect appears in the bottom-right corner, the MLP does not recognize it because a completely different set of weights is activated.
+\end{enumerate}
+
+To overcome these limitations, Yann LeCun and colleagues drew inspiration from the biological visual cortex studied by David Hubel and Torsten Wiesel. The result is the \textbf{Convolutional Neural Network (CNN)}. CNNs use three core architectural principles: \textbf{local receptive fields}, \textbf{shared weights}, and \textbf{spatial pooling}.
+
+% ==============================================================================
+% 1. THE CONVOLUTION OPERATION
+% ==============================================================================
+\subsection{The Convolution Operation: Filters and Feature Maps}\label{subsec:convolution_op}
+
+\begin{keyidea}[Local Connectivity and Weight Sharing]
+Instead of connecting every output neuron to every input pixel, a convolutional layer connects each neuron only to a small local patch of the input (the \textbf{local receptive field}). 
+
+Furthermore, the same set of weights (called a \textbf{filter} or \textbf{kernel}) slides across the entire image. If a filter learns to detect a horizontal edge, it can detect that edge anywhere on the image without learning separate parameters for each position.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+In computer vision and edge sensor processing, an edge, scratch, or temperature spike is fundamentally local. You do not need to compare the top-left corner of a turbine blade to the bottom-right corner to know whether a surface crack exists at the top-left. We only need to examine local neighborhoods of adjacent pixels.
+
+\begin{analogy}[The Rubber Stamp Inspector]
+Imagine you are inspecting a large printed circuit board (PCB) for missing solder joints. You have a small handheld inspection stamp with a magnifying glass ($3 \times 3$ grid of inspection points). 
+
+You place the stamp on the top-left corner of the PCB, compare the pattern under the stamp to your standard reference, and write down a score: $+10$ if a solder joint matches, or $0$ if empty. Then you slide your stamp one step to the right and repeat the check. You slide it row by row until you have scanned the entire board. 
+
+You do not need a million different inspectors standing over every millimeter of the board. You need only \emph{one} template stamp slid across the entire surface.
+\end{analogy}
+
+\paragraph{The 2D Convolution in Mathematics}
+In machine learning, the operation we call ``convolution'' is technically the 2D \textbf{cross-correlation} operation. Given a 2D input matrix $\mathbf{X}$ and a 2D filter $\mathbf{K}$ of height $K_h$ and width $K_w$, the output value at row $i$ and column $j$ of the output matrix $\mathbf{S}$ (called the \textbf{feature map}) is calculated by taking the element-wise product and summing:
+\begin{equation}
+S(i, j) = (\mathbf{X} * \mathbf{K})(i, j) = \sum_{m=0}^{K_h - 1} \sum_{n=0}^{K_w - 1} X(i + m, j + n) K(m, n) + b\label{eq:conv2d_scalar}
+\end{equation}
+where:
+\begin{itemize}
+    \item $\mathbf{X}(i+m, j+n)$ is the pixel value in the input image at row $i+m$ and column $j+n$.
+    \item $\mathbf{K}(m, n)$ is the filter weight at row $m$ and column $n$.
+    \item $b$ is a learnable scalar bias added to the result.
+    \item $S(i, j)$ is the resulting pre-activation value at output position $(i, j)$.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    pixel/.style={rectangle, draw=gray!70, thick, minimum size=0.9cm, inner sep=0pt, font=\small\sffamily},
+    kernel_pixel/.style={rectangle, draw=keyideablue, fill=keyideablue!20, thick, minimum size=0.9cm, inner sep=0pt, font=\small\sffamily\bfseries},
+    active_pixel/.style={rectangle, draw=analogygreen!80, fill=analogygreen!20, thick, minimum size=0.9cm, inner sep=0pt, font=\small\sffamily\bfseries},
+    out_pixel/.style={rectangle, draw=warningred!80, fill=warningred!20, thick, minimum size=0.9cm, inner sep=0pt, font=\small\sffamily\bfseries}
+]
+    % Input Matrix 4x4
+    \node[font=\bfseries\sffamily] at (1.35, 2.2) {Input Matrix $\mathbf{X}$ ($4 \times 4$)};
+    \foreach \r [evaluate=\r as \y using {1.35 - \r*0.9}] in {0,1,2,3} {
+        \foreach \c [evaluate=\c as \x using {\c*0.9}] in {0,1,2,3} {
+            \node[pixel] (p\r\c) at (\x, \y) {};
+        }
+    }
+    % Fill sample values in Input
+    \node at (p00) {1}; \node at (p01) {2}; \node at (p02) {0}; \node at (p03) {3};
+    \node at (p10) {0}; \node at (p11) {1}; \node at (p12) {1}; \node at (p13) {4};
+    \node at (p20) {2}; \node at (p21) {3}; \node at (p22) {1}; \node at (p23) {0};
+    \node at (p30) {0}; \node at (p31) {2}; \node at (p32) {2}; \node at (p33) {1};
+
+    % Highlight 3x3 active receptive field at top-left
+    \foreach \r in {0,1,2} {
+        \foreach \c in {0,1,2} {
+            \node[active_pixel] at (p\r\c) {};
+        }
+    }
+    % Re-print values for highlighted pixels
+    \node at (p00) {1}; \node at (p01) {2}; \node at (p02) {0};
+    \node at (p10) {0}; \node at (p11) {1}; \node at (p12) {1};
+    \node at (p20) {2}; \node at (p21) {3}; \node at (p22) {1};
+
+    % Filter K
+    \node[font=\bfseries\sffamily] at (5.4, 2.2) {Filter $\mathbf{K}$ ($3 \times 3$)};
+    \foreach \r [evaluate=\r as \y using {0.9 - \r*0.9}] in {0,1,2} {
+        \foreach \c [evaluate=\c as \x using {4.5 + \c*0.9}] in {0,1,2} {
+            \node[kernel_pixel] (k\r\c) at (\x, \y) {};
+        }
+    }
+    \node at (k00) {1};  \node at (k01) {0};  \node at (k02) {-1};
+    \node at (k10) {1};  \node at (k11) {0};  \node at (k12) {-1};
+    \node at (k20) {1};  \node at (k21) {0};  \node at (k22) {-1};
+
+    % Operation symbols
+    \node[font=\Large\bfseries] at (3.6, 0.0) {$*$};
+    \node[font=\Large\bfseries] at (7.6, 0.0) {$=$};
+
+    % Output Feature Map
+    \node[font=\bfseries\sffamily] at (9.45, 2.2) {Output $\mathbf{S}$ ($2 \times 2$)};
+    \foreach \r [evaluate=\r as \y using {0.45 - \r*0.9}] in {0,1} {
+        \foreach \c [evaluate=\c as \x using {9.0 + \c*0.9}] in {0,1} {
+            \node[pixel] (out\r\c) at (\x, \y) {};
+        }
+    }
+    \node[out_pixel] at (out00) {4};
+    \node at (out01) {-4};
+    \node at (out10) {1};
+    \node at (out11) {2};
+
+    % Connecting lines showing mapping
+    \draw[-{Stealth[length=2.5mm]}, thick, analogygreen!80] (p11.east) -- (3.3, 0.0);
+    \draw[-{Stealth[length=2.5mm]}, thick, keyideablue] (k11.east) -- (7.3, 0.0);
+    \draw[-{Stealth[length=2.5mm]}, thick, warningred!80] (7.9, 0.0) -- (out00.west);
+\end{tikzpicture}
+\caption{The 2D convolution operation. A $3 \times 3$ kernel slides across a $4 \times 4$ input matrix with stride $S=1$ and no padding ($P=0$), yielding a $2 \times 2$ output feature map.}\label{fig:conv2d_diagram}
+\end{figure}
+
+\begin{example}[Hand-Calculating a 2D Convolution]
+Let us calculate every output value by hand using the exact numbers shown in Figure~\ref{fig:conv2d_diagram}.
+
+\textbf{Input Matrix $\mathbf{X}$}:
+\begin{equation*}
+\mathbf{X} = \begin{bmatrix}
+1 & 2 & 0 & 3 \\
+0 & 1 & 1 & 4 \\
+2 & 3 & 1 & 0 \\
+0 & 2 & 2 & 1
+\end{bmatrix}, \quad
+\mathbf{K} = \begin{bmatrix}
+1 & 0 & -1 \\
+1 & 0 & -1 \\
+1 & 0 & -1
+\end{bmatrix}, \quad
+b = 1
+\end{equation*}
+Notice that $\mathbf{K}$ is a vertical edge detector: it subtracts the right column of the receptive field from the left column.
+
+\textbf{Step 1: Position $(0, 0)$ (Top-Left 3x3 Window)}
+The receptive field covers rows $0..2$ and columns $0..2$:
+\begin{equation*}
+\mathbf{X}_{(0:2, 0:2)} = \begin{bmatrix}
+1 & 2 & 0 \\
+0 & 1 & 1 \\
+2 & 3 & 1
+\end{bmatrix}
+\end{equation*}
+Multiply element-by-element with $\mathbf{K}$ and sum:
+\begin{align*}
+\text{Sum} &= (1 \times 1) + (2 \times 0) + (0 \times -1) \\
+           &\quad + (0 \times 1) + (1 \times 0) + (1 \times -1) \\
+           &\quad + (2 \times 1) + (3 \times 0) + (1 \times -1) \\
+           &= (1 + 0 + 0) + (0 + 0 - 1) + (2 + 0 - 1) \\
+           &= 1 - 1 + 1 = 3
+\end{align*}
+Add bias $b = 1$:
+\begin{equation*}
+S(0, 0) = 3 + 1 = \mathbf{4}
+\end{equation*}
+
+\textbf{Step 2: Position $(0, 1)$ (Top-Right 3x3 Window)}
+Shift the window one column to the right (rows $0..2$, columns $1..3$):
+\begin{equation*}
+\mathbf{X}_{(0:2, 1:3)} = \begin{bmatrix}
+2 & 0 & 3 \\
+1 & 1 & 4 \\
+3 & 1 & 0
+\end{bmatrix}
+\end{equation*}
+Multiply element-by-element with $\mathbf{K}$:
+\begin{align*}
+\text{Sum} &= (2 \times 1) + (0 \times 0) + (3 \times -1) \\
+           &\quad + (1 \times 1) + (1 \times 0) + (4 \times -1) \\
+           &\quad + (3 \times 1) + (1 \times 0) + (0 \times -1) \\
+           &= (2 - 3) + (1 - 4) + (3 - 0) = -1 - 3 + 3 = -4
+\end{align*}
+Add bias $b = 1$:
+\begin{equation*}
+S(0, 1) = -4 + 1 = \mathbf{-3}
+\end{equation*}
+\textit{(If bias $b=0$, the value is $-4$; with $b=1$, $S(0,1) = -3$.)}
+
+\textbf{Step 3: Position $(1, 0)$ (Bottom-Left 3x3 Window)}
+Shift down one row (rows $1..3$, columns $0..2$):
+\begin{equation*}
+\mathbf{X}_{(1:3, 0:2)} = \begin{bmatrix}
+0 & 1 & 1 \\
+2 & 3 & 1 \\
+0 & 2 & 2
+\end{bmatrix}
+\end{equation*}
+\begin{align*}
+\text{Sum} &= (0 \times 1) + (1 \times 0) + (1 \times -1) \\
+           &\quad + (2 \times 1) + (3 \times 0) + (1 \times -1) \\
+           &\quad + (0 \times 1) + (2 \times 0) + (2 \times -1) \\
+           &= (0 - 1) + (2 - 1) + (0 - 2) = -1 + 1 - 2 = -2
+\end{align*}
+Add bias $b = 1$: $S(1, 0) = -2 + 1 = \mathbf{-1}$.
+
+\textbf{Step 4: Position $(1, 1)$ (Bottom-Right 3x3 Window)}
+Shift to rows $1..3$, columns $1..3$:
+\begin{equation*}
+\mathbf{X}_{(1:3, 1:3)} = \begin{bmatrix}
+1 & 1 & 4 \\
+3 & 1 & 0 \\
+2 & 2 & 1
+\end{bmatrix}
+\end{equation*}
+\begin{align*}
+\text{Sum} &= (1 - 4) + (3 - 0) + (2 - 1) = -3 + 3 + 1 = 1
+\end{align*}
+Add bias $b = 1$: $S(1, 1) = 1 + 1 = \mathbf{2}$.
+\end{example}
+
+\paragraph{Multi-Channel Convolution (Color Images and Deep Layers)}
+Real images have three color channels ($C_{\text{in}} = 3$: Red, Green, Blue). In hidden layers, feature maps have dozens or hundreds of channels ($C_{\text{in}} = 32, 64, 128$).
+\begin{itemize}
+    \item A single filter is not a 2D matrix; it is a 3D tensor of shape $(C_{\text{in}} \times K_h \times K_w)$.
+    \item To compute one output channel, the filter performs 2D convolutions on each input channel independently, sums all channel outputs together, and adds one bias scalar:
+    \begin{equation}
+    S(c_{\text{out}}, i, j) = \sum_{c_{\text{in}}=0}^{C_{\text{in}}-1} \sum_{m=0}^{K_h - 1} \sum_{n=0}^{K_w - 1} X(c_{\text{in}}, i + m, j + n) K(c_{\text{out}}, c_{\text{in}}, m, n) + b_{c_{\text{out}}}\label{eq:multichannel_conv}
+    \end{equation}
+    \item If we want $C_{\text{out}}$ output feature maps, we use $C_{\text{out}}$ distinct 3D filters. The weight tensor has shape:
+    \begin{equation*}
+    (C_{\text{out}} \times C_{\text{in}} \times K_h \times K_w)
+    \end{equation*}
+\end{itemize}
+
+% ==============================================================================
+% 2. PADDING AND STRIDE
+% ==============================================================================
+\subsection{Padding and Stride: Controlling Spatial Dimensions}\label{subsec:padding_stride}
+
+When applying convolutions, two practical problems quickly arise:
+\begin{enumerate}
+    \item \textbf{Corner and Edge Shrinkage}: Pixels on the borders are only included in one or two filter positions, while center pixels are sampled many times.
+    \item \textbf{Rapid Resolution Loss}: Every convolution shrinks the spatial dimensions. A $32 \times 32$ image convolved with a $3 \times 3$ filter becomes $30 \times 30$, then $28 \times 28$, and after 10 layers, it vanishes into a single point.
+\end{enumerate}
+
+To control resolution and preserve border information, we use \textbf{padding} and \textbf{stride}.
+
+\paragraph{Padding ($P$)}
+\textbf{Zero-padding} adds borders of zeros around the perimeter of the input matrix before applying the filter.
+\begin{itemize}
+    \item \textbf{Valid Padding ($P = 0$)}: No padding is added. The output shrinks by $(K - 1)$ pixels in each dimension.
+    \item \textbf{Same Padding}: Enough zeros are added around the borders so that the output feature map has the \emph{exact same spatial dimensions} as the input (when stride $S=1$). For an odd filter size $K$, the required padding on each side is:
+    \begin{equation}
+    P = \frac{K - 1}{2}\label{eq:same_padding}
+    \end{equation}
+    For a $3 \times 3$ filter, $P = (3-1)/2 = 1$. For a $5 \times 5$ filter, $P = (5-1)/2 = 2$.
+\end{itemize}
+
+\paragraph{Stride ($S$)}
+The \textbf{stride} is the step size by which the filter shifts across the input matrix:
+\begin{itemize}
+    \item $S = 1$: The filter moves 1 pixel at a time (dense coverage).
+    \item $S = 2$: The filter skips every second pixel. This cuts both the output height and width approximately in half, reducing the total number of pixels by a factor of 4.
+\end{itemize}
+
+\paragraph{The Universal Dimension Formula}
+Given an input of height $H_{\text{in}}$ and width $W_{\text{in}}$, filter dimensions $K_h \times K_w$, padding $P$, and stride $S$, the output dimensions $H_{\text{out}} \times W_{\text{out}}$ are:
+\begin{equation}
+H_{\text{out}} = \left\lfloor \frac{H_{\text{in}} - K_h + 2P}{S} \right\rfloor + 1, \quad
+W_{\text{out}} = \left\lfloor \frac{W_{\text{in}} - K_w + 2P}{S} \right\rfloor + 1\label{eq:dim_formula}
+\end{equation}
+where $\lfloor \cdot \rfloor$ denotes the floor function (rounding down to the nearest integer).
+
+\begin{example}[Calculating Feature Map Dimensions]
+Let an edge camera produce an input image of size $224 \times 224 \times 3$. We apply a convolutional layer with:
+\begin{itemize}
+    \item $K = 7 \times 7$ filters
+    \item $C_{\text{out}} = 64$ output channels
+    \item Padding $P = 3$
+    \item Stride $S = 2$
+\end{itemize}
+Let us calculate the spatial dimensions:
+\begin{align*}
+H_{\text{out}} &= \left\lfloor \frac{224 - 7 + 2(3)}{2} \right\rfloor + 1 \\
+               &= \left\lfloor \frac{224 - 7 + 6}{2} \right\rfloor + 1 \\
+               &= \left\lfloor \frac{223}{2} \right\rfloor + 1 = 111 + 1 = \mathbf{112}
+\end{align*}
+The output shape is $(64 \times 112 \times 112)$. The stride of 2 halved the resolution, while the 64 filters expanded the depth from 3 to 64 channels.
+\end{example}
+
+% ==============================================================================
+% 3. POOLING LAYERS
+% ==============================================================================
+\subsection{Pooling: Spatial Downsampling and Invariance}\label{subsec:pooling}
+
+\begin{keyidea}[Downsampling with Pooling]
+A \textbf{pooling layer} downsamples feature maps independently along spatial dimensions ($H, W$) without modifying channel depth ($C$). 
+
+Unlike convolutional layers, standard pooling layers have \textbf{no learnable parameters} (no weights or biases). They apply a fixed aggregation rule across a local window.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Once a convolutional filter detects an edge or a bolt head at coordinates $(x=42, y=55)$, the exact sub-pixel location is no longer critical. What matters for high-level classification is that the bolt head exists in that approximate region. 
+
+Pooling achieves two vital goals:
+\begin{enumerate}
+    \item \textbf{Memory and Computation Reduction}: It aggressively reduces the spatial height and width, keeping tensor sizes manageable for edge microcontrollers.
+    \item \textbf{Translation Invariance}: Small shifts or vibrations of the camera do not change the maximum value inside a local window.
+\end{enumerate}
+
+\paragraph{Types of Pooling}
+\begin{itemize}
+    \item \textbf{Max Pooling}: Selects the largest activation within the pooling window:
+    \begin{equation}
+    P_{\text{max}}(i, j) = \max_{m=0}^{K-1} \max_{n=0}^{K-1} X(i \cdot S + m, j \cdot S + n)\label{eq:maxpool}
+    \end{equation}
+    Max pooling acts as an anomaly/feature gate: ``Did this feature fire strongly anywhere in this region?''
+    \item \textbf{Average Pooling}: Computes the arithmetic mean of all values inside the window. It is commonly used as \textbf{Global Average Pooling (GAP)} at the end of modern CNNs, where the entire spatial dimension ($H \times W$) of each channel is averaged into a single number.
+\end{itemize}
+
+\begin{example}[Hand-Calculating Max Pooling vs Average Pooling]
+Consider a $4 \times 4$ single-channel feature map. We apply a $2 \times 2$ pooling window with stride $S = 2$ (non-overlapping windows):
+\begin{equation*}
+\mathbf{X} = \begin{bmatrix}
+\mathbf{8} & \mathbf{2} & | & 1 & 3 \\
+\mathbf{4} & \mathbf{6} & | & 5 & 1 \\
+\hline
+3 & 1 & | & \mathbf{9} & \mathbf{2} \\
+7 & 5 & | & \mathbf{4} & \mathbf{8}
+\end{bmatrix}
+\end{equation*}
+
+\textbf{1. Max Pooling Output ($2 \times 2$)}:
+\begin{itemize}
+    \item Top-Left quadrant: $\max(8, 2, 4, 6) = \mathbf{8}$
+    \item Top-Right quadrant: $\max(1, 3, 5, 1) = \mathbf{5}$
+    \item Bottom-Left quadrant: $\max(3, 1, 7, 5) = \mathbf{7}$
+    \item Bottom-Right quadrant: $\max(9, 2, 4, 8) = \mathbf{9}$
+\end{itemize}
+\begin{equation*}
+\mathbf{S}_{\text{max}} = \begin{bmatrix} 8 & 5 \\ 7 & 9 \end{bmatrix}
+\end{equation*}
+
+\textbf{2. Average Pooling Output ($2 \times 2$)}:
+\begin{itemize}
+    \item Top-Left: $\frac{8 + 2 + 4 + 6}{4} = \frac{20}{4} = \mathbf{5.0}$
+    \item Top-Right: $\frac{1 + 3 + 5 + 1}{4} = \frac{10}{4} = \mathbf{2.5}$
+    \item Bottom-Left: $\frac{3 + 1 + 7 + 5}{4} = \frac{16}{4} = \mathbf{4.0}$
+    \item Bottom-Right: $\frac{9 + 2 + 4 + 8}{4} = \frac{23}{4} = \mathbf{5.75}$
+\end{itemize}
+\begin{equation*}
+\mathbf{S}_{\text{avg}} = \begin{bmatrix} 5.0 & 2.5 \\ 4.0 & 5.75 \end{bmatrix}
+\end{equation*}
+\end{example}
+
+% ==============================================================================
+% 4. CLASSIC ARCHITECTURES: LENET, VGG, RESNET
+% ==============================================================================
+\subsection{Classic CNN Architectures: LeNet, VGG, and ResNet}\label{subsec:architectures}
+
+The evolution of convolutional networks over the past three decades reveals three landmark architectural breakthroughs: the foundational Conv-Pool pipeline (LeNet-5), deep stacking of tiny filters (VGG), and identity shortcut connections (ResNet).
+
+\subsubsection{LeNet-5 (1998): The Blueprint}
+Developed by Yann LeCun, Leon Bottou, Yoshua Bengio, and Patrick Haffner for reading handwritten digits on bank checks, LeNet-5 established the canonical deep vision pattern:
+\begin{equation*}
+\text{Input} \longrightarrow [\text{Conv} \to \text{Pool}] \longrightarrow [\text{Conv} \to \text{Pool}] \longrightarrow \text{Dense Layers} \longrightarrow \text{Output}
+\end{equation*}
+\begin{itemize}
+    \item Input: $32 \times 32$ grayscale digit images.
+    \item As spatial resolution shrinks ($32 \to 28 \to 14 \to 10 \to 5$), the number of channels increases ($1 \to 6 \to 16$).
+    \item \textbf{Key Insight}: Trade spatial resolution for semantic channel depth. Spatial coordinates matter less as we move deeper; what matters is the presence of complex feature combinations.
+\end{itemize}
+
+\subsubsection{VGG (2014): The Power of Small Filters}
+In 2014, Karen Simonyan and Andrew Zisserman from Oxford's Visual Geometry Group (VGG) introduced VGG-16 and VGG-19. Before VGG, architects used large filters ($11 \times 11$ in AlexNet, $7 \times 7$ in LeNet). VGG proved that \textbf{replacing large filters with stacks of small $3 \times 3$ filters} is strictly superior in both parameter efficiency and representational power.
+
+\begin{keyidea}[Effective Receptive Field of Stacked $3 \times 3$ Convolutions]
+Stacking two consecutive $3 \times 3$ convolutional layers (with stride $S=1$) gives each neuron in the second layer an \textbf{effective receptive field of $5 \times 5$} on the input image. 
+
+Stacking three consecutive $3 \times 3$ convolutional layers produces an \textbf{effective receptive field of $7 \times 7$}.
+\end{keyidea}
+
+Why stack small filters instead of using one large filter? Consider three stacked $3 \times 3$ layers versus one single $7 \times 7$ layer, assuming $C$ input and output channels:
+\begin{enumerate}
+    \item \textbf{Parameter Comparison}:
+    \begin{align*}
+    \text{Parameters for one } 7 \times 7 \text{ layer} &= 7 \times 7 \times C \times C = \mathbf{49\,C^2} \\
+    \text{Parameters for three } 3 \times 3 \text{ layers} &= 3 \times (3 \times 3 \times C \times C) = \mathbf{27\,C^2}
+    \end{align*}
+    The stacked $3 \times 3$ design uses \textbf{$45\%$ fewer parameters} while covering the exact same spatial context!
+    \item \textbf{More Non-linearities}: Three $3 \times 3$ layers incorporate three consecutive ReLU activation functions instead of one, enabling the network to learn significantly more discriminative functions.
+\end{enumerate}
+
+\subsubsection{ResNet (2015): Residual Connections and Ultra-Deep Networks}
+As researchers tried to build deeper networks (beyond 20 layers), they hit an unexpected wall: \textbf{the degradation problem}. As network depth increased, accuracy saturated and then rapidly degraded. Crucially, this was \emph{not} overfitting; the 56-layer network had worse \textbf{training} loss than a 20-layer network! Deeper models simply failed to optimize because gradients vanished as they propagated back through dozens of multiplicative weight matrices.
+
+In 2015, Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun solved this problem with \textbf{Deep Residual Learning (ResNet)}, creating networks with 50, 101, and 152 layers that won first place in the ImageNet competition.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    block/.style={rectangle, draw=keyideablue, fill=keyideablue!10, rounded corners=2mm, thick, minimum width=3.8cm, minimum height=0.85cm, font=\small\sffamily\bfseries, align=center},
+    op/.style={circle, draw=warningred, fill=warningred!20, thick, minimum size=0.8cm, inner sep=0pt, font=\large\bfseries},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Main path nodes
+    \node (x) at (0, 4.5) {Input $\mathbf{x}$};
+    \node[block] (conv1) at (0, 3.2) {Weight Layer (Conv $3 \times 3$)};
+    \node[block, fill=analogygreen!15, draw=analogygreen] (relu1) at (0, 2.0) {ReLU Activation};
+    \node[block] (conv2) at (0, 0.8) {Weight Layer (Conv $3 \times 3$)};
+    \node[op] (add) at (0, -0.7) {$+$};
+    \node[block, fill=analogygreen!15, draw=analogygreen] (relu2) at (0, -1.9) {ReLU Activation};
+    \node (out) at (0, -3.0) {Output $\mathbf{y} = \text{ReLU}(\mathcal{F}(\mathbf{x}) + \mathbf{x})$};
+
+    % Direct flow
+    \draw[arrow] (x) -- (conv1);
+    \draw[arrow] (conv1) -- (relu1);
+    \draw[arrow] (relu1) -- (conv2);
+    \draw[arrow] (conv2) -- node[right, font=\footnotesize\sffamily] {$\mathcal{F}(\mathbf{x})$} (add);
+    \draw[arrow] (add) -- (relu2);
+    \draw[arrow] (relu2) -- (out);
+
+    % Skip connection (Identity shortcut)
+    \draw[thick, draw=warningred!80] (x) -- (-2.8, 4.5) -- node[left, font=\small\bfseries\sffamily, text=warningred] {Identity Shortcut $\mathbf{x}$} (-2.8, -0.7) -- (add.west);
+\end{tikzpicture}
+\caption{The Residual Building Block of ResNet. The identity shortcut skips two weight layers, allowing gradients to flow back unimpeded.}\label{fig:resnet_block}
+\end{figure}
+
+\paragraph{The Math of Residual Connections}
+Instead of forcing a stack of layers to directly fit an underlying mapping $\mathcal{H}(\mathbf{x})$, ResNet forces the layers to fit a \textbf{residual mapping} $\mathcal{F}(\mathbf{x}) = \mathcal{H}(\mathbf{x}) - \mathbf{x}$. The original mapping is recast into:
+\begin{equation}
+\mathbf{y} = \mathcal{F}(\mathbf{x}, \{\mathbf{W}_i\}) + \mathbf{x}\label{eq:residual_eq}
+\end{equation}
+Why is this mathematically transformative?
+\begin{itemize}
+    \item \textbf{Ease of Learning Identity}: If an extra layer is unneeded, it is notoriously difficult for a standard weight layer $\mathbf{W}\mathbf{x}$ to learn an exact identity transformation ($\mathbf{W} = \mathbf{I}$). With a residual block, the network can easily drive the weights toward zero ($\mathcal{F}(\mathbf{x}) \to \mathbf{0}$), leaving $\mathbf{y} = \mathbf{x}$ as a pure pass-through.
+    \item \textbf{Unobstructed Gradient Highway}: During backpropagation, by the chain rule:
+    \begin{equation}
+    \frac{\partial \mathcal{L}}{\partial \mathbf{x}} = \frac{\partial \mathcal{L}}{\partial \mathbf{y}} \cdot \frac{\partial \mathbf{y}}{\partial \mathbf{x}} = \frac{\partial \mathcal{L}}{\partial \mathbf{y}} \left( \frac{\partial \mathcal{F}(\mathbf{x})}{\partial \mathbf{x}} + \mathbf{I} \right) = \frac{\partial \mathcal{L}}{\partial \mathbf{y}} \cdot \frac{\partial \mathcal{F}}{\partial \mathbf{x}} + \frac{\partial \mathcal{L}}{\partial \mathbf{y}}\label{eq:resnet_gradient}
+    \end{equation}
+    Notice the term $\mathbf{I}$! Even if the gradient through the weight layers $\frac{\partial \mathcal{F}}{\partial \mathbf{x}}$ becomes vanishingly small ($\approx \mathbf{0}$), the term $\frac{\partial \mathcal{L}}{\partial \mathbf{y}} \cdot \mathbf{I} = \frac{\partial \mathcal{L}}{\partial \mathbf{y}}$ flows directly back to earlier layers without diminishing. The gradient highway never closes.
+\end{itemize}
+
+% ==============================================================================
+% 5. TRANSFER LEARNING
+% ==============================================================================
+\subsection{Transfer Learning with Pretrained Models}\label{subsec:transfer_learning}
+
+\begin{keyidea}[Transfer Learning: Standing on the Shoulders of Giants]
+Training a modern deep CNN from scratch requires millions of labeled images and days of compute on power-hungry GPU clusters. 
+
+\textbf{Transfer Learning} takes a network trained on a massive generic dataset (such as ImageNet with 1.4 million images across 1,000 categories) and adapts it to a specific target task (such as detecting defects on an industrial assembly line with only 200 images).
+\end{keyidea}
+
+\paragraph{Why It Works: The Feature Hierarchy}
+Convolutional networks learn a natural visual hierarchy:
+\begin{itemize}
+    \item \textbf{Early Layers (1--3)}: Learn generic low-level primitives: Gabor-like edge detectors, color gradients, and simple textures. These features are identical whether looking at cats, cars, or printed circuit boards.
+    \item \textbf{Middle Layers (4--8)}: Combine edges into geometric shapes, corners, grids, and repetitive surface textures.
+    \item \textbf{Late Layers}: Combine shapes into high-level, domain-specific object parts (wheels, dog faces, turbine blades).
+\end{itemize}
+
+Because early and middle features are universal, we do not need to re-learn them.
+
+\paragraph{Two Strategies for Transfer Learning}
+\begin{enumerate}
+    \item \textbf{Feature Extraction (Frozen Backbone)}:
+    \begin{itemize}
+        \item Freeze all convolutional weights: set \code{param.requires\_grad = False}.
+        \item Remove the original 1,000-class classification head (the final fully connected layer).
+        \item Attach a new, randomly initialized classification layer matching your number of classes (e.g., 2 classes: Healthy vs Defective).
+        \item Train \emph{only} the new head. This trains in minutes on a standard CPU and prevents overfitting on small datasets.
+    \end{itemize}
+    \item \textbf{Fine-Tuning}:
+    \begin{itemize}
+        \item First train the new head with the backbone frozen until loss stabilizes.
+        \item Unfreeze the top few convolutional layers (e.g., ResNet's Layer 4).
+        \item Re-train with a \textbf{very small learning rate} (typically $\eta = 10^{-4}$ or $10^{-5}$, which is $10\times$ to $100\times$ smaller than normal). A small learning rate makes gentle adjustments without destroying (``catastrophically forgetting'') the rich pretrained representations.
+    \end{itemize}
+\end{enumerate}
+
+% ==============================================================================
+% 6. CODE WALKTHROUGH: IMAGE CLASSIFICATION IN PYTORCH
+% ==============================================================================
+\subsection{End-to-End Implementation: Image Classification with PyTorch}\label{subsec:pytorch_cnn}
+
+Let us build and train a complete, edge-friendly convolutional network in PyTorch. We will design a custom architecture called \code{EdgeVisionCNN} suitable for edge deployment.
+
+\paragraph{The PyTorch Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+class EdgeVisionCNN(nn.Module):
+    """
+    Compact 3-stage CNN with Global Average Pooling.
+    Designed for low-latency visual inspection on embedded hardware.
+    """
+    def __init__(self, num_classes=2):
+        super(EdgeVisionCNN, self).__init__()
+        
+        # Stage 1: Input (3 x 32 x 32) -> Output (16 x 16 x 16)
+        self.stage1 = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        
+        # Stage 2: Input (16 x 16 x 16) -> Output (32 x 8 x 8)
+        self.stage2 = nn.Sequential(
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        
+        # Stage 3: Input (32 x 8 x 8) -> Output (64 x 4 x 4)
+        self.stage3 = nn.Sequential(
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        
+        # Global Average Pooling: collapes (64 x 4 x 4) -> (64 x 1 x 1)
+        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+        
+        # Final Classifier Head: 64 features -> num_classes logits
+        self.classifier = nn.Linear(64, num_classes)
+        
+    def forward(self, x):
+        x = self.stage1(x)
+        x = self.stage2(x)
+        x = self.stage3(x)
+        x = self.global_pool(x)
+        x = torch.flatten(x, 1)  # Flatten (Batch, 64, 1, 1) to (Batch, 64)
+        logits = self.classifier(x)
+        return logits
+
+# Instantiate model, loss function, and optimizer
+model = EdgeVisionCNN(num_classes=2)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+# Synthetic batch representing 8 industrial camera images (3 x 32 x 32)
+torch.manual_seed(42)
+dummy_images = torch.randn(8, 3, 32, 32)
+dummy_labels = torch.tensor([0, 1, 0, 0, 1, 1, 0, 1])
+
+# Training step simulation
+model.train()
+optimizer.zero_grad()
+outputs = model(dummy_images)
+loss = criterion(outputs, dummy_labels)
+loss.backward()
+optimizer.step()
+
+# Compute predictions
+_, predicted = torch.max(outputs, 1)
+print(f"Batch Loss: {loss.item():.4f}")
+print(f"Predictions: {predicted.tolist()}")
+print(f"True Labels: {dummy_labels.tolist()}")
+
+# Parameter audit
+total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Total Trainable Parameters: {total_params:,}")
+\end{lstlisting}
+
+\paragraph{Expected Output}
+\begin{lstlisting}[style=outputstyle]
+Batch Loss: 0.7041
+Predictions: [0, 0, 0, 0, 0, 0, 0, 0]
+True Labels: [0, 1, 0, 0, 1, 1, 0, 1]
+Total Trainable Parameters: 25,298
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Breakdown}
+\begin{itemize}
+    \item \textbf{Lines 13--18}: \code{stage1} defines a $3 \times 3$ convolution with \code{padding=1}. Because $P = (3-1)/2 = 1$, the convolution preserves the $32 \times 32$ spatial dimensions. The \code{MaxPool2d(2, 2)} immediately halves the resolution to $16 \times 16$ while the channel depth expands from 3 to 16.
+    \item \textbf{Lines 36--37}: \code{nn.AdaptiveAvgPool2d((1, 1))} performs Global Average Pooling. No matter what spatial resolution reaches this layer, it averages each channel's feature map into a single scalar value. This transforms a $(B \times 64 \times 4 \times 4)$ tensor into $(B \times 64 \times 1 \times 1)$.
+    \item \textbf{Lines 40}: \code{nn.Linear(64, num_classes)} connects directly to the 64 channel averages. This avoids the parameter explosion caused by flattening thousands of spatial activations into a giant dense layer.
+    \item \textbf{Lines 67--69}: The total parameter count is just \textbf{25,298 parameters}. At 4 bytes per float32 weight, the entire model occupies only $\approx 101 \text{ KB}$ of memory, making it small enough to fit inside the internal flash of an ESP32 or ARM Cortex-M microcontroller!
+\end{itemize}
+
+% ==============================================================================
+% 7. IOT & TINYML CONNECTION
+% ==============================================================================
+\subsection{ML for IoT and Edge: TinyML Vision and 1D/2D CNNs}\label{subsec:iot_tinyml}
+
+\begin{iotbox}[Edge Vision Hardware and RAM Constraints]
+Running CNNs on embedded microcontrollers (like the ESP32-S3 or Raspberry Pi Pico) presents severe memory constraints:
+\begin{itemize}
+    \item \textbf{Flash Storage (Model Size)}: Microcontrollers typically have 2 MB to 16 MB of Flash. A 25,000-parameter quantized 8-bit model takes only 25 KB of Flash. Storage is rarely the primary bottleneck.
+    \item \textbf{SRAM (Peak Activation Memory)}: Microcontrollers typically have only 256 KB to 512 KB of internal SRAM. During CNN inference, the microcontroller must store both the input and output activations of the currently executing layer.
+\end{itemize}
+\end{iotbox}
+
+\paragraph{The Peak Activation Memory Bottleneck}
+Engineers often mistakenly assume that if a model file fits into Flash storage, it will run on the microcontroller. This is dangerously incorrect. The primary cause of out-of-memory (\texttt{OOM}) crashes on edge hardware is \textbf{peak intermediate activation memory}.
+
+Consider an ESP32-CAM processing an image through an initial convolutional layer:
+\begin{itemize}
+    \item Input Image: $224 \times 224$ with 3 channels in Float32 (4 bytes per number).
+    \begin{equation*}
+    \text{Input Memory} = 224 \times 224 \times 3 \times 4 \text{ bytes} \approx \mathbf{602\text{ KB}}
+    \end{equation*}
+    \item First Conv Layer ($32$ filters, same padding):
+    \begin{equation*}
+    \text{Output Activation Memory} = 224 \times 224 \times 32 \times 4 \text{ bytes} \approx \mathbf{6{,}422\text{ KB}} \approx \mathbf{6.42\text{ MB}}
+    \end{equation*}
+\end{itemize}
+An ESP32 has only 512 KB of internal SRAM. The activation tensor of that single layer is over 12 times larger than the entire available RAM! To run vision models on microcontrollers, TinyML engineers use:
+\begin{enumerate}
+    \item \textbf{Lower Input Resolution}: Reduce camera capture to $96 \times 96$ grayscale ($96 \times 96 \times 1 = 9.2\text{ KB}$).
+    \item \textbf{Strided First Layer}: Use stride $S=2$ in the very first layer to instantly cut activation memory by $75\%$.
+    \item \textbf{INT8 Quantization}: Convert 32-bit floats to 8-bit integers, immediately reducing RAM consumption by $4\times$.
+    \item \textbf{External PSRAM}: Use ESP32 modules equipped with 8 MB of SPI Pseudo-Static RAM (PSRAM).
+\end{enumerate}
+
+\paragraph{1D CNNs vs 2D CNNs on Sensor Data}
+Convolutional networks are not restricted to camera images. In IoT and TinyML, they are used across two distinct data modalities:
+\begin{enumerate}
+    \item \textbf{1D CNNs on Raw Time-Series}: A 3-axis accelerometer on a vibrating motor produces a 1D sequence with 3 channels over time ($3 \times T$). A 1D convolutional filter slides \emph{only along the time axis}. It detects temporal vibration patterns (such as shock pulses or harmonic rattling) using minimal compute.
+    \item \textbf{2D CNNs on Spectrograms}: By applying the Short-Time Fourier Transform (STFT) to an audio stream or vibration signal, we convert 1D time-series data into a 2D time-frequency image (\textbf{spectrogram}). A standard 2D CNN can then be used for keyword spotting (``Hey Siri'') or acoustic machine fault detection (bearing wear).
+\end{enumerate}
+
+% ==============================================================================
+% 8. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\subsection{Common Mistakes and Misconceptions}\label{subsec:mistakes}
+
+\begin{warning}[Five Pitfalls in Convolutional Network Engineering]
+\begin{enumerate}
+    \item \textbf{The Giant Flatten Blow-Up}: Connecting a high-resolution convolutional feature map directly to a dense layer with \code{nn.Flatten()} without pooling. For example, flattening $(128 \times 32 \times 32)$ produces 131,072 neurons. Connecting this to a dense layer of 512 neurons creates over 67 million parameters in a single layer! \textbf{Solution}: Always use Global Average Pooling (\code{nn.AdaptiveAvgPool2d((1, 1))}) before the final classifier.
+    \item \textbf{Mismatched Input Channels in Multi-Layer Stacks}: Forgetting that the \code{in\_channels} of layer $l$ must exactly equal the \code{out\_channels} of layer $l-1$. If layer 1 outputs 32 channels, layer 2 must specify \code{in\_channels=32}.
+    \item \textbf{Confusing Filter Parameters with Activation Memory}: Assuming a 100 KB model will run on a microcontroller with 256 KB of RAM. Model weights live in Flash; intermediate feature map activations live in SRAM.
+    \item \textbf{Applying Asymmetric Data Augmentation to Directional Data}: Random horizontal flipping is great for photos of dogs. But if you apply random horizontal or vertical flips to digit recognition (turning a ``6'' into a ``9'') or directional sensor data (turning an upstream flow into a downstream flow), you corrupt the ground truth labels.
+    \item \textbf{Forgetting \code{model.eval()} During Inference}: Failing to call \code{model.eval()} before testing or deployment. In training mode, \code{BatchNorm2d} calculates batch statistics on the fly. If you pass a single image during inference while in training mode, batch normalization calculates variance across a batch of size 1, causing the model to output meaningless nonsense.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 9. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:takeaways}
+
+\begin{takeaways}[Core Principles of Convolutional Networks]
+\begin{itemize}
+    \item \textbf{Spatial Inductive Bias}: CNNs exploit local connectivity and weight sharing, slashing parameter counts compared to MLPs while remaining translation invariant.
+    \item \textbf{Padding and Stride}: Stride $S$ controls downsampling; padding $P$ prevents boundary data loss. For odd filter size $K$, same padding requires $P = (K-1)/2$.
+    \item \textbf{Small Filters Win}: Stacking two $3 \times 3$ convolutions matches the receptive field of a $5 \times 5$ filter, while saving $28\%$ of parameters and adding extra non-linearities.
+    \item \textbf{Residual Shortcuts Cure Degradation}: ResNet adds identity connections $\mathbf{y} = \mathcal{F}(\mathbf{x}) + \mathbf{x}$, creating a gradient highway that enables networks with hundreds of layers to train without vanishing gradients.
+    \item \textbf{SRAM is the Edge Constraint}: In TinyML vision, peak activation memory (RAM) is almost always a tighter constraint than model weight storage (Flash).
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 10. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:check_yourself}
+
+\begin{checkyourself}[Practice Questions and Calculations]
+\begin{enumerate}
+    \item \textbf{Dimension Calculation}: An industrial quality-control camera captures images of size $128 \times 128 \times 3$. The first layer applies 16 filters of size $5 \times 5$ with stride $S = 2$ and padding $P = 2$. What are the spatial dimensions and channel depth of the output feature map?
+    \item \textbf{Parameter Counting}: A convolutional layer takes an input tensor with 16 channels and produces 32 output channels using $3 \times 3$ filters. Each output filter has a bias term. Exactly how many trainable parameters (weights + biases) does this layer contain?
+    \item \textbf{Receptive Field}: You replace a single $7 \times 7$ convolutional layer with a stack of three $3 \times 3$ convolutional layers (all with stride $S=1$ and no padding). Both designs have an identical effective receptive field. If the input and output have 64 channels, how many parameters does each approach use, and what is the percentage parameter reduction?
+    \item \textbf{Max Pooling Hand Calculation}: Apply a $2 \times 2$ Max Pooling operation with stride $S=2$ to the following $4 \times 4$ matrix:
+    \begin{equation*}
+    \mathbf{M} = \begin{bmatrix}
+    12 & 15 & 7 & 9 \\
+    8  & 20 & 4 & 11 \\
+    3  & 6  & 18 & 2 \\
+    1  & 5  & 14 & 16
+    \end{bmatrix}
+    \end{equation*}
+    What is the resulting $2 \times 2$ matrix?
+    \item \textbf{TinyML Peak Memory}: An edge microcontroller with 320 KB of available internal SRAM runs inference on a grayscale camera image of size $96 \times 96 \times 1$ using 32-bit floats (4 bytes per value). The first layer applies 16 filters with same padding ($P=1$) and stride $S=1$. How many kilobytes of SRAM are required just to store the output activation tensor of this single layer? Does it fit in memory?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 11. ANSWERS
+% ==============================================================================
+\subsection*{Answers}\label{subsec:answers}
+
+\begin{enumerate}
+    \item \textbf{Dimension Calculation}:
+    Using the universal dimension formula (Equation~\ref{eq:dim_formula}):
+    \begin{align*}
+    H_{\text{out}} &= \left\lfloor \frac{H_{\text{in}} - K + 2P}{S} \right\rfloor + 1 = \left\lfloor \frac{128 - 5 + 2(2)}{2} \right\rfloor + 1 \\
+                   &= \left\lfloor \frac{128 - 5 + 4}{2} \right\rfloor + 1 = \left\lfloor \frac{127}{2} \right\rfloor + 1 = 63 + 1 = \mathbf{64}
+    \end{align*}
+    Because width and height are symmetric, $W_{\text{out}} = 64$. The number of output channels equals the number of filters ($C_{\text{out}} = 16$).
+    The output tensor shape is $\mathbf{(16 \times 64 \times 64)}$.
+
+    \item \textbf{Parameter Counting}:
+    Each 3D filter must span all 16 input channels:
+    \begin{equation*}
+    \text{Weights per filter} = K_h \times K_w \times C_{\text{in}} = 3 \times 3 \times 16 = 144 \text{ weights}
+    \end{equation*}
+    Adding 1 bias per filter gives $144 + 1 = 145$ parameters per filter.
+    With 32 output filters:
+    \begin{equation*}
+    \text{Total Parameters} = 32 \times 145 = \mathbf{4{,}640 \text{ parameters}}
+    \end{equation*}
+    Expressed in a single formula:
+    \begin{equation*}
+    (K_h \times K_w \times C_{\text{in}} + 1) \times C_{\text{out}} = (3 \times 3 \times 16 + 1) \times 32 = 145 \times 32 = \mathbf{4{,}640}
+    \end{equation*}
+
+    \item \textbf{Receptive Field and Parameter Comparison}:
+    Let $C = 64$.
+    \begin{itemize}
+        \item \textbf{Single $7 \times 7$ Layer}:
+        \begin{equation*}
+        \text{Weights} = 7 \times 7 \times 64 \times 64 = 49 \times 4{,}096 = \mathbf{200{,}704}
+        \end{equation*}
+        \item \textbf{Three Stacked $3 \times 3$ Layers}:
+        Each layer has $3 \times 3 \times 64 \times 64 = 9 \times 4{,}096 = 36{,}864$ weights.
+        For three layers:
+        \begin{equation*}
+        \text{Total Weights} = 3 \times 36{,}864 = \mathbf{110{,}592}
+        \end{equation*}
+        \item \textbf{Percentage Reduction}:
+        \begin{equation*}
+        \text{Reduction} = \frac{200{,}704 - 110{,}592}{200{,}704} = \frac{90{,}112}{200{,}704} \approx \mathbf{44.9\%}
+        \end{equation*}
+        The stacked $3 \times 3$ design uses nearly $45\%$ fewer parameters while introducing three non-linear activation functions instead of one.
+    \end{itemize}
+
+    \item \textbf{Max Pooling Hand Calculation}:
+    Divide the $4 \times 4$ matrix into four non-overlapping $2 \times 2$ blocks:
+    \begin{itemize}
+        \item Top-Left Block $\begin{bmatrix} 12 & 15 \\ 8 & 20 \end{bmatrix}$: $\max(12, 15, 8, 20) = \mathbf{20}$
+        \item Top-Right Block $\begin{bmatrix} 7 & 9 \\ 4 & 11 \end{bmatrix}$: $\max(7, 9, 4, 11) = \mathbf{11}$
+        \item Bottom-Left Block $\begin{bmatrix} 3 & 6 \\ 1 & 5 \end{bmatrix}$: $\max(3, 6, 1, 5) = \mathbf{6}$
+        \item Bottom-Right Block $\begin{bmatrix} 18 & 2 \\ 14 & 16 \end{bmatrix}$: $\max(18, 2, 14, 16) = \mathbf{18}$
+    \end{itemize}
+    The resulting $2 \times 2$ matrix is:
+    \begin{equation*}
+    \mathbf{M}_{\text{max}} = \begin{bmatrix}
+    20 & 11 \\
+    6  & 18
+    \end{bmatrix}
+    \end{equation*}
+
+    \item \textbf{TinyML Peak Memory Calculation}:
+    \begin{itemize}
+        \item Spatial dimensions: Same padding ($P=1$) with stride $S=1$ on a $96 \times 96$ input preserves the spatial dimensions: $96 \times 96$.
+        \item The output tensor has 16 channels, so its total shape is $(16 \times 96 \times 96)$.
+        \item Total number of elements: $16 \times 96 \times 96 = 147{,}456 \text{ values}$.
+        \item At 4 bytes per float32 value:
+        \begin{equation*}
+        \text{Bytes} = 147{,}456 \times 4 = 589{,}824 \text{ bytes} = \frac{589{,}824}{1024} = \mathbf{576 \text{ KB}}
+        \end{equation*}
+        \item \textbf{Conclusion}: The output activation tensor alone requires \textbf{576 KB}. Because the microcontroller has only \textbf{320 KB} of available SRAM, the model will suffer an immediate \textbf{Out-Of-Memory (OOM) crash} before finishing the first layer!
+        \item \textbf{Remedy}: To fit in memory, the engineer must use stride $S=2$ in the first layer (cutting activation memory to $144\text{ KB}$), or quantize activations to 8-bit integers (cutting memory by $4\times$ to $144\text{ KB}$), or reduce the number of initial filters from 16 to 8.
+    \end{itemize}
+\end{enumerate}

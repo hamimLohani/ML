@@ -1,0 +1,703 @@
+% FILE: chapters/ch03_s1_exploring_cleaning.tex
+\chapter{Data Handling and Preparation}\label{ch:data_handling}
+\section{Exploring and Cleaning Data}\label{sec:exploring_cleaning}
+
+There is a timeless law in computing and artificial intelligence: \textbf{Garbage In, Garbage Out} (often abbreviated as GIGO). 
+
+The most advanced neural network, trained with millions of parameters on the fastest supercomputer, will produce useless, dangerous predictions if it is trained on dirty, corrupted, or uninspected data. In real-world engineering, and especially in the Internet of Things (IoT), data is never delivered clean in a neat package. Microcontrollers drop Wi-Fi packets, batteries brown out, sensors produce electrical voltage spikes, and human annotators enter misspelled labels.
+
+Before training any machine learning model, an engineer must become a data detective. In this section, we learn how to inspect raw data, compute summary statistics, discover hidden correlations, handle missing entries, filter outliers, and clean inconsistent text.
+
+% ==============================================================================
+% 1. EXPLORATORY DATA ANALYSIS (EDA) AND SUMMARY STATISTICS
+% ==============================================================================
+\subsection{Exploratory Data Analysis: Understanding Your Data}
+
+\begin{keyidea}[Exploratory Data Analysis (EDA)]
+\textbf{Exploratory Data Analysis (EDA)} is the practice of systematically inspecting, summarizing, and visualizing a dataset before applying any machine learning algorithm. Its purpose is to uncover the underlying structure, detect anomalies, check assumptions, and verify data integrity.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+A sensor dataset is initially just a silent file of millions of numbers. You do not know if the temperature column is recorded in Celsius or Fahrenheit. You do not know if half the readings failed and recorded as \texttt{-999}. You do not know if the values are tightly clustered or swinging wildly. EDA turns on the lights in a dark room.
+
+\begin{analogy}[The Chef's Kitchen Inspection]
+Before a head chef begins cooking a banquet, they do not blindly dump crate contents into boiling pots. They inspect the ingredients: Are the tomatoes ripe or bruised? Did the delivery driver forget the cream? Are the fish fillets fresh? Only after inspecting, tasting, and trimming do they begin cooking. EDA is the chef's inspection of the raw ingredients before feeding them to the machine learning recipe.
+\end{analogy}
+
+\paragraph{The Idea in Words, Step by Step}
+When inspecting tabular data, variables belong to two primary families:
+\begin{enumerate}
+    \item \textbf{Numerical Data}: Quantitative measurements where arithmetic makes physical sense:
+    \begin{itemize}
+        \item \textbf{Continuous}: Can take any fractional value along an interval (e.g., voltage $3.284\text{ V}$, temperature $24.15^\circ\text{C}$).
+        \item \textbf{Discrete}: Whole countable integers (e.g., number of motor revolutions, packet retry counts).
+    \end{itemize}
+    \item \textbf{Categorical Data}: Qualitative categories or labels:
+    \begin{itemize}
+        \item \textbf{Nominal}: Categories with no natural order (e.g., sensor model \texttt{"DHT22"}, \texttt{"BME280"}, \texttt{"BMP180"}).
+        \item \textbf{Ordinal}: Categories with a clear ranked order (e.g., severity \texttt{"Low"}, \texttt{"Medium"}, \texttt{"High"}).
+    \end{itemize}
+\end{enumerate}
+
+To summarize numerical features quantitatively, we use two key metrics: \textbf{central tendency} (where the center of the data lies) and \textbf{dispersion} (how widely spread out the numbers are).
+\begin{itemize}
+    \item \textbf{Mean ($\bar{x}$)}: The arithmetic average. Highly sensitive to extreme values.
+    \item \textbf{Median}: The exact middle value when numbers are sorted in order. It divides the top $50\%$ from the bottom $50\%$. Highly resistant to extreme outliers.
+    \item \textbf{Mode}: The single most frequently occurring value in the dataset.
+    \item \textbf{Variance ($s^2$)}: The average squared distance of data points from the mean.
+    \item \textbf{Standard Deviation ($s$)}: The square root of variance. It restores the spread metric back into the \textbf{original physical units} of the measurement (e.g., $^\circ\text{C}$ instead of $(^\circ\text{C})^2$).
+\end{itemize}
+
+\paragraph{The Maths: Sample Mean, Variance, and Standard Deviation}
+For a sample of $N$ observations $x_1, x_2, \dots, x_N$:
+\begin{align}
+\text{Sample Mean: } \bar{x} &= \frac{1}{N} \sum_{i=1}^N x_i\label{eq:sample_mean_stat} \\
+\text{Sample Variance: } s^2 &= \frac{1}{N - 1} \sum_{i=1}^N (x_i - \bar{x})^2\label{eq:sample_variance} \\
+\text{Sample Standard Deviation: } s &= \sqrt{s^2}\label{eq:sample_std}
+\end{align}
+\textit{Note on Bessel's Correction}: In Equation~\ref{eq:sample_variance}, we divide by $N - 1$ rather than $N$. This correction accounts for the fact that we are estimating the spread of an entire population using only a small sample, preventing an underestimation of true variance.
+
+\paragraph{Hand Calculation Example}
+Consider $N = 5$ soil moisture percentage measurements collected by an ESP32:
+\begin{equation*}
+x = [20.0, 22.0, 25.0, 23.0, 30.0]
+\end{equation*}
+\begin{enumerate}
+    \item \textbf{Calculate the Mean $\bar{x}$}:
+    \begin{equation*}
+    \bar{x} = \frac{20.0 + 22.0 + 25.0 + 23.0 + 30.0}{5} = \frac{120.0}{5} = 24.0\%
+    \end{equation*}
+    \item \textbf{Calculate the Median}:
+    First, sort the values in ascending order: $[20.0, 22.0, \mathbf{23.0}, 25.0, 30.0]$.
+    The middle value (at index 3 of 5) is $\mathbf{23.0\%}$.
+    \item \textbf{Calculate the Deviations from the Mean $(x_i - \bar{x})$ and their Squares}:
+    \begin{align*}
+    (20.0 - 24.0)^2 &= (-4.0)^2 = 16.0 \\
+    (22.0 - 24.0)^2 &= (-2.0)^2 = 4.0 \\
+    (25.0 - 24.0)^2 &= (+1.0)^2 = 1.0 \\
+    (23.0 - 24.0)^2 &= (-1.0)^2 = 1.0 \\
+    (30.0 - 24.0)^2 &= (+6.0)^2 = 36.0
+    \end{align*}
+    \item \textbf{Sum the Squared Deviations}:
+    \begin{equation*}
+    \sum_{i=1}^5 (x_i - \bar{x})^2 = 16.0 + 4.0 + 1.0 + 1.0 + 36.0 = 58.0
+    \end{equation*}
+    \item \textbf{Compute Sample Variance and Standard Deviation}:
+    \begin{align*}
+    s^2 &= \frac{58.0}{5 - 1} = \frac{58.0}{4} = 14.5 \\
+    s &= \sqrt{14.5} \approx 3.8079\%
+    \end{align*}
+    The average moisture reading is $24.0\%$ with a standard deviation of $\pm 3.81\%$.
+\end{enumerate}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import pandas as pd
+import numpy as np
+
+# Creating a simulated telemetry dataframe
+data = {
+    "node_id": ["ESP_01", "ESP_01", "ESP_02", "ESP_02", "ESP_01"],
+    "moisture_pct": [20.0, 22.0, 25.0, 23.0, 30.0],
+    "battery_v": [3.28, 3.25, 3.10, 3.08, 3.24]
+}
+df = pd.DataFrame(data)
+
+# 1. Inspecting dataset structure
+print("--- Dataframe Overview ---")
+print(df.info())
+
+# 2. Computing summary statistics
+print("\n--- Summary Statistics (describe) ---")
+print(df.describe())
+
+# 3. Explicit statistical calculations
+mean_val = df["moisture_pct"].mean()
+median_val = df["moisture_pct"].median()
+std_val = df["moisture_pct"].std()
+
+print(f"\nSoil Moisture Mean:   {mean_val:.2f}%")
+print(f"Soil Moisture Median: {median_val:.2f}%")
+print(f"Soil Moisture StdDev: {std_val:.4f}%")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Dataframe Overview ---
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 5 entries, 0 to 4
+Data columns (total 3 columns):
+ #   Column        Non-Null Count  Dtype  
+---  ------        --------------  -----  
+ 0   node_id       5 non-null      object 
+ 1   moisture_pct  5 non-null      float64
+ 2   battery_v     5 non-null      float64
+dtypes: float64(2), object(1)
+memory usage: 248.0+ bytes
+None
+
+--- Summary Statistics (describe) ---
+       moisture_pct  battery_v
+count      5.000000   5.000000
+mean      24.000000   3.190000
+std        3.807887   0.091378
+min       20.000000   3.080000
+25%       22.000000   3.100000
+50%       23.000000   3.240000
+75%       25.000000   3.250000
+max       30.000000   3.280000
+
+Soil Moisture Mean:   24.00%
+Soil Moisture Median: 23.00%
+Soil Moisture StdDev: 3.8079%
+\end{lstlisting}
+
+\paragraph{Line-by-Line Explanation}
+\begin{itemize}
+    \item Line 1: We import \code{pandas}, the standard Python library for data manipulation, aliased as \code{pd}.
+    \item Line 11: \code{pd.DataFrame(data)} converts Python dictionaries into a structured table (rows and columns).
+    \item Line 15: \code{df.info()} shows total rows, column data types, and counts of non-null (present) values.
+    \item Line 19: \code{df.describe()} computes count, mean, standard deviation, minimum, quartiles ($25\%, 50\%, 75\%$), and maximum in a single call.
+    \item Line 23: \code{df["moisture\_pct"].std()} uses $N-1$ in the denominator by default, matching our manual calculation $3.8079\%$.
+\end{itemize}
+
+\begin{warning}[Mean vs. Median in Skewed Data]
+Never rely solely on the mean if your data has extreme values. If four factory motors draw $2.0\text{ A}$ of current and one motor has a dead short-circuit drawing $100.0\text{ A}$:
+\begin{align*}
+\text{Mean} &= \frac{2 + 2 + 2 + 2 + 100}{5} = \frac{108}{5} = 21.6\text{ A} \\
+\text{Median} &= 2.0\text{ A}
+\end{align*}
+The mean ($21.6\text{ A}$) does not describe any normal motor. The median ($2.0\text{ A}$) reliably captures the typical operating condition.
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item EDA reveals structural errors, data types, and distributions before modeling.
+    \item Use the mean for symmetric, bell-shaped distributions; use the median when data is skewed by outliers.
+    \item Standard deviation expresses spread in the exact physical units of the measurement.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 2. CORRELATION ANALYSIS
+% ==============================================================================
+\subsection{Correlation Analysis: Discovering Relationships Between Features}
+
+\begin{keyidea}[Pearson Correlation Coefficient]
+The \textbf{Pearson correlation coefficient} ($r$) measures the strength and direction of the \textbf{linear relationship} between two continuous variables. It ranges strictly between $-1.0$ and $+1.0$:
+\begin{itemize}
+    \item $r = +1.0$: Perfect positive correlation (as $x$ increases, $y$ increases proportionally).
+    \item $r = -1.0$: Perfect negative (inverse) correlation (as $x$ increases, $y$ decreases proportionally).
+    \item $r = 0.0$: No linear relationship between the two variables.
+\end{itemize}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+In IoT sensor systems, deploying ten sensors costs ten times more money and drains ten times more battery power than deploying one sensor. If a soil moisture sensor and a soil electrical conductivity sensor have a correlation of $r = 0.99$, they are telling your machine learning algorithm the exact same thing. Correlation analysis allows us to eliminate redundant features, drastically reducing model size for edge deployment on microcontrollers.
+
+\begin{analogy}[Gasoline Pedal and Speedometer]
+In an automobile:
+\begin{itemize}
+    \item The depth you press the accelerator pedal and the vehicle's speed have a strong \textbf{positive correlation} ($r \approx +0.95$): more gas equals more speed.
+    \item The outside temperature and the thickness of the coat you wear have a strong \textbf{negative correlation} ($r \approx -0.90$): colder weather equals a thicker coat.
+    \item The color of your car and the temperature of the radiator have \textbf{zero correlation} ($r \approx 0.0$): a blue car does not make an engine run cooler than a red car.
+\end{itemize}
+\end{analogy}
+
+\paragraph{The Maths: Pearson's Correlation Formula}
+Given paired observations $(x_1, y_1), (x_2, y_2), \dots, (x_N, y_N)$:
+\begin{equation}
+r = \frac{\sum_{i=1}^N (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^N (x_i - \bar{x})^2} \sqrt{\sum_{i=1}^N (y_i - \bar{y})^2}} = \frac{\text{Cov}(x, y)}{s_x s_y}\label{eq:pearson_r}
+\end{equation}
+The numerator measures the \textbf{covariance} (whether $x$ and $y$ deviate from their means in the same direction). The denominator normalizes by their standard deviations, guaranteeing that $r$ always stays between $-1.0$ and $+1.0$, regardless of measurement units.
+
+\paragraph{Hand Calculation Example}
+Let us compute the correlation between temperature ($x$, in $^\circ\text{C}$) and relative humidity ($y$, in $\%$):
+\begin{equation*}
+x = [10.0, 20.0, 30.0], \quad y = [80.0, 60.0, 40.0]
+\end{equation*}
+\begin{enumerate}
+    \item \textbf{Calculate Means}:
+    \begin{equation*}
+    \bar{x} = \frac{10 + 20 + 30}{3} = 20.0, \quad \bar{y} = \frac{80 + 60 + 40}{3} = 60.0
+    \end{equation*}
+    \item \textbf{Calculate Deviations}:
+    \begin{align*}
+    x - \bar{x} &= [-10.0, 0.0, 10.0] \\
+    y - \bar{y} &= [20.0, 0.0, -20.0]
+    \end{align*}
+    \item \textbf{Compute Numerator (Product of Deviations)}:
+    \begin{align*}
+    \sum (x_i - \bar{x})(y_i - \bar{y}) &= (-10.0 \times 20.0) + (0.0 \times 0.0) + (10.0 \times -20.0) \\
+    &= -200.0 + 0.0 - 200.0 = -400.0
+    \end{align*}
+    \item \textbf{Compute Denominator Terms (Sum of Squared Deviations)}:
+    \begin{align*}
+    \sum (x_i - \bar{x})^2 &= (-10.0)^2 + 0.0^2 + 10.0^2 = 100.0 + 0.0 + 100.0 = 200.0 \\
+    \sum (y_i - \bar{y})^2 &= (20.0)^2 + 0.0^2 + (-20.0)^2 = 400.0 + 0.0 + 400.0 = 800.0
+    \end{align*}
+    \item \textbf{Combine into Equation~\ref{eq:pearson_r}}:
+    \begin{equation*}
+    r = \frac{-400.0}{\sqrt{200.0} \times \sqrt{800.0}} = \frac{-400.0}{\sqrt{160000.0}} = \frac{-400.0}{400.0} = -1.0
+    \end{equation*}
+    The result $r = -1.0$ indicates a perfect inverse linear relationship.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.85]
+    % Positive correlation
+    \begin{scope}[shift={(0,0)}]
+        \draw[->, thick] (0,0) -- (3.5,0) node[right, font=\tiny\sffamily] {$x$};
+        \draw[->, thick] (0,0) -- (0,3.5) node[above, font=\tiny\sffamily] {$y$};
+        \draw[thick, keyideablue] (0.5,0.6) -- (3.0,3.1);
+        \foreach \x/\y in {0.6/0.8, 1.0/1.2, 1.4/1.3, 1.8/2.1, 2.2/2.0, 2.6/2.8, 2.9/3.0}
+            \filldraw[keyideablue] (\x,\y) circle (1.8pt);
+        \node[font=\small\sffamily, align=center] at (1.75, -0.7) {Positive\\($r \approx +0.95$)};
+    \end{scope}
+
+    % Zero correlation
+    \begin{scope}[shift={(5,0)}]
+        \draw[->, thick] (0,0) -- (3.5,0) node[right, font=\tiny\sffamily] {$x$};
+        \draw[->, thick] (0,0) -- (0,3.5) node[above, font=\tiny\sffamily] {$y$};
+        \foreach \x/\y in {0.5/1.5, 0.8/2.8, 1.2/0.7, 1.5/2.2, 2.0/1.0, 2.3/3.1, 2.7/1.8, 3.0/0.9}
+            \filldraw[takeawaysgray] (\x,\y) circle (1.8pt);
+        \node[font=\small\sffamily, align=center] at (1.75, -0.7) {Uncorrelated\\($r \approx 0.0$)};
+    \end{scope}
+
+    % Negative correlation
+    \begin{scope}[shift={(10,0)}]
+        \draw[->, thick] (0,0) -- (3.5,0) node[right, font=\tiny\sffamily] {$x$};
+        \draw[->, thick] (0,0) -- (0,3.5) node[above, font=\tiny\sffamily] {$y$};
+        \draw[thick, warningred] (0.5,3.1) -- (3.0,0.6);
+        \foreach \x/\y in {0.6/2.9, 1.1/2.6, 1.5/2.1, 1.9/1.8, 2.3/1.2, 2.7/1.0, 2.9/0.7}
+            \filldraw[warningred] (\x,\y) circle (1.8pt);
+        \node[font=\small\sffamily, align=center] at (1.75, -0.7) {Negative\\($r \approx -0.95$)};
+    \end{scope}
+\end{tikzpicture}
+\caption{Visualizing Pearson correlation patterns across feature pairs.}\label{fig:correlation_scatter}
+\end{figure}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import pandas as pd
+
+# Environmental sensor records from a greenhouse node
+sensor_data = {
+    "temp_c": [10.0, 20.0, 30.0, 25.0, 15.0],
+    "humidity_pct": [80.0, 60.0, 40.0, 48.0, 72.0],
+    "soil_moisture": [45.0, 44.0, 46.0, 45.0, 44.5]
+}
+df_sensors = pd.DataFrame(sensor_data)
+
+# Calculate pairwise Pearson correlation matrix
+corr_matrix = df_sensors.corr(method="pearson")
+print("--- Correlation Matrix ---")
+print(corr_matrix.round(3))
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Correlation Matrix ---
+               temp_c  humidity_pct  soil_moisture
+temp_c          1.000        -0.997          0.449
+humidity_pct   -0.997         1.000         -0.407
+soil_moisture   0.449        -0.407          1.000
+\end{lstlisting}
+
+\begin{warning}[Correlation Does Not Imply Causation]
+A high correlation ($|r| \approx 1$) proves that two numbers move together mathematically, but \textbf{it does not prove that one causes the other}. For example, ice cream sales and forest fires are strongly positively correlated ($r > 0.8$) because hot summer heat waves cause both independently. Hot weather is the hidden confounding factor.
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Pearson's $r$ quantifies linear relationships between continuous variables on a scale from $-1.0$ to $+1.0$.
+    \item Highly correlated features ($|r| > 0.95$) indicate redundant information that can be pruned to save edge RAM.
+    \item Pearson correlation only detects linear relationships; non-linear curves can have $r \approx 0$.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 3. MISSING VALUES: DROP VS. IMPUTE
+% ==============================================================================
+\subsection{Missing Data: Dropping vs. Imputation}
+
+\begin{keyidea}[Handling Missing Values]
+In data science, missing entries are represented as \texttt{NaN} (Not a Number) or \texttt{None}. 
+There are two primary ways to handle them:
+\begin{itemize}
+    \item \textbf{Deletion (Dropping)}: Removing entire rows or columns that contain missing entries.
+    \item \textbf{Imputation (Filling)}: Replacing missing entries with plausible estimates (such as the mean, median, or interpolated neighbors).
+\end{itemize}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+In IoT deployments, sensors sleep to conserve battery. When waking up, an ESP32 might transmit a radio packet that gets garbled by electrical noise or dropped by an access point. If an algorithm receives \texttt{NaN} in a feature vector, numerical matrix operations like $\mathbf{A}\mathbf{x}$ will evaluate entirely to \texttt{NaN}, completely breaking the model.
+
+\paragraph{The Idea in Words, Step by Step}
+Before deciding what to do, understand \textbf{why} the data is missing:
+\begin{enumerate}
+    \item \textbf{Strategy 1: Drop Rows (\code{dropna(axis=0)})}
+    \begin{itemize}
+        \item \textit{When to use}: When less than $2\%$ of rows are missing, and you have thousands of samples. Dropping a tiny fraction will not hurt your dataset.
+    \end{itemize}
+    \item \textbf{Strategy 2: Drop Columns (\code{dropna(axis=1)})}
+    \begin{itemize}
+        \item \textit{When to use}: When a sensor failed permanently and an entire column is missing more than $50\%$ to $60\%$ of its readings. A column that is mostly empty provides almost no information.
+    \end{itemize}
+    \item \textbf{Strategy 3: Statistical Imputation (Mean / Median / Mode)}
+    \begin{itemize}
+        \item \textit{When to use}: For static, non-time-series data. Fill missing values with the column's median (for skewed numbers) or mode (for categories).
+    \end{itemize}
+    \item \textbf{Strategy 4: Time-Series Imputation (Forward-Fill / Linear Interpolation)}
+    \begin{itemize}
+        \item \textit{When to use}: In continuous sensor streams. Physical temperature does not teleport from $20^\circ\text{C}$ to $0^\circ\text{C}$ and back. Linear interpolation connects the gap smoothly between the measurement before and the measurement after.
+    \end{itemize}
+\end{enumerate}
+
+\paragraph{The Maths: Linear Interpolation}
+If a sensor record is missing at time $t$, but we know the value $y_0$ at time $t_0$ and the value $y_1$ at time $t_1$:
+\begin{equation}
+y(t) = y_0 + (t - t_0) \times \frac{y_1 - y_0}{t_1 - t_0}\label{eq:linear_interp}
+\end{equation}
+Let us calculate this by hand:
+\begin{itemize}
+    \item At $t_0 = 10\text{ min}$, temperature $y_0 = 20.0^\circ\text{C}$.
+    \item At $t = 12\text{ min}$, packet dropped: reading is \texttt{NaN}.
+    \item At $t_1 = 14\text{ min}$, temperature $y_1 = 24.0^\circ\text{C}$.
+\end{itemize}
+Applying Equation~\ref{eq:linear_interp}:
+\begin{equation*}
+y(12) = 20.0 + (12 - 10) \times \frac{24.0 - 20.0}{14 - 10} = 20.0 + 2 \times \frac{4.0}{4} = 20.0 + 2.0 = 22.0^\circ\text{C}
+\end{equation*}
+The missing reading is imputed as $22.0^\circ\text{C}$.
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import pandas as pd
+import numpy as np
+
+# A sensor time series with dropped wireless packets (NaN)
+raw_stream = {
+    "time_min": [10, 12, 14, 16, 18],
+    "temp_c": [20.0, np.nan, 24.0, np.nan, 26.0],
+    "fault_code": ["OK", "OK", np.nan, "OK", "OK"]
+}
+df_stream = pd.DataFrame(raw_stream)
+
+print("--- Original Data with Missing Values ---")
+print(df_stream)
+
+# 1. Forward-fill (carry last valid observation forward)
+df_ffill = df_stream["temp_c"].ffill()
+
+# 2. Linear Interpolation (smooth physical estimate)
+df_interp = df_stream["temp_c"].interpolate(method="linear")
+
+# 3. Categorical Imputation using Mode (most common status)
+mode_status = df_stream["fault_code"].mode()[0]
+df_stream["fault_code"] = df_stream["fault_code"].fillna(mode_status)
+
+df_stream["temp_interpolated"] = df_interp
+print("\n--- Cleaned and Imputed Dataframe ---")
+print(df_stream[["time_min", "temp_interpolated", "fault_code"]])
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Original Data with Missing Values ---
+   time_min  temp_c fault_code
+0        10    20.0         OK
+1        12     NaN         OK
+2        14    24.0        NaN
+3        16     NaN         OK
+4        18    26.0         OK
+
+--- Cleaned and Imputed Dataframe ---
+   time_min  temp_interpolated fault_code
+0        10               20.0         OK
+1        12               22.0         OK
+2        14               24.0         OK
+3        16               25.0         OK
+4        18               26.0         OK
+\end{lstlisting}
+
+\begin{warning}[Data Leakage During Imputation]
+When splitting data into training and test sets, \textbf{never compute imputation values across the entire dataset at once}. If you calculate the mean using both training and testing samples, information from your test set ``leaks'' into training, creating unrealistically optimistic evaluation scores. Always compute the mean on the training split, and use that exact training mean to fill both splits.
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Unhandled missing values (\code{NaN}) will break mathematical ML training algorithms.
+    \item Dropping rows is safe only when missingness is rare ($< 2\%$).
+    \item Linear interpolation is the gold standard for time-series sensor streams.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 4. OUTLIER DETECTION AND TREATMENT
+% ==============================================================================
+\subsection{Outlier Detection and Treatment: Filtering Noise}
+
+\begin{keyidea}[Outliers in Data]
+An \textbf{outlier} is an observation that lies an abnormal distance away from the rest of the values in a dataset. Outliers can represent genuine physical emergencies (a greenhouse fire) or measurement corruptions (an electrical sensor glitch).
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Consider an ESP8266 reading an analog light sensor. If someone trips over the power cord, a momentary voltage drop can cause the ADC to register $0$ or maximum $1023$ for a single cycle. If an algorithm attempts to minimize squared error across that $1023$ spike, it will warp its decision boundaries trying to accommodate that single bad reading, degrading performance for all normal cases.
+
+\paragraph{The Idea in Words: The IQR (Interquartile Range) Method}
+The most robust, non-parametric method for identifying outliers is the \textbf{IQR Rule}:
+\begin{enumerate}
+    \item Sort the data and divide it into four equal quarters:
+    \begin{itemize}
+        \item $Q_1$ (25th percentile): $25\%$ of the data lies below this value.
+        \item $Q_2$ (50th percentile): The median.
+        \item $Q_3$ (75th percentile): $75\%$ of the data lies below this value.
+    \end{itemize}
+    \item Calculate the Interquartile Range: $\text{IQR} = Q_3 - Q_1$.
+    \item Establish the outlier fences:
+    \begin{align}
+    \text{Lower Fence} &= Q_1 - 1.5 \times \text{IQR}\label{eq:iqr_lower} \\
+    \text{Upper Fence} &= Q_3 + 1.5 \times \text{IQR}\label{eq:iqr_upper}
+    \end{align}
+    Any data point falling below the Lower Fence or above the Upper Fence is flagged as an outlier.
+\end{enumerate}
+
+\paragraph{Hand Calculation Example}
+Consider seven temperature readings from an engine exhaust, with one corrupted spike:
+\begin{equation*}
+x = [40.0, 42.0, 44.0, 45.0, 47.0, 49.0, 95.0]
+\end{equation*}
+\begin{enumerate}
+    \item \textbf{Identify Quartiles}:
+    \begin{itemize}
+        \item Median ($Q_2$) is the 4th value: $45.0$.
+        \item Lower half $[40.0, 42.0, 44.0] \implies Q_1 = 42.0$.
+        \item Upper half $[47.0, 49.0, 95.0] \implies Q_3 = 49.0$.
+    \end{itemize}
+    \item \textbf{Calculate IQR}:
+    \begin{equation*}
+    \text{IQR} = Q_3 - Q_1 = 49.0 - 42.0 = 7.0
+    \end{equation*}
+    \item \textbf{Calculate Fences}:
+    \begin{align*}
+    \text{Lower Fence} &= 42.0 - (1.5 \times 7.0) = 42.0 - 10.5 = 31.5 \\
+    \text{Upper Fence} &= 49.0 + (1.5 \times 7.0) = 49.0 + 10.5 = 59.5
+    \end{align*}
+    \item \textbf{Test Observations}:
+    Since $95.0 > 59.5$, the value $95.0$ is quantitatively flagged as an outlier!
+\end{enumerate}
+
+\paragraph{Treatment Options}
+Once flagged, what do we do?
+\begin{itemize}
+    \item \textbf{Trimming}: Delete the outlier row.
+    \item \textbf{Capping (Winsorizing)}: Clip values to the fence boundaries (e.g., replace $95.0$ with $59.5$).
+    \item \textbf{Imputation}: Replace the outlier with \texttt{NaN} and interpolate between valid neighboring timestamps.
+\end{itemize}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import pandas as pd
+import numpy as np
+
+temps = pd.Series([40.0, 42.0, 44.0, 45.0, 47.0, 49.0, 95.0])
+
+# Compute Quartiles and IQR
+Q1 = temps.quantile(0.25)
+Q3 = temps.quantile(0.75)
+IQR = Q3 - Q1
+
+lower_fence = Q1 - 1.5 * IQR
+upper_fence = Q3 + 1.5 * IQR
+
+# Identify outliers
+is_outlier = (temps < lower_fence) | (temps > upper_fence)
+
+# Option: Clip (Winsorize) to boundary fences
+temps_capped = temps.clip(lower=lower_fence, upper=upper_fence)
+
+print(f"Q1: {Q1}, Q3: {Q3}, IQR: {IQR}")
+print(f"Valid Range: [{lower_fence:.1f}, {upper_fence:.1f}]")
+print(f"Outliers Detected:\n{temps[is_outlier]}")
+print(f"Capped Series:\n{temps_capped.values}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Q1: 43.0, Q3: 48.0, IQR: 5.0
+Valid Range: [35.5, 55.5]
+Outliers Detected:
+6    95.0
+dtype: float64
+Capped Series:
+[40.  42.  44.  45.  47.  49.  55.5]
+\end{lstlisting}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Outliers distort linear models, inflate variance, and corrupt neural network gradients.
+    \item The IQR method establishes empirical upper and lower bounds without assuming normal distribution.
+    \item Capping (clipping) preserves the high-magnitude signal without introducing destructive infinite values.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 5. DUPLICATES AND INCONSISTENT LABELS
+% ==============================================================================
+\subsection{Deduplication and Categorical Label Consistency}
+
+\begin{keyidea}[Categorical Consistency and Deduplication]
+Data cleaning is not only about numbers. Datasets frequently suffer from:
+\begin{itemize}
+    \item \textbf{Duplicate Records}: Identical data rows collected multiple times due to network retries.
+    \item \textbf{Inconsistent Strings}: The same real-world entity spelled differently (e.g., \texttt{"ESP32"}, \texttt{"esp32"}, \texttt{"ESP-32 "}).
+\end{itemize}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+In edge IoT communications, network protocols like MQTT often operate with Quality of Service Level 1 (QoS 1: ``at least once delivery''). If a sensor node sends telemetry and the acknowledgment packet is delayed by $50\text{ milliseconds}$, the sensor resends the packet. The cloud server now logs two identical rows for the same millisecond timestamp. If duplicate samples leak into both training and validation splits, the model simply memorizes the duplicated rows, leading to false confidence.
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import pandas as pd
+
+# Raw incoming IoT log table with duplicates and dirty string labels
+raw_records = {
+    "device_name": ["ESP-32", "esp-32", "ESP32 ", "ESP-32", "BME_280"],
+    "firmware": ["v1.0", "v1.0", "V1.0", "v1.0", "v2.1"],
+    "reading_c": [22.4, 22.4, 22.4, 22.4, 18.9]
+}
+df_dirty = pd.DataFrame(raw_records)
+
+print("--- Raw Records (with duplicates and dirty text) ---")
+print(df_dirty)
+
+# 1. Standardize string labels: strip whitespace and lowercase
+df_dirty["device_name"] = (
+    df_dirty["device_name"]
+    .str.strip()
+    .str.lower()
+    .str.replace("-", "", regex=False)
+)
+df_dirty["firmware"] = df_dirty["firmware"].str.strip().str.lower()
+
+# 2. Drop exact duplicate rows
+df_cleaned = df_dirty.drop_duplicates()
+
+print("\n--- Standardized and Deduplicated Records ---")
+print(df_cleaned)
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Raw Records (with duplicates and dirty text) ---
+  device_name firmware  reading_c
+0      ESP-32     v1.0       22.4
+1      esp-32     v1.0       22.4
+2      ESP32      V1.0       22.4
+3      ESP-32     v1.0       22.4
+4     BME_280     v2.1       18.9
+
+--- Standardized and Deduplicated Records ---
+  device_name firmware  reading_c
+0       esp32     v1.0       22.4
+4      bme280     v2.1       18.9
+\end{lstlisting}
+
+\begin{takeaways}
+\begin{itemize}
+    \item IoT network retries generate duplicate records that must be removed.
+    \item String formatting (trimming whitespace, standardizing case) prevents categorical label fragmentation.
+    \item Clean categories ensure one-hot encoders create compact, meaningful feature matrices.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 6. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+Test your understanding of data exploration and cleaning concepts:
+
+\begin{enumerate}
+    \item \textbf{Central Tendency Comparison}: You measure the daily battery runtime of five remote solar IoT nodes: $[12.0, 12.5, 11.8, 12.2, 0.5]\text{ hours}$.
+    \begin{enumerate}
+        \item Compute the sample mean and the median by hand.
+        \item Which metric gives a better representation of normal operation, and why?
+    \end{enumerate}
+
+    \item \textbf{Hand Calculation (Variance and Spread)}: Consider four temperature error residuals: $e = [1.0, -1.0, 2.0, -2.0]^\circ\text{C}$.
+    \begin{enumerate}
+        \item Calculate the sample mean $\bar{e}$.
+        \item Calculate the sample variance $s^2$ and standard deviation $s$ by hand (using $N-1$).
+    \end{enumerate}
+
+    \item \textbf{IQR Outlier Detection}: A soil sensor dataset has a 25th percentile $Q_1 = 20.0\%$ and a 75th percentile $Q_3 = 30.0\%$. Using the $1.5 \times \text{IQR}$ rule:
+    \begin{enumerate}
+        \item Calculate the Lower and Upper Fences.
+        \item Determine whether a reading of $48.0\%$ is an outlier.
+    \end{enumerate}
+
+    \item \textbf{Time-Series Imputation}: A greenhouse temperature sensor records the following stream at 5-minute intervals: $t_0 = 18.0^\circ\text{C}$, $t_1 = \text{NaN}$, $t_2 = 24.0^\circ\text{C}$. What is the imputed value at $t_1$ using:
+    \begin{enumerate}
+        \item Forward-fill (\code{ffill})?
+        \item Linear interpolation?
+    \end{enumerate}
+
+    \item \textbf{Correlation Interpretation}: A motor monitoring engineer discovers that current draw ($A$) and motor housing temperature ($^\circ\text{C}$) have a Pearson correlation of $r = 0.94$. Does this mean that high temperature causes high current? Explain.
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Central Tendency Comparison}:
+    \begin{enumerate}
+        \item \textbf{Mean}:
+        \begin{equation*}
+        \bar{x} = \frac{12.0 + 12.5 + 11.8 + 12.2 + 0.5}{5} = \frac{49.0}{5} = 9.8\text{ hours}
+        \end{equation*}
+        \textbf{Median}: Sort the values: $[0.5, 11.8, \mathbf{12.0}, 12.2, 12.5]$. The middle value is $\mathbf{12.0\text{ hours}}$.
+        \item The \textbf{median ($12.0\text{ hours}$)} is far superior. The single hardware failure ($0.5\text{ hours}$) drags the mean down to $9.8\text{ hours}$, which represents none of the functioning nodes. The median accurately reflects healthy performance.
+    \end{enumerate}
+
+    \item \textbf{Hand Calculation (Variance and Spread)}:
+    \begin{enumerate}
+        \item Mean:
+        \begin{equation*}
+        \bar{e} = \frac{1.0 + (-1.0) + 2.0 + (-2.0)}{4} = \frac{0.0}{4} = 0.0^\circ\text{C}
+        \end{equation*}
+        \item Deviations from mean: $(1-0)=1$, $(-1-0)=-1$, $(2-0)=2$, $(-2-0)=-2$.
+        Squared deviations: $1^2 = 1.0$, $(-1)^2 = 1.0$, $2^2 = 4.0$, $(-2)^2 = 4.0$.
+        Sum of squared deviations: $1.0 + 1.0 + 4.0 + 4.0 = 10.0$.
+        Sample Variance:
+        \begin{equation*}
+        s^2 = \frac{10.0}{4 - 1} = \frac{10.0}{3} \approx 3.3333\,(^\circ\text{C})^2
+        \end{equation*}
+        Sample Standard Deviation:
+        \begin{equation*}
+        s = \sqrt{3.3333} \approx 1.8257^\circ\text{C}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{IQR Outlier Detection}:
+    \begin{enumerate}
+        \item $\text{IQR} = Q_3 - Q_1 = 30.0 - 20.0 = 10.0\%$.
+        \begin{align*}
+        \text{Lower Fence} &= Q_1 - 1.5 \times \text{IQR} = 20.0 - (1.5 \times 10.0) = 20.0 - 15.0 = 5.0\% \\
+        \text{Upper Fence} &= Q_3 + 1.5 \times \text{IQR} = 30.0 + (1.5 \times 10.0) = 30.0 + 15.0 = 45.0\%
+        \end{align*}
+        \item Yes, $48.0\%$ is an \textbf{outlier} because $48.0\% > 45.0\%$ (it exceeds the Upper Fence).
+    \end{enumerate}
+
+    \item \textbf{Time-Series Imputation}:
+    \begin{enumerate}
+        \item \textbf{Forward-fill}: Takes the last known observation prior to the gap ($t_0$), so $t_1 = \mathbf{18.0^\circ\text{C}}$.
+        \item \textbf{Linear interpolation}: Connects $18.0$ and $24.0$ at the midpoint:
+        \begin{equation*}
+        t_1 = 18.0 + \frac{24.0 - 18.0}{2} = 18.0 + 3.0 = \mathbf{21.0^\circ\text{C}}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{Correlation Interpretation}:
+    \textbf{No}. High correlation ($r = 0.94$) proves a strong linear association, but \textbf{not causation}. In reality, excessive mechanical friction or heavy electrical load is the root cause: it forces the motor to draw higher electrical current, and that electrical current dissipates waste heat through coil resistance ($P = I^2 R$), which subsequently warms the housing. High current causes high heat, not the reverse.
+\end{enumerate}

@@ -1,0 +1,562 @@
+% FILE: chapters/ch02_s2_calculus.tex
+\section{Calculus}\label{sec:calculus}
+
+In the previous section, we explored linear algebra: the mathematical language of static structures. Linear algebra describes vectors, matrices, sensor tensors, and geometric projections. It tells us where data points sit in high-dimensional space and how linear transformations rotate and stretch them.
+
+However, linear algebra alone cannot explain how a machine learning model \textit{learns}. A model does not start with optimal weights; it begins with random numbers that produce terrible predictions. To make the model smarter, we must measure its error and continuously adjust millions of numerical weights until that error reaches its absolute minimum.
+
+This continuous optimization is the domain of \textbf{Calculus}: the mathematical study of continuous change. While linear algebra builds the physical body of a neural network, calculus serves as its nervous system, guiding how every weight should twitch to minimize error.
+
+In this section, we demystify the calculus of machine learning:
+\begin{enumerate}
+    \item \textbf{Derivatives}: Measuring the instantaneous rate of change and the slope of curves.
+    \item \textbf{The Chain Rule}: The fundamental engine of backpropagation that connects nested functions.
+    \item \textbf{Partial Derivatives}: Calculating sensitivity across multi-variable loss surfaces.
+    \item \textbf{The Gradient Vector and the Jacobian}: Navigating multi-dimensional landscapes and vector transformations.
+    \item \textbf{Gradient Descent Intuition}: The universal optimization algorithm that drives modern artificial intelligence.
+    \item \textbf{The TinyML Bridge}: How resource-constrained microcontrollers compute gradients on the edge.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    mountain/.style={draw=keyideablue!80, fill=keyideablue!10, thick},
+    ball/.style={circle, draw=red!80, fill=red!70, inner sep=2.5pt},
+    arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=red!80!black}
+]
+    % 1D Loss Curve
+    \draw[->, thick] (-4, 0) -- (4, 0) node[right, font=\footnotesize\sffamily] {Weight ($w$)};
+    \draw[->, thick] (0, 0) -- (0, 4.5) node[above, font=\footnotesize\sffamily] {Loss / Error $L(w)$};
+
+    % Parabola
+    \draw[domain=-3:3, smooth, variable=\x, blue!80, very thick] plot ({\x}, {0.35*\x*\x + 0.5});
+
+    % Ball at w=2.2
+    \node[ball] (b1) at (2.2, {0.35*2.2*2.2 + 0.5}) {};
+    \node[above right=1mm of b1, font=\scriptsize\sffamily\bfseries] {Current State $\mathbf{w}_t$};
+
+    % Tangent line at w=2.2
+    \draw[dashed, red!70, thick] (0.8, 0.44) -- (3.2, 3.8);
+    \node[above=2mm of b1, xshift=1.5cm, font=\scriptsize\sffamily, text=red!80!black] {Slope $L'(w) > 0$ (Points Uphill)};
+
+    % Gradient Descent Step
+    \draw[arrow] (2.2, 0.2) -- (1.2, 0.2) node[midway, below, font=\scriptsize\sffamily\bfseries] {Step: $-\eta \nabla L$};
+
+    % Minimum
+    \draw[fill=green!60!black] (0, 0.5) circle (2pt) node[below=2mm, font=\scriptsize\sffamily\bfseries, text=green!60!black] {Global Minimum $w^*$ ($L'(w) = 0$)};
+\end{tikzpicture}
+\caption{The foundational concept of gradient descent: the derivative gives the uphill slope; stepping in the opposite direction descends toward the minimum loss.}\label{fig:calculus_gradient_descent}
+\end{figure}
+
+% ==============================================================================
+% 1. DERIVATIVES AND THE RATE OF CHANGE
+% ==============================================================================
+\subsection{Derivatives: The Instantaneous Rate of Change}
+
+\begin{keyidea}[What is a Derivative?]
+The \textbf{derivative} of a function $f(x)$, written as $f'(x)$ or $\frac{df}{dx}$, measures the instantaneous rate at which the output $f(x)$ changes in response to an infinitesimal nudge in the input $x$. Geometrically, the derivative is the exact numerical slope of the tangent line touching the curve at that point.
+\end{keyidea}
+
+\begin{analogy}[The Automobile Speedometer]
+If you drive 100 kilometers in two hours, your average velocity is $50\text{ km/h}$. However, that average tells you nothing about what happened when you slammed on the brakes for a pedestrian or accelerated on the highway. 
+
+Your car's speedometer does not display average velocity; it displays your \textbf{instantaneous velocity}---how much distance you would cover per hour if you maintained your exact speed at this split-second. The speedometer is the physical derivative of your position over time.
+\end{analogy}
+
+\paragraph{Mathematical Definition: The Limit of Secant Slopes}
+To find the slope of a curve at a single point $x$, we pick a nearby point $x + h$, calculate the slope of the line connecting them, and shrink the distance $h$ toward zero:
+\begin{equation}
+f'(x) = \frac{df}{dx} = \lim_{h \to 0} \frac{f(x + h) - f(x)}{h}\label{eq:derivative_limit}
+\end{equation}
+
+\paragraph{Hand-Worked Calculation: Deriving $f(x) = x^2$ from First Principles}
+Let us compute the derivative of $f(x) = x^2$ step-by-step:
+\begin{enumerate}
+    \item Evaluate the function at $x + h$:
+    \begin{equation*}
+    f(x + h) = (x + h)^2 = x^2 + 2xh + h^2
+    \end{equation*}
+    \item Compute the difference $f(x + h) - f(x)$:
+    \begin{equation*}
+    (x^2 + 2xh + h^2) - x^2 = 2xh + h^2
+    \end{equation*}
+    \item Divide by the step size $h$:
+    \begin{equation*}
+    \frac{2xh + h^2}{h} = 2x + h
+    \end{equation*}
+    \item Take the limit as $h \to 0$:
+    \begin{equation*}
+    \lim_{h \to 0} (2x + h) = 2x + 0 = \mathbf{2x}
+    \end{equation*}
+\end{enumerate}
+Therefore, $\frac{d}{dx}[x^2] = 2x$. If $x = 3$, the slope is $2(3) = 6$. A tiny nudge of $+0.001$ to $x$ will increase $f(x)$ by approximately $6 \times 0.001 = 0.006$.
+
+\paragraph{The Essential Derivative Rules for Machine Learning}
+In practice, you do not use limits; you use five foundational calculus rules:
+\begin{enumerate}
+    \item \textbf{Power Rule}:
+    \begin{equation}
+    \frac{d}{dx}[x^n] = n x^{n-1}\label{eq:power_rule}
+    \end{equation}
+    Examples: $\frac{d}{dx}[x^3] = 3x^2$, \quad $\frac{d}{dx}[x] = 1$, \quad $\frac{d}{dx}[c] = 0$ (constants do not change).
+
+    \item \textbf{Constant Multiple Rule}:
+    \begin{equation}
+    \frac{d}{dx}[c \cdot f(x)] = c \cdot f'(x)\label{eq:const_multiple}
+    \end{equation}
+
+    \item \textbf{Sum and Difference Rule}:
+    \begin{equation}
+    \frac{d}{dx}[f(x) \pm g(x)] = f'(x) \pm g'(x)\label{eq:sum_rule}
+    \end{equation}
+
+    \item \textbf{Exponential Rule}:
+    \begin{equation}
+    \frac{d}{dx}[e^x] = e^x\label{eq:exp_rule}
+    \end{equation}
+    The natural exponential function is the only mathematical function whose rate of growth is identical to its current value.
+
+    \item \textbf{Natural Logarithm Rule}:
+    \begin{equation}
+    \frac{d}{dx}[\ln(x)] = \frac{1}{x} \quad (x > 0)\label{eq:log_rule}
+    \end{equation}
+    This derivative is critical when optimizing cross-entropy loss in classification models.
+\end{enumerate}
+
+% ==============================================================================
+% 2. THE CHAIN RULE
+% ==============================================================================
+\subsection{The Chain Rule: Differentiating Nested Functions}
+
+\begin{keyidea}[Why the Chain Rule Drives Deep Learning]
+A neural network is not a single simple equation; it is a long cascade of nested mathematical functions:
+\begin{equation*}
+\text{Loss} = L(f_3(f_2(f_1(\mathbf{x}))))
+\end{equation*}
+The \textbf{Chain Rule} is the mathematical formula that calculates how a change in a weight inside the very first layer propagates through every intermediate layer to affect the final loss at the output. Without the chain rule, deep learning would be mathematically impossible.
+\end{keyidea}
+
+\begin{analogy}[Interlocking Bicycle Gears]
+Consider a bicycle transmission where Pedal Gear A connects to Intermediate Gear B, which turns Rear Wheel C:
+\begin{itemize}
+    \item When Gear A turns $1$ revolution, Gear B turns $3$ revolutions ($\frac{dB}{dA} = 3$).
+    \item When Gear B turns $1$ revolution, Wheel C turns $2$ revolutions ($\frac{dC}{dB} = 2$).
+\end{itemize}
+How fast does Wheel C turn relative to Pedal A? You multiply the gear ratios:
+\begin{equation*}
+\frac{dC}{dA} = \frac{dC}{dB} \times \frac{dB}{dA} = 2 \times 3 = \mathbf{6}
+\end{equation*}
+The chain rule is simply multiplying intermediate rates of change together.
+\end{analogy}
+
+\paragraph{Mathematical Formulation}
+If variable $z$ depends on $u$, and $u$ depends on $x$ (i.e., $z = f(u)$ and $u = g(x)$), then:
+\begin{equation}
+\frac{dz}{dx} = \frac{dz}{du} \times \frac{du}{dx}\label{eq:chain_rule}
+\end{equation}
+In function notation:
+\begin{equation}
+\frac{d}{dx}[f(g(x))] = f'(g(x)) \cdot g'(x)\label{eq:chain_rule_fn}
+\end{equation}
+
+\paragraph{Hand-Worked Calculation: A Complete Worked Example}
+Let $z = (3x^2 + 5)^4$. Find $\frac{dz}{dx}$ evaluated at $x = 1$.
+\begin{enumerate}
+    \item Identify the inner and outer functions:
+    \begin{itemize}
+        \item Inner: $u = g(x) = 3x^2 + 5$
+        \item Outer: $z = f(u) = u^4$
+    \end{itemize}
+
+    \item Compute the derivative of the outer function with respect to $u$:
+    \begin{equation*}
+    \frac{dz}{du} = 4u^3
+    \end{equation*}
+
+    \item Compute the derivative of the inner function with respect to $x$:
+    \begin{equation*}
+    \frac{du}{dx} = 6x
+    \end{equation*}
+
+    \item Multiply using the chain rule:
+    \begin{equation*}
+    \frac{dz}{dx} = \frac{dz}{du} \times \frac{du}{dx} = 4u^3 \times 6x = 24x u^3 = 24x (3x^2 + 5)^3
+    \end{equation*}
+
+    \item Evaluate numerically at $x = 1$:
+    \begin{align*}
+    u(1) &= 3(1)^2 + 5 = 8 \\
+    \frac{dz}{dx}\Big|_{x=1} &= 24(1) \times (8)^3 = 24 \times 512 = \mathbf{12{,}288}
+    \end{align*}
+\end{enumerate}
+
+\paragraph{The Chain Rule for a Single Neuron}
+In machine learning, a single artificial neuron computes a linear combination followed by a non-linear activation:
+\begin{align*}
+z &= w \cdot x + b \quad &\implies \frac{\partial z}{\partial w} = x \\
+\hat{y} &= \sigma(z) \quad &\implies \frac{\partial \hat{y}}{\partial z} = \sigma'(z) \\
+L &= \frac{1}{2}(y - \hat{y})^2 \quad &\implies \frac{\partial L}{\partial \hat{y}} = -(y - \hat{y})
+\end{align*}
+How does changing the weight $w$ affect the loss $L$? By the chain rule:
+\begin{equation}
+\frac{\partial L}{\partial w} = \frac{\partial L}{\partial \hat{y}} \times \frac{\partial \hat{y}}{\partial z} \times \frac{\partial z}{\partial w} = -(y - \hat{y}) \cdot \sigma'(z) \cdot x\label{eq:neuron_backprop}
+\end{equation}
+This exact three-term product is calculated billions of times per second during deep learning training.
+
+% ==============================================================================
+% 3. PARTIAL DERIVATIVES
+% ==============================================================================
+\subsection{Partial Derivatives: Slopes in Multi-Dimensional Space}
+
+\begin{keyidea}[What is a Partial Derivative?]
+When a function depends on multiple independent inputs (e.g., $f(x, y)$ or Loss $L(w_1, w_2, b)$), the \textbf{partial derivative} $\frac{\partial f}{\partial x_i}$ measures the rate of change of the output with respect to $x_i$ \textbf{while holding all other variables strictly constant}. We use the curly $\partial$ symbol (pronounced ``del'' or ``partial'') to denote that other variables are temporarily frozen.
+\end{keyidea}
+
+\paragraph{Hand-Worked Calculation: Evaluating Partial Derivatives}
+Consider a multi-variable loss function:
+\begin{equation*}
+f(x, y) = 2x^3 y + 4x y^2 - 5y + 7
+\end{equation*}
+Let us compute $\frac{\partial f}{\partial x}$ and $\frac{\partial f}{\partial y}$ at the point $(x = 2, y = 3)$:
+
+\begin{enumerate}
+    \item \textbf{Calculate $\frac{\partial f}{\partial x}$ (Treat $y$ as a fixed constant)}:
+    \begin{align*}
+    \frac{\partial}{\partial x}[2x^3 y] &= 2y \cdot \frac{d}{dx}[x^3] = 2y(3x^2) = 6x^2 y \\
+    \frac{\partial}{\partial x}[4x y^2] &= 4y^2 \cdot \frac{d}{dx}[x] = 4y^2(1) = 4y^2 \\
+    \frac{\partial}{\partial x}[-5y + 7] &= 0 \quad (\text{no } x \text{ term; treats as constant!}) \\
+    \frac{\partial f}{\partial x} &= 6x^2 y + 4y^2
+    \end{align*}
+    Evaluate at $(x=2, y=3)$:
+    \begin{equation*}
+    \frac{\partial f}{\partial x}\Big|_{(2,3)} = 6(2^2)(3) + 4(3^2) = 6(4)(3) + 4(9) = 72 + 36 = \mathbf{108}
+    \end{equation*}
+
+    \item \textbf{Calculate $\frac{\partial f}{\partial y}$ (Treat $x$ as a fixed constant)}:
+    \begin{align*}
+    \frac{\partial}{\partial y}[2x^3 y] &= 2x^3 \cdot \frac{d}{dy}[y] = 2x^3(1) = 2x^3 \\
+    \frac{\partial}{\partial y}[4x y^2] &= 4x \cdot \frac{d}{dy}[y^2] = 4x(2y) = 8xy \\
+    \frac{\partial}{\partial y}[-5y] &= -5 \\
+    \frac{\partial}{\partial y}[7] &= 0 \\
+    \frac{\partial f}{\partial y} &= 2x^3 + 8xy - 5
+    \end{align*}
+    Evaluate at $(x=2, y=3)$:
+    \begin{equation*}
+    \frac{\partial f}{\partial y}\Big|_{(2,3)} = 2(2^3) + 8(2)(3) - 5 = 2(8) + 48 - 5 = 16 + 48 - 5 = \mathbf{59}
+    \end{equation*}
+\end{enumerate}
+
+Physical interpretation: At $(2, 3)$, nudging $x$ by $+0.01$ will increase the function by $\approx 108 \times 0.01 = 1.08$, whereas nudging $y$ by $+0.01$ increases it by only $\approx 59 \times 0.01 = 0.59$. The function is roughly twice as sensitive to changes in $x$ as it is to changes in $y$.
+
+% ==============================================================================
+% 4. GRADIENTS AND THE JACOBIAN
+% ==============================================================================
+\subsection{The Gradient Vector and the Jacobian Matrix}
+
+\begin{keyidea}[The Gradient Vector $\nabla f$]
+For a scalar function $f(\mathbf{x})$ taking a vector input $\mathbf{x} = [x_1, x_2, \dots, x_n]^T$, the \textbf{Gradient Vector} $\nabla f(\mathbf{x})$ (pronounced ``del f'' or ``grad f'') bundles all individual partial derivatives into a single vector:
+\begin{equation}
+\nabla f(\mathbf{x}) = \begin{bmatrix} 
+\frac{\partial f}{\partial x_1} \\[1mm] 
+\frac{\partial f}{\partial x_2} \\[1mm] 
+\vdots \\[1mm] 
+\frac{\partial f}{\partial x_n} 
+\end{bmatrix} \in \mathbb{R}^n\label{eq:gradient_vector}
+\end{equation}
+\end{keyidea}
+
+\paragraph{The Two Fundamental Geometric Properties of the Gradient}
+\begin{enumerate}
+    \item \textbf{Direction of Steepest Ascent}: The gradient vector $\nabla f(\mathbf{x})$ points in the physical direction of maximum increase. If you take a step of fixed length in the direction of $\nabla f$, the function value will rise faster than in any other direction.
+    \item \textbf{Magnitude Represents Maximum Slope}: The Euclidean norm $\|\nabla f(\mathbf{x})\|$ equals the steepness of that slope. At a flat local minimum or maximum, the slope is zero, meaning $\nabla f(\mathbf{x}) = \mathbf{0}$.
+\end{enumerate}
+
+\paragraph{The Jacobian Matrix: Multi-Output Functions}
+What if our function maps multiple inputs to multiple outputs? For example, a hidden neural network layer taking $n$ inputs and producing $m$ activations:
+\begin{equation*}
+\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m, \quad \mathbf{y} = \mathbf{f}(\mathbf{x}) = \begin{bmatrix} f_1(x_1, \dots, x_n) \\ f_2(x_1, \dots, x_n) \\ \vdots \\ f_m(x_1, \dots, x_n) \end{bmatrix}
+\end{equation*}
+
+The \textbf{Jacobian Matrix} $\mathbf{J} \in \mathbb{R}^{m \times n}$ collects all first-order partial derivatives, where row $i$ is the gradient of output $f_i$:
+\begin{equation}
+\mathbf{J} = \begin{bmatrix}
+\frac{\partial f_1}{\partial x_1} & \frac{\partial f_1}{\partial x_2} & \cdots & \frac{\partial f_1}{\partial x_n} \\[2mm]
+\frac{\partial f_2}{\partial x_1} & \frac{\partial f_2}{\partial x_2} & \cdots & \frac{\partial f_2}{\partial x_n} \\[2mm]
+\vdots & \vdots & \ddots & \vdots \\[2mm]
+\frac{\partial f_m}{\partial x_1} & \frac{\partial f_m}{\partial x_2} & \cdots & \frac{\partial f_m}{\partial x_n}
+\end{bmatrix}\label{eq:jacobian_matrix}
+\end{equation}
+
+\paragraph{Hand-Worked Calculation: Constructing a Robotic Kinematics Jacobian}
+In IoT robotics, a 2-joint planar robotic arm has joint angles $(\theta_1, \theta_2)$ and arm lengths $r_1, r_2$. The $(x, y)$ tip coordinates are:
+\begin{align*}
+f_1(\theta_1, \theta_2) &= r_1 \cos(\theta_1) + r_2 \cos(\theta_1 + \theta_2) \\
+f_2(\theta_1, \theta_2) &= r_1 \sin(\theta_1) + r_2 \sin(\theta_1 + \theta_2)
+\end{align*}
+Let $r_1 = 1.0\text{ m}, r_2 = 1.0\text{ m}$. Construct the Jacobian matrix $\mathbf{J}$ evaluated at $\theta_1 = 0, \theta_2 = \frac{\pi}{2}$ radians ($90^\circ$):
+\begin{enumerate}
+    \item Compute each partial derivative:
+    \begin{align*}
+    \frac{\partial f_1}{\partial \theta_1} &= -\sin(\theta_1) - \sin(\theta_1 + \theta_2) \\
+    \frac{\partial f_1}{\partial \theta_2} &= -\sin(\theta_1 + \theta_2) \\
+    \frac{\partial f_2}{\partial \theta_1} &= \cos(\theta_1) + \cos(\theta_1 + \theta_2) \\
+    \frac{\partial f_2}{\partial \theta_2} &= \cos(\theta_1 + \theta_2)
+    \end{align*}
+
+    \item Evaluate at $\theta_1 = 0, \theta_1 + \theta_2 = \frac{\pi}{2}$:
+    \begin{align*}
+    \sin(0) = 0, \quad \cos(0) = 1, \quad &\sin\left(\frac{\pi}{2}\right) = 1, \quad \cos\left(\frac{\pi}{2}\right) = 0 \\
+    \frac{\partial f_1}{\partial \theta_1} = -0 - 1 = \mathbf{-1}, \quad &\frac{\partial f_1}{\partial \theta_2} = \mathbf{-1} \\
+    \frac{\partial f_2}{\partial \theta_1} = 1 + 0 = \mathbf{1}, \quad &\frac{\partial f_2}{\partial \theta_2} = \mathbf{0}
+    \end{align*}
+
+    \item Assemble the Jacobian matrix:
+    \begin{equation*}
+    \mathbf{J} = \begin{bmatrix} -1 & -1 \\ 1 & 0 \end{bmatrix}
+    \end{equation*}
+\end{enumerate}
+This matrix directly translates small joint angular velocities $\begin{bmatrix} \dot{\theta}_1 \\ \dot{\theta}_2 \end{bmatrix}$ into linear tip velocities $\begin{bmatrix} \dot{x} \\ \dot{y} \end{bmatrix} = \mathbf{J} \begin{bmatrix} \dot{\theta}_1 \\ \dot{\theta}_2 \end{bmatrix}$.
+
+% ==============================================================================
+% 5. GRADIENT DESCENT INTUITION
+% ==============================================================================
+\subsection{Gradient Descent: Optimization Through Iterative Steps}
+
+\begin{keyidea}[Gradient Descent Update Rule]
+Because the gradient $\nabla L(\mathbf{w})$ points in the direction of steepest increase, moving in the \textbf{opposite direction} ($-\nabla L(\mathbf{w})$) guarantees the steepest rate of decrease. 
+
+The \textbf{Gradient Descent} algorithm updates model parameters iteratively according to:
+\begin{equation}
+\mathbf{w}_{t+1} = \mathbf{w}_t - \eta \nabla L(\mathbf{w}_t)\label{eq:gradient_descent}
+\end{equation}
+where $\mathbf{w}_t$ is the parameter vector at iteration $t$, and $\eta > 0$ is a positive scalar called the \textbf{learning rate}.
+\end{keyidea}
+
+\paragraph{The Role of the Learning Rate $\eta$}
+\begin{itemize}
+    \item \textbf{Too Small ($\eta = 0.00001$)}: The model takes microscopic baby steps. Training takes weeks, wasting electricity and getting stuck on flat saddle regions.
+    \item \textbf{Too Large ($\eta = 5.0$)}: The model takes massive leaps, overshooting the valley floor and ricocheting up the opposite wall. The loss explodes toward infinity (\code{NaN}).
+    \item \textbf{Just Right ($\eta \approx 0.01$ to $0.1$)}: The model steps briskly down the slope, automatically taking smaller steps as the gradient flattens near the minimum.
+\end{itemize}
+
+\paragraph{Complete Hand-Worked Trace of 4 Optimization Steps}
+Let us minimize the 1D quadratic loss function:
+\begin{equation*}
+L(w) = w^2 - 4w + 6
+\end{equation*}
+\begin{enumerate}
+    \item Calculate the derivative:
+    \begin{equation*}
+    L'(w) = 2w - 4
+    \end{equation*}
+    (Notice that the true minimum occurs where $2w - 4 = 0 \implies w^* = 2.0$, giving minimum loss $L(2) = 2^2 - 4(2) + 6 = 2.0$).
+
+    \item Set hyperparameter learning rate $\eta = 0.1$, and start from an initial guess $w_0 = 5.0$:
+    \begin{itemize}
+        \item \textbf{Iteration 1}:
+        \begin{align*}
+        L(w_0) &= 5^2 - 4(5) + 6 = 25 - 20 + 6 = \mathbf{11.0000} \\
+        L'(w_0) &= 2(5.0) - 4 = \mathbf{6.0000} \\
+        w_1 &= w_0 - \eta L'(w_0) = 5.0 - (0.1 \times 6.0) = 5.0 - 0.60 = \mathbf{4.4000}
+        \end{align*}
+
+        \item \textbf{Iteration 2}:
+        \begin{align*}
+        L(w_1) &= (4.4)^2 - 4(4.4) + 6 = 19.36 - 17.60 + 6 = \mathbf{7.7600} \quad (\text{Loss dropped!}) \\
+        L'(w_1) &= 2(4.4) - 4 = 8.8 - 4 = \mathbf{4.8000} \\
+        w_2 &= w_1 - \eta L'(w_1) = 4.40 - (0.1 \times 4.80) = 4.40 - 0.48 = \mathbf{3.9200}
+        \end{align*}
+
+        \item \textbf{Iteration 3}:
+        \begin{align*}
+        L(w_2) &= (3.92)^2 - 4(3.92) + 6 = 15.3664 - 15.68 + 6 = \mathbf{5.6864} \\
+        L'(w_2) &= 2(3.92) - 4 = 7.84 - 4 = \mathbf{3.8400} \\
+        w_3 &= w_2 - \eta L'(w_2) = 3.92 - (0.1 \times 3.84) = 3.92 - 0.384 = \mathbf{3.5360}
+        \end{align*}
+
+        \item \textbf{Iteration 4}:
+        \begin{align*}
+        L(w_3) &= (3.536)^2 - 4(3.536) + 6 = 12.5033 - 14.1440 + 6 = \mathbf{4.3593} \\
+        L'(w_3) &= 2(3.536) - 4 = 7.072 - 4 = \mathbf{3.0720} \\
+        w_4 &= w_3 - \eta L'(w_3) = 3.536 - (0.1 \times 3.072) = 3.536 - 0.3072 = \mathbf{3.2288}
+        \end{align*}
+    \end{itemize}
+\end{enumerate}
+
+Notice the behavior:
+\begin{itemize}
+    \item The weight $w$ steadily marches toward the target: $5.0 \to 4.4 \to 3.92 \to 3.54 \to 3.23 \to \dots \to 2.0$.
+    \item The loss drops continuously: $11.00 \to 7.76 \to 5.69 \to 4.36 \to \dots \to 2.0$.
+    \item The gradient naturally shrinks ($6.0 \to 4.8 \to 3.84 \to 3.07$), automatically slowing down our steps as we approach the valley floor.
+\end{itemize}
+
+\paragraph{Python Code: Gradient Descent from Scratch}
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+def loss_fn(w):
+    return w**2 - 4*w + 6
+
+def grad_fn(w):
+    return 2*w - 4
+
+# Hyperparameters
+learning_rate = 0.1
+w = 5.0  # Initial weight
+n_iterations = 20
+
+print("--- Gradient Descent Optimization Trace ---")
+for step in range(1, n_iterations + 1):
+    current_loss = loss_fn(w)
+    gradient = grad_fn(w)
+    w_next = w - learning_rate * gradient
+    
+    if step <= 4 or step == n_iterations:
+        print(f"Step {step:2d} | w = {w:.4f} | Grad = {gradient:.4f} | Loss = {current_loss:.4f}")
+    elif step == 5:
+        print("  ...    |    ...    |     ...     |    ...")
+    w = w_next
+
+print(f"\nConverged Parameter: w* = {w:.4f} (True Analytical Minimum = 2.0000)")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+--- Gradient Descent Optimization Trace ---
+Step  1 | w = 5.0000 | Grad = 6.0000 | Loss = 11.0000
+Step  2 | w = 4.4000 | Grad = 4.8000 | Loss = 7.7600
+Step  3 | w = 3.9200 | Grad = 3.8400 | Loss = 5.6864
+Step  4 | w = 3.5360 | Grad = 3.0720 | Loss = 4.3593
+  ...    |    ...    |     ...     |    ...
+Step 20 | w = 2.0344 | Grad = 0.0687 | Loss = 2.0012
+
+Converged Parameter: w* = 2.0344 (True Analytical Minimum = 2.0000)
+\end{lstlisting}
+
+% ==============================================================================
+% 6. THE TINYML BRIDGE
+% ==============================================================================
+\subsection{The TinyML Bridge: On-Device Gradients on Microcontrollers}
+
+\begin{iotbox}[Why Full Backpropagation Breaks Microcontrollers]
+Computing forward inference on an ESP32 requires only evaluating functions. However, computing backward gradients via the chain rule requires storing all intermediate activation tensors from every layer in RAM to calculate partial derivatives!
+
+On a computer with 16 GB of RAM, storing activations is trivial. On an ESP32 with only $320\text{ KB}$ of SRAM, storing multi-layer activations causes an immediate stack overflow. 
+
+To overcome this, edge engineers use \textbf{TinyOL (Tiny On-Device Learning)}:
+\begin{itemize}
+    \item \textbf{Layer Freezing}: Freeze all feature extraction layers in Flash; compute gradients strictly for the final linear classification layer.
+    \item \textbf{Quantized Integer Gradients}: Compute gradient descent updates using 8-bit or 16-bit fixed-point integer math rather than 32-bit floats, reducing memory consumption by $4\times$.
+\end{itemize}
+\end{iotbox}
+
+\begin{warning}[Common Calculus Pitfalls in Machine Learning]
+\begin{itemize}
+    \item \textbf{The Vanishing Gradient Trap}: In deep neural networks, if intermediate derivatives are small fractions (e.g., sigmoid $\sigma'(z) \le 0.25$), multiplying 10 such terms via the chain rule yields $(0.25)^{10} \approx 0.00000095$. The gradient vanishes to zero, freezing earlier layers.
+    \item \textbf{The Exploding Gradient Trap}: If weights and derivatives are large ($> 1.5$), chaining 20 layers yields $(1.5)^{20} \approx 3{,}325$. Gradients explode into \code{NaN} (Not a Number), destroying the model weights.
+    \item \textbf{Forgetting Other Variables During Partial Differentiation}: When computing $\frac{\partial}{\partial x_1}[x_1^2 + x_1 x_2]$, beginners often accidentally treat $x_2$ as a variable. It must be treated strictly as a fixed number (like $5$).
+\end{itemize}
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item The derivative $\frac{df}{dx}$ measures the instantaneous slope of a function at a single point.
+    \item The Chain Rule ($\frac{dz}{dx} = \frac{dz}{du} \cdot \frac{du}{dx}$) enables gradient computation through nested compositions of functions.
+    \item Partial derivatives $\frac{\partial f}{\partial x_i}$ isolate the sensitivity of an output to one specific input while holding all others frozen.
+    \item The Gradient Vector $\nabla f$ points in the direction of steepest ascent; stepping along $-\nabla f$ descends toward the minimum.
+    \item Gradient Descent iteratively updates parameters ($\mathbf{w}_{t+1} = \mathbf{w}_t - \eta \nabla L$) to minimize error.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 7. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+\begin{enumerate}
+    \item \textbf{Power Rule \& Basic Derivatives}: Differentiate the polynomial $f(x) = 4x^3 - 5x^2 + 7x - 9$. What is the numerical slope of the tangent line at $x = 2$?
+
+    \item \textbf{The Chain Rule by Hand}: Given $y = \sin(u)$ and $u = 2x^3 - 4x$, express $\frac{dy}{dx}$ in terms of $x$. What is $\frac{dy}{dx}$ evaluated at $x = 1$? (Recall that $\frac{d}{du}[\sin(u)] = \cos(u)$).
+
+    \item \textbf{Partial Differentiation}: Given the loss function:
+    \begin{equation*}
+    L(w_1, w_2) = 3w_1^2 + 2w_1 w_2 + 4w_2^2
+    \end{equation*}
+    Calculate the partial derivatives $\frac{\partial L}{\partial w_1}$ and $\frac{\partial L}{\partial w_2}$. Then write the gradient vector $\nabla L$ evaluated at $(w_1 = 2, w_2 = -1)$.
+
+    \item \textbf{Gradient Descent Step by Hand}: Using the function $L(w) = 3w^2 - 12w + 15$ with learning rate $\eta = 0.1$ and initial weight $w_0 = 4.0$:
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the derivative $L'(w)$.
+        \item Calculate the first updated weight $w_1$.
+        \item Did the loss decrease from $L(w_0)$ to $L(w_1)$? Show the arithmetic.
+    \end{enumerate}
+
+    \item \textbf{Jacobian Dimensions}: A neural network layer takes an input vector $\mathbf{x} \in \mathbb{R}^4$ and outputs an activation vector $\mathbf{y} \in \mathbb{R}^3$. What are the row and column dimensions of the Jacobian matrix $\mathbf{J} = \frac{\partial \mathbf{y}}{\partial \mathbf{x}}$?
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Power Rule \& Basic Derivatives}:
+    Using the power rule:
+    \begin{equation*}
+    f'(x) = 4(3x^2) - 5(2x) + 7(1) - 0 = \mathbf{12x^2 - 10x + 7}
+    \end{equation*}
+    Evaluate at $x = 2$:
+    \begin{equation*}
+    f'(2) = 12(2^2) - 10(2) + 7 = 12(4) - 20 + 7 = 48 - 20 + 7 = \mathbf{35}
+    \end{equation*}
+
+    \item \textbf{The Chain Rule by Hand}:
+    \begin{align*}
+    \frac{dy}{du} &= \cos(u) \\
+    \frac{du}{dx} &= 6x^2 - 4
+    \end{align*}
+    By the chain rule:
+    \begin{equation*}
+    \frac{dy}{dx} = \frac{dy}{du} \cdot \frac{du}{dx} = \cos(u) \cdot (6x^2 - 4) = \mathbf{\cos(2x^3 - 4x) \cdot (6x^2 - 4)}
+    \end{equation*}
+    At $x = 1$:
+    \begin{align*}
+    u(1) &= 2(1)^3 - 4(1) = 2 - 4 = -2 \\
+    \frac{dy}{dx}\Big|_{x=1} &= \cos(-2) \cdot (6(1)^2 - 4) = \cos(-2) \cdot (6 - 4) = \mathbf{2 \cos(-2)} \approx 2(-0.4161) \approx \mathbf{-0.8323}
+    \end{align*}
+
+    \item \textbf{Partial Differentiation}:
+    \begin{align*}
+    \frac{\partial L}{\partial w_1} &= 6w_1 + 2w_2 \\
+    \frac{\partial L}{\partial w_2} &= 2w_1 + 8w_2
+    \end{align*}
+    Evaluate at $(w_1 = 2, w_2 = -1)$:
+    \begin{align*}
+    \frac{\partial L}{\partial w_1} &= 6(2) + 2(-1) = 12 - 2 = \mathbf{10} \\
+    \frac{\partial L}{\partial w_2} &= 2(2) + 8(-1) = 4 - 8 = \mathbf{-4}
+    \end{align*}
+    Gradient vector:
+    \begin{equation*}
+    \nabla L(2, -1) = \begin{bmatrix} 10 \\ -4 \end{bmatrix}
+    \end{equation*}
+
+    \item \textbf{Gradient Descent Step by Hand}:
+    \begin{enumerate}[label=(\alph*)]
+        \item $L'(w) = 6w - 12$.
+        \item At $w_0 = 4.0$:
+        \begin{align*}
+        L'(4.0) &= 6(4.0) - 12 = 24 - 12 = 12.0 \\
+        w_1 &= w_0 - \eta L'(w_0) = 4.0 - (0.1 \times 12.0) = 4.0 - 1.2 = \mathbf{2.8}
+        \end{align*}
+        \item Check losses:
+        \begin{align*}
+        L(w_0) &= L(4.0) = 3(4^2) - 12(4) + 15 = 3(16) - 48 + 15 = 48 - 48 + 15 = \mathbf{15.0} \\
+        L(w_1) &= L(2.8) = 3(2.8^2) - 12(2.8) + 15 = 3(7.84) - 33.6 + 15 = 23.52 - 33.6 + 15 = \mathbf{4.92}
+        \end{align*}
+        Yes, the loss dropped significantly from $15.0$ to $4.92$.
+    \end{enumerate}
+
+    \item \textbf{Jacobian Dimensions}:
+    The function has $m = 3$ outputs and $n = 4$ inputs. 
+    The Jacobian matrix $\mathbf{J}$ has dimensions $\mathbf{3 \times 4}$ (3 rows, 4 columns), where element $J_{ij} = \frac{\partial y_i}{\partial x_j}$.
+\end{enumerate}

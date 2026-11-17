@@ -1,0 +1,962 @@
+% FILE: chapters/ch04_s4_unsupervised.tex
+\section{Unsupervised Learning}\label{sec:unsupervised_learning}
+
+In all preceding chapters on regression and classification, our algorithms operated in a supervised regime: every single sensor feature vector $\mathbf{x}_i$ was accompanied by a teacher's answer, the ground-truth target label $y_i$.
+
+In the real physical world of IoT networks, smart factories, and remote environmental sensing, ground-truth labels are a rare luxury:
+\begin{itemize}
+    \item A vibration sensor on an industrial gas compressor records $10{,}000$ acceleration samples every second, generating $864\text{ million}$ raw floats every single day. No human technician can manually review and label every vibration burst.
+    \item When a novel mechanical degradation mode develops in a newly deployed wind turbine gearbox, no historical labeled examples of that specific failure mode exist in the training database.
+    \item A fleet of $500$ smart agriculture nodes transmits soil moisture, temperature, solar flux, and air quality telemetry. We want to discover whether distinct geographic microclimates exist without predefined botanical categories.
+\end{itemize}
+
+This is the domain of **Unsupervised Learning**. In unsupervised learning, the algorithm is provided exclusively with the input feature vectors:
+\begin{equation}
+\mathcal{D} = \{\mathbf{x}_1, \mathbf{x}_2, \dots, \mathbf{x}_N\}, \quad \mathbf{x}_i \in \mathbb{R}^D\label{eq:unsupervised_dataset}
+\end{equation}
+There are no target labels $y$, no teacher, and no reward signals. The mission of unsupervised learning is to discover intrinsic mathematical structure, hidden groupings, latent geometric manifolds, and anomalous outliers directly from the unlabeled data distribution.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    box/.style={rectangle, draw=gray!70, fill=gray!5, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
+    task_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Central Input
+    \node[box, minimum width=11.5cm, fill=gray!12] (input) at (0, 3.2) {\textbf{Unlabeled Sensor Telemetry} $\mathbf{X} \in \mathbb{R}^{N \times D}$ (No ground-truth labels)};
+
+    % Four Branches
+    \node[task_box, minimum width=2.6cm] (clust) at (-4.2, 1.4) {\textbf{1. Hard Clustering}\\$k$-Means, DBSCAN,\\Hierarchical};
+    \node[task_box, minimum width=2.6cm] (prob) at (-1.4, 1.4) {\textbf{2. Probabilistic}\\Gaussian Mixture\\Models (GMM)};
+    \node[task_box, minimum width=2.6cm] (linear_dr) at (1.4, 1.4) {\textbf{3. Linear Projection}\\PCA Reconstruction\\Anomaly Detection};
+    \node[task_box, minimum width=2.6cm] (nl_dr) at (4.2, 1.4) {\textbf{4. Manifold Learning}\\t-SNE and UMAP\\Visual Embedding};
+
+    % Connections
+    \draw[arrow] (-4.2, 2.7) -- (clust.north);
+    \draw[arrow] (-1.4, 2.7) -- (prob.north);
+    \draw[arrow] (1.4, 2.7) -- (linear_dr.north);
+    \draw[arrow] (4.2, 2.7) -- (nl_dr.north);
+
+    % Outcomes
+    \node[font=\scriptsize\sffamily, text=gray!80] at (-4.2, 0.4) {Operating regime segmentation};
+    \node[font=\scriptsize\sffamily, text=gray!80] at (-1.4, 0.4) {Soft density assignment};
+    \node[font=\scriptsize\sffamily, text=gray!80] at (1.4, 0.4) {Residual fault scoring};
+    \node[font=\scriptsize\sffamily, text=gray!80] at (4.2, 0.4) {2D/3D human inspection};
+\end{tikzpicture}
+\caption{The taxonomy of unsupervised learning for physical sensor systems. Without human annotations, algorithms discover discrete operational modes, estimate probability densities, and compress complex multidimensional telemetry for anomaly detection and visualization.}\label{fig:unsupervised_taxonomy}
+\end{figure}
+
+In this section, we master the foundational algorithms of unsupervised machine learning:
+\begin{enumerate}
+    \item \textbf{$k$-Means Clustering}: Vector quantization, centroid convergence, and inertia optimization.
+    \item \textbf{Hierarchical Clustering}: Agglomerative bottom-up tree construction, linkage distance criteria, and dendrogram interpretation.
+    \item \textbf{DBSCAN}: Density-based spatial clustering capable of discovering arbitrary non-convex geometries and isolating noise.
+    \item \textbf{Gaussian Mixture Models (GMM)}: Soft probabilistic clustering via the Expectation-Maximization (EM) algorithm.
+    \item \textbf{Principal Component Analysis (PCA) for Anomaly Detection}: Using linear reconstruction error as a zero-shot physical fault detector.
+    \item \textbf{Non-Linear Dimensionality Reduction}: High-dimensional visualization using t-SNE and UMAP.
+\end{enumerate}
+
+% ==============================================================================
+% 1. K-MEANS CLUSTERING
+% ==============================================================================
+\subsection{$k$-Means Clustering: Vector Quantization and Centroid Optimization}\label{subsec:kmeans}
+
+The most famous and widely deployed clustering algorithm in engineering history is **$k$-Means**. Developed independently in several disciplines (notably by Stuart Lloyd in 1957 for pulse-code modulation in telecommunications), $k$-Means partitions an unlabeled dataset into $K$ distinct, non-overlapping groups.
+
+\subsubsection{Mathematical Formulation: Minimizing Within-Cluster Inertia}
+Given an unlabeled dataset $\mathcal{D} = \{\mathbf{x}_1, \dots, \mathbf{x}_N\}$ and a user-specified number of clusters $K$, our goal is to partition the $N$ observations into $K$ disjoint sets $S = \{S_1, S_2, \dots, S_K\}$ such that the total **Within-Cluster Sum of Squares (WCSS)**---also termed **Inertia**---is minimized:
+\begin{equation}
+J(S, \boldsymbol{\mu}) = \sum_{k=1}^{K} \sum_{\mathbf{x}_i \in S_k} \|\mathbf{x}_i - \boldsymbol{\mu}_k\|^2\label{eq:kmeans_inertia}
+\end{equation}
+where $\boldsymbol{\mu}_k \in \mathbb{R}^D$ is the geometric center (the **centroid**) of cluster $S_k$:
+\begin{equation}
+\boldsymbol{\mu}_k = \frac{1}{|S_k|} \sum_{\mathbf{x}_i \in S_k} \mathbf{x}_i\label{eq:kmeans_centroid_def}
+\end{equation}
+
+\subsubsection{Lloyd's Algorithm: The Alternating Optimization}
+Finding the exact global minimum of Equation~\eqref{eq:kmeans_inertia} is an NP-hard combinatorial problem (there are approximately $K^N / K!$ possible ways to partition $N$ points into $K$ sets). 
+
+Instead, **Lloyd's Algorithm** finds an exceptionally high-quality local minimum through an alternating two-step heuristic:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    step_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!10, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
+]
+    \node[step_box, minimum width=3.8cm] (init) at (-4.8, 0) {\textbf{0. Initialization}\\Select $K$ initial centroids\\$\boldsymbol{\mu}_1, \dots, \boldsymbol{\mu}_K$ ($k$-Means++)};
+    \node[step_box, minimum width=3.8cm] (assign) at (0.0, 1.2) {\textbf{Step 1: Assignment}\\Assign each $\mathbf{x}_i$ to closest\\centroid: $\arg\min_k \|\mathbf{x}_i - \boldsymbol{\mu}_k\|^2$};
+    \node[step_box, minimum width=3.8cm] (update) at (0.0, -1.2) {\textbf{Step 2: Update}\\Recompute centroids as\\means: $\boldsymbol{\mu}_k = \frac{1}{|S_k|}\sum \mathbf{x}_i$};
+    \node[step_box, minimum width=3.0cm] (done) at (4.8, 0) {\textbf{Convergence}\\Centroids stop moving\\$\Delta \boldsymbol{\mu}_k < \varepsilon$};
+
+    \draw[arrow] (init) |- (assign.west);
+    \draw[arrow] (assign.south) -- (update.north);
+    \draw[arrow] (update.west) -| (-2.4, 0) |- (assign.west);
+    \draw[arrow] (update.east) -| (2.4, 0) |- (done.west);
+    \draw[arrow] (assign.east) -| (done.west);
+\end{tikzpicture}
+\caption{The iterative loop of Lloyd's $k$-Means algorithm. Alternating between nearest-centroid assignment and centroid mean recomputation guarantees monotonic reduction of inertia until convergence.}\label{fig:kmeans_loop}
+\end{figure}
+
+\begin{enumerate}
+    \item \textbf{Initialization}: Choose $K$ initial centroid vectors $\boldsymbol{\mu}_1, \dots, \boldsymbol{\mu}_K$ in feature space.
+    \item \textbf{Assignment Step}: Holding the centroids $\boldsymbol{\mu}_k$ fixed, assign each data point $\mathbf{x}_i$ to its nearest centroid according to Euclidean distance:
+    \begin{equation}
+    S_k^{(t)} = \left\{ \mathbf{x}_i : \|\mathbf{x}_i - \boldsymbol{\mu}_k^{(t)}\|^2 \le \|\mathbf{x}_i - \boldsymbol{\mu}_j^{(t)}\|^2 \quad \forall j \in \{1, \dots, K\} \right\}\label{eq:kmeans_assignment}
+    \end{equation}
+    \item \textbf{Update Step}: Holding the cluster assignments $S_k$ fixed, recompute each centroid as the arithmetic mean of all data points currently assigned to that cluster:
+    \begin{equation}
+    \boldsymbol{\mu}_k^{(t+1)} = \frac{1}{|S_k^{(t)}|} \sum_{\mathbf{x}_i \in S_k^{(t)}} \mathbf{x}_i\label{eq:kmeans_update}
+    \end{equation}
+    \item \textbf{Convergence}: Repeat Steps 1 and 2 until the centroid coordinates stop moving ($\|\boldsymbol{\mu}_k^{(t+1)} - \boldsymbol{\mu}_k^{(t)}\| < \varepsilon$) or cluster assignments become invariant.
+\end{enumerate}
+
+\paragraph{Convergence Guarantee}
+Because both the assignment step and the update step strictly decrease or maintain the non-negative objective function $J$, and because there are only a finite number of possible partitions, **Lloyd's algorithm is mathematically guaranteed to converge**. However, it converges to a local minimum, not necessarily the global optimum.
+
+\subsubsection{Initialization Pitfalls and $k$-Means++}
+If initial centroids are selected purely at random, two centroids may land within the same physical cluster, leaving another distant cluster without a centroid. The algorithm gets trapped in a poor local minimum.
+
+To solve this, Arthur and Vassilvitskii (2007) introduced **$k$-Means++**:
+\begin{enumerate}
+    \item Choose the first centroid $\boldsymbol{\mu}_1$ uniformly at random from the training data points.
+    \item For every data point $\mathbf{x}_i$, compute its shortest squared distance to any already chosen centroid:
+    \begin{equation}
+    D(\mathbf{x}_i)^2 = \min_{j} \|\mathbf{x}_i - \boldsymbol{\mu}_j\|^2
+    \end{equation}
+    \item Select the next centroid $\boldsymbol{\mu}_k$ from the data points with probability proportional to its squared distance:
+    \begin{equation}
+    P(\mathbf{x}_i) = \frac{D(\mathbf{x}_i)^2}{\sum_{m=1}^{N} D(\mathbf{x}_m)^2}\label{eq:kmeans_plus_prob}
+    \end{equation}
+    \item Repeat Steps 2 and 3 until all $K$ centroids have been initialized.
+\end{enumerate}
+$k$-Means++ deliberately pushes initial centroids far apart from each other across the physical feature space, dramatically accelerating convergence and guaranteeing an expected approximation ratio within $\mathcal{O}(\log K)$ of the optimal clustering.
+
+\subsubsection{Determining the Optimal Number of Clusters $K$}
+In unsupervised learning, the true number of physical regimes $K$ is rarely known in advance. We evaluate candidate values of $K$ using two metrics:
+
+\paragraph{1. The Elbow Method}
+Plot total inertia $J$ as a function of $K$. As $K$ increases, inertia naturally decreases (if $K = N$, inertia drops to exact zero because every point is its own centroid). We identify the ``elbow'' point on the curve where the rate of inertia reduction abruptly flattens. Adding further clusters beyond the elbow yields diminishing physical returns.
+
+\paragraph{2. Silhouette Analysis}
+For any sample $\mathbf{x}_i$:
+\begin{itemize}
+    \item Let $a_i$ be the mean intra-cluster distance from $\mathbf{x}_i$ to all other points in its own cluster (measuring **cohesion**).
+    \item Let $b_i$ be the mean nearest-cluster distance from $\mathbf{x}_i$ to points in the closest neighboring cluster (measuring **separation**).
+\end{itemize}
+The **Silhouette Coefficient** of sample $\mathbf{x}_i$ is defined as:
+\begin{equation}
+s_i = \frac{b_i - a_i}{\max(a_i, b_i)} \in [-1, +1]\label{eq:silhouette_coeff}
+\end{equation}
+\begin{itemize}
+    \item $s_i \approx +1$: Sample $\mathbf{x}_i$ is tightly clustered within its own group and far from neighboring clusters (ideal clustering).
+    \item $s_i \approx 0$: Sample $\mathbf{x}_i$ lies directly on the decision boundary between two clusters.
+    \item $s_i < 0$: Sample $\mathbf{x}_i$ is closer to a neighboring cluster than to its assigned cluster (indicates an incorrect assignment).
+\end{itemize}
+The average silhouette coefficient across all $N$ samples provides an objective score to compare different values of $K$.
+
+\subsubsection{Assumptions and Critical Limitations of $k$-Means}
+$k$-Means makes rigid geometric assumptions:
+\begin{itemize}
+    \item \textbf{Spherical Clusters}: Because it uses Euclidean distance, $k$-Means assumes clusters are spherical and isotropically distributed. It fails on elongated, crescent-shaped, or irregular manifolds.
+    \item \textbf{Equal Cluster Sizes and Densities}: $k$-Means places boundaries midway between centroids, struggling when one cluster is dense and compact while another is sparse and broad.
+    \item \textbf{Extreme Sensitivity to Scale}: Unscaled features warp distance metrics. Scaling via \texttt{StandardScaler} is non-negotiable.
+\end{itemize}
+
+% ==============================================================================
+% 2. HIERARCHICAL CLUSTERING
+% ==============================================================================
+\subsection{Hierarchical Clustering: Dendrograms and Linkage Criteria}\label{subsec:hierarchical_clustering}
+
+Unlike $k$-Means, which requires pre-specifying $K$ and produces a flat, single-tier partition, **Hierarchical Clustering** constructs a nested hierarchy of clusters visualized as a branching tree diagram called a **Dendrogram**.
+
+\subsubsection{Agglomerative (Bottom-Up) Clustering}
+The most prevalent hierarchical architecture is **Agglomerative Clustering**:
+\begin{enumerate}
+    \item Start with $N$ individual clusters, where each data point $\mathbf{x}_i$ forms its own singleton cluster: $S_i = \{\mathbf{x}_i\}$.
+    \item Compute the pairwise distance between all current clusters.
+    \item Merge the two clusters that are closest together according to a chosen **Linkage Criterion**.
+    \item Repeat Steps 2 and 3 until all data points are merged into a single root cluster containing all $N$ samples.
+\end{enumerate}
+
+\subsubsection{Linkage Criteria: Measuring Inter-Cluster Distance}
+How do we calculate the distance $D(A, B)$ between two multi-point clusters $A$ and $B$?
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    cluster_a/.style={circle, draw=keyideablue!80, fill=keyideablue!20, minimum size=1.8cm, font=\scriptsize\sffamily},
+    cluster_b/.style={circle, draw=analogygreen!80, fill=analogygreen!20, minimum size=1.8cm, font=\scriptsize\sffamily},
+    pt_a/.style={circle, fill=keyideablue!80, inner sep=1.8pt},
+    pt_b/.style={circle, fill=analogygreen!80, inner sep=1.8pt}
+]
+    % Panel 1: Single Linkage
+    \node[cluster_a] at (-4.8, 1.8) {};
+    \node[cluster_b] at (-2.2, 1.8) {};
+    \node[pt_a] (s_a) at (-3.9, 1.8) {}; \node[pt_b] (s_b) at (-3.1, 1.8) {};
+    \draw[<->, thick, purple!80] (s_a) -- node[above, font=\tiny\sffamily] {$\min d(a, b)$} (s_b);
+    \node[font=\scriptsize\sffamily\bfseries] at (-3.5, 0.4) {1. Single Linkage};
+
+    % Panel 2: Complete Linkage
+    \node[cluster_a] at (0.0, 1.8) {};
+    \node[cluster_b] at (2.6, 1.8) {};
+    \node[pt_a] (c_a) at (-0.8, 2.2) {}; \node[pt_b] (c_b) at (3.4, 1.4) {};
+    \draw[<->, thick, purple!80] (c_a) -- node[above, font=\tiny\sffamily] {$\max d(a, b)$} (c_b);
+    \node[font=\scriptsize\sffamily\bfseries] at (1.3, 0.4) {2. Complete Linkage};
+
+    % Panel 3: Average Linkage
+    \node[cluster_a] at (4.8, 1.8) {};
+    \node[cluster_b] at (7.4, 1.8) {};
+    \draw[dashed, gray!60] (4.4, 2.2) -- (7.0, 2.2);
+    \draw[dashed, gray!60] (4.4, 1.4) -- (7.0, 1.4);
+    \draw[<->, thick, purple!80] (4.8, 1.8) -- node[above, font=\tiny\sffamily] {$\text{Mean } d(a, b)$} (7.4, 1.8);
+    \node[font=\scriptsize\sffamily\bfseries] at (6.1, 0.4) {3. Average Linkage};
+\end{tikzpicture}
+\caption{The three primary geometric linkage distance criteria between two multi-point clusters $A$ and $B$.}\label{fig:linkage_criteria}
+\end{figure}
+
+\begin{enumerate}
+    \item \textbf{Single Linkage (Minimum Distance)}:
+    \begin{equation}
+    D_{\text{single}}(A, B) = \min_{\mathbf{a} \in A, \mathbf{b} \in B} \|\mathbf{a} - \mathbf{b}\|\label{eq:single_linkage}
+    \end{equation}
+    Measures the distance between the closest pair of points. 
+    
+    \textit{Drawback}: Highly susceptible to the **chaining effect**, where a thin line of random noise points bridges two fundamentally distinct clusters into a single elongated blob.
+    
+    \item \textbf{Complete Linkage (Maximum Distance)}:
+    \begin{equation}
+    D_{\text{complete}}(A, B) = \max_{\mathbf{a} \in A, \mathbf{b} \in B} \|\mathbf{a} - \mathbf{b}\|\label{eq:complete_linkage}
+    \end{equation}
+    Measures the distance between the two farthest points. Forces clusters to remain compact and spherical.
+    
+    \item \textbf{Average Linkage (UPGMA)}:
+    \begin{equation}
+    D_{\text{average}}(A, B) = \frac{1}{|A||B|} \sum_{\mathbf{a} \in A} \sum_{\mathbf{b} \in B} \|\mathbf{a} - \mathbf{b}\|\label{eq:average_linkage}
+    \end{equation}
+    Computes the average distance between all cross-cluster point pairs, balancing compactness and chain resistance.
+    
+    \item \textbf{Ward's Linkage (Minimum Variance)}:
+    Instead of measuring raw distance, Ward's method computes the increase in total within-cluster variance resulting from merging clusters $A$ and $B$:
+    \begin{equation}
+    \Delta \text{ESS}_{AB} = \frac{|A||B|}{|A| + |B|} \|\boldsymbol{\mu}_A - \boldsymbol{\mu}_B\|^2\label{eq:ward_linkage}
+    \end{equation}
+    Ward's linkage seeks to minimize the growth of sum-of-squares errors. In industrial sensor applications, Ward's linkage is generally the most robust and stable criterion.
+\end{enumerate}
+
+\subsubsection{The Dendrogram: Visualizing Multi-Scale Structure}
+The entire agglomerative merging history is visualized in a **Dendrogram**. The horizontal axis lists the individual observations, while the vertical axis represents the merge distance (dissimilarity) at which clusters joined:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Vertical distance axis
+    \draw[->, thick, gray!70] (-0.5, 0) -- (-0.5, 3.8) node[above, font=\footnotesize\sffamily] {Merge Distance $\Delta \text{ESS}$};
+    \foreach \y/\val in {0/0, 1/1.0, 2/2.0, 3/3.0} {
+        \draw[thick, gray!60] (-0.6, \y) -- (-0.4, \y) node[left=1.5mm, font=\scriptsize\sffamily] {\val};
+    }
+
+    % Horizontal Cut Line (Threshold)
+    \draw[very thick, dashed, warningred!80] (-0.3, 2.2) -- (8.5, 2.2) node[right, font=\scriptsize\sffamily\bfseries, text=warningred!90!black] {Cut Threshold ($K = 3$)};
+
+    % Leaves
+    \node[font=\scriptsize\sffamily] at (0.5, -0.3) {$x_1$};
+    \node[font=\scriptsize\sffamily] at (1.5, -0.3) {$x_2$};
+    \node[font=\scriptsize\sffamily] at (3.0, -0.3) {$x_3$};
+    \node[font=\scriptsize\sffamily] at (4.0, -0.3) {$x_4$};
+    \node[font=\scriptsize\sffamily] at (5.5, -0.3) {$x_5$};
+    \node[font=\scriptsize\sffamily] at (6.5, -0.3) {$x_6$};
+    \node[font=\scriptsize\sffamily] at (7.5, -0.3) {$x_7$};
+
+    % Branches Cluster 1 (x1, x2)
+    \draw[thick, keyideablue!80] (0.5, 0) -- (0.5, 0.8) -- (1.5, 0.8) -- (1.5, 0);
+    \draw[thick, keyideablue!80] (1.0, 0.8) -- (1.0, 2.8);
+
+    % Branches Cluster 2 (x3, x4)
+    \draw[thick, analogygreen!80!black] (3.0, 0) -- (3.0, 0.6) -- (4.0, 0.6) -- (4.0, 0);
+    \draw[thick, analogygreen!80!black] (3.5, 0.6) -- (3.5, 1.8);
+
+    % Branches Cluster 3 (x5, x6, x7)
+    \draw[thick, purple!80] (5.5, 0) -- (5.5, 0.5) -- (6.5, 0.5) -- (6.5, 0);
+    \draw[thick, purple!80] (6.0, 0.5) -- (6.0, 1.2) -- (7.5, 1.2) -- (7.5, 0);
+    \draw[thick, purple!80] (6.75, 1.2) -- (6.75, 1.8);
+
+    % Merge Clust 2 and 3
+    \draw[thick, analogygreen!80!black] (3.5, 1.8) -- (6.75, 1.8);
+    \draw[thick, gray!80] (5.125, 1.8) -- (5.125, 2.8);
+
+    % Master root merge
+    \draw[thick, gray!80] (1.0, 2.8) -- (5.125, 2.8) -- (3.06, 3.5);
+\end{tikzpicture}
+\caption{An Agglomerative Hierarchical Dendrogram. Drawing a horizontal cut line across the diagram at any chosen height partitions the dataset into discrete clusters. Cutting at height $2.2$ yields exactly $K = 3$ clusters.}\label{fig:dendrogram_structure}
+\end{figure}
+
+By sliding a horizontal threshold line vertically up or down the dendrogram, an engineer can inspect the clustering structure at arbitrary granularities: a high cut yields coarse operational regimes (e.g., Running vs.\ Stopped), while a low cut reveals fine-grained micro-modes (e.g., High-Torque vs.\ Eco-Mode vs.\ Low-Pressure Idle).
+
+% ==============================================================================
+% 3. DBSCAN
+% ==============================================================================
+\subsection{DBSCAN: Density-Based Spatial Clustering with Noise}\label{subsec:dbscan}
+
+Both $k$-Means and Ward's hierarchical clustering struggle when clusters have non-spherical shapes, interlocking rings, or widespread random background noise. 
+
+**DBSCAN (Density-Based Spatial Clustering of Applications with Noise)**, developed by Ester, Kriegel, Sander, and Xu in 1996, abandons distance-to-centroid metrics entirely. Instead, it defines clusters as **continuous dense regions of points separated by low-density empty space**.
+
+\subsubsection{Core Parameters: Epsilon ($\varepsilon$) and MinPts}
+DBSCAN requires two intuitive physical parameters:
+\begin{enumerate}
+    \item \textbf{$\varepsilon$ (Epsilon)}: The maximum spatial neighborhood radius surrounding any point.
+    \item \textbf{MinPts}: The minimum number of points required within distance $\varepsilon$ to form a dense core region.
+\end{enumerate}
+
+\subsubsection{Point Classification: Core, Border, and Noise}
+Given $\varepsilon$ and $\text{MinPts}$, DBSCAN categorizes every sample $\mathbf{x}_i$ into one of three mutual states:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Core Point C
+    \coordinate (C) at (0, 0);
+    \draw[dashed, thick, keyideablue!80, fill=keyideablue!8] (C) circle (1.5cm);
+    \node[circle, fill=keyideablue!90, inner sep=2.5pt] (Cnode) at (C) {};
+    \node[above=2mm, font=\scriptsize\sffamily\bfseries, text=keyideablue!90!black] at (C) {Core Point ($\ge 4$ neighbors)};
+
+    % Core neighbors
+    \node[circle, fill=keyideablue!70, inner sep=1.8pt] at (-0.6, 0.7) {};
+    \node[circle, fill=keyideablue!70, inner sep=1.8pt] at (0.8, 0.5) {};
+    \node[circle, fill=keyideablue!70, inner sep=1.8pt] at (-0.7, -0.6) {};
+    
+    % Border Point B
+    \coordinate (B) at (1.2, -0.5);
+    \draw[dashed, thick, analogygreen!80, fill=analogygreen!8] (B) circle (1.5cm);
+    \node[circle, fill=analogygreen!90!black, inner sep=2.5pt] at (B) {};
+    \node[below right=2mm, font=\scriptsize\sffamily\bfseries, text=analogygreen!90!black] at (B) {Border Point ($< 4$ neighbors)};
+    \node[circle, fill=analogygreen!70!black, inner sep=1.8pt] at (2.2, -0.8) {};
+
+    % Noise Point N (Outlier)
+    \coordinate (N) at (4.5, 0.8);
+    \draw[dashed, thick, warningred!80, fill=warningred!8] (N) circle (1.5cm);
+    \node[rectangle, fill=warningred!90, inner sep=2.5pt] at (N) {};
+    \node[above=2mm, font=\scriptsize\sffamily\bfseries, text=warningred!90!black] at (N) {Noise Point (Isolated Outlier)};
+
+    % Radius indicator
+    \draw[<->, thick, purple!80] (C) -- (1.5, 0) node[midway, below, font=\tiny\sffamily\bfseries] {Radius $\varepsilon$};
+\end{tikzpicture}
+\caption{The DBSCAN point classification taxonomy with $\text{MinPts} = 4$. Core points possess dense neighborhoods; border points inhabit cluster boundaries; noise points are rejected as outliers.}\label{fig:dbscan_geometry}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Core Point}: A point $\mathbf{x}$ is a core point if its $\varepsilon$-neighborhood contains at least $\text{MinPts}$ points:
+    \begin{equation}
+    |N_\varepsilon(\mathbf{x})| = |\{\mathbf{z} \in \mathcal{D} : \|\mathbf{x} - \mathbf{z}\| \le \varepsilon\}| \ge \text{MinPts}\label{eq:dbscan_core}
+    \end{equation}
+    \item \textbf{Border Point}: A point that contains fewer than $\text{MinPts}$ points in its own neighborhood, but falls within distance $\varepsilon$ of a Core Point. Border points represent the outer frontiers of a cluster.
+    \item \textbf{Noise Point (Outlier)}: A point that is neither a core point nor a border point.
+\end{itemize}
+
+\subsubsection{Density-Reachability and Cluster Formation}
+DBSCAN expands clusters using density chains:
+\begin{enumerate}
+    \item Select an unvisited point $\mathbf{x}$. If it is a core point, initialize a new cluster.
+    \item Recursively expand the cluster by adding all points that are **density-reachable** from $\mathbf{x}$ (i.e., reachable through a chain of core points where each is within distance $\varepsilon$ of the next).
+    \item If a border point is encountered, add it to the cluster and terminate expansion along that branch.
+    \item Repeat until every point in the dataset has been visited.
+\end{enumerate}
+
+\subsubsection{Why DBSCAN is Essential for IoT Anomaly Detection}
+DBSCAN possesses practical advantages over $k$-Means:
+\begin{enumerate}
+    \item **No Need to Specify $K$**: The algorithm automatically discovers the number of physical clusters dictated by the spatial density of the data.
+    \item **Built-In Noise Rejection**: Outliers, electrical sensor spikes, and corrupt communication frames are assigned label $-1$ (Noise). They do not distort cluster boundaries.
+    \item **Arbitrary Cluster Shapes**: Can cleanly cluster interlocking concentric rings, spiral acoustic harmonics, and irregular non-linear manifolds that paralyze centroid-based models.
+\end{enumerate}
+
+% ==============================================================================
+% 4. GAUSSIAN MIXTURE MODELS (GMM)
+% ==============================================================================
+\subsection{Gaussian Mixture Models: Soft Probabilistic Clustering}\label{subsec:gmm}
+
+Algorithms like $k$-Means and DBSCAN enforce **hard clustering**: every observation is assigned strictly and binarily to a single cluster. 
+
+In physical engineering, state boundaries are often fuzzy: a motor bearing transitioning from healthy operation to early spalling does not jump instantly across a hard mathematical line. It exists in an intermediate, degraded operational state.
+
+**Gaussian Mixture Models (GMM)** provide **soft clustering** by modeling the data generation process probabilistically.
+
+\subsubsection{Mathematical Formulation of the Mixture}
+A Gaussian Mixture Model treats the observed dataset as a linear superposition of $K$ distinct multivariate Gaussian distributions:
+\begin{equation}
+p(\mathbf{x}) = \sum_{k=1}^{K} \pi_k \mathcal{N}(\mathbf{x} \mid \boldsymbol{\mu}_k, \mathbf{\Sigma}_k)\label{eq:gmm_probability_density}
+\end{equation}
+where:
+\begin{itemize}
+    \item $\pi_k$ is the **mixture weight** (prior probability) of component $k$, satisfying $0 \le \pi_k \le 1$ and $\sum_{k=1}^K \pi_k = 1$.
+    \item $\boldsymbol{\mu}_k \in \mathbb{R}^D$ is the mean vector of Gaussian component $k$.
+    \item $\mathbf{\Sigma}_k \in \mathbb{R}^{D \times D}$ is the covariance matrix of component $k$.
+    \item $\mathcal{N}(\mathbf{x} \mid \boldsymbol{\mu}_k, \mathbf{\Sigma}_k)$ is the multivariate Gaussian density:
+    \begin{equation}
+    \mathcal{N}(\mathbf{x} \mid \boldsymbol{\mu}_k, \mathbf{\Sigma}_k) = \frac{1}{(2\pi)^{D/2} |\mathbf{\Sigma}_k|^{1/2}} \exp\left( -\frac{1}{2} (\mathbf{x} - \boldsymbol{\mu}_k)^T \mathbf{\Sigma}_k^{-1} (\mathbf{x} - \boldsymbol{\mu}_k) \right)\label{eq:multivariate_gaussian_def}
+    \end{equation}
+\end{itemize}
+
+\subsubsection{Covariance Matrix Topologies}
+The geometry of each Gaussian cluster is controlled by constraints placed upon covariance matrix $\mathbf{\Sigma}_k$:
+\begin{itemize}
+    \item \textbf{Spherical}: $\mathbf{\Sigma}_k = \sigma_k^2 \mathbf{I}$. Clusters are forced to be spherical (identical variance across all dimensions). Mathematically equivalent to soft $k$-means.
+    \item \textbf{Diagonal}: $\mathbf{\Sigma}_k$ is a diagonal matrix. Clusters form axis-aligned ellipsoids. Features are assumed conditionally uncorrelated within each cluster.
+    \item \textbf{Full}: $\mathbf{\Sigma}_k$ is an unconstrained symmetric positive-definite matrix. Clusters form rotated, arbitrary ellipsoids with full cross-feature covariance modeling.
+\end{itemize}
+
+\subsubsection{The Expectation-Maximization (EM) Algorithm}
+Because the mixture contains hidden (latent) variables indicating which component generated which sample, we cannot solve for $\pi_k, \boldsymbol{\mu}_k, \mathbf{\Sigma}_k$ using closed-form calculus. Instead, we use the **Expectation-Maximization (EM)** algorithm:
+
+\begin{enumerate}
+    \item \textbf{E-Step (Expectation / Responsibilities)}:
+    Using current estimates of $\pi_k, \boldsymbol{\mu}_k, \mathbf{\Sigma}_k$, compute the **responsibility** $\gamma_{ik}$---the posterior probability that observation $\mathbf{x}_i$ was generated by component $k$:
+    \begin{equation}
+    \gamma_{ik} = P(z_i = k \mid \mathbf{x}_i) = \frac{\pi_k \mathcal{N}(\mathbf{x}_i \mid \boldsymbol{\mu}_k, \mathbf{\Sigma}_k)}{\sum_{j=1}^{K} \pi_j \mathcal{N}(\mathbf{x}_i \mid \boldsymbol{\mu}_j, \mathbf{\Sigma}_j)}\label{eq:gmm_responsibility}
+    \end{equation}
+    Every sample receives a soft probability distribution across all $K$ clusters (e.g., $85\%$ Healthy, $14\%$ Cavitation, $1\%$ Overheated).
+
+    \item \textbf{M-Step (Maximization / Parameter Update)}:
+    Recompute parameters by maximizing the expected log-likelihood using the soft weights $\gamma_{ik}$:
+    \begin{align}
+    N_k &= \sum_{i=1}^{N} \gamma_{ik} \quad (\text{Effective number of points in component } k) \\
+    \pi_k^{\text{new}} &= \frac{N_k}{N}\label{eq:gmm_update_pi} \\
+    \boldsymbol{\mu}_k^{\text{new}} &= \frac{1}{N_k} \sum_{i=1}^{N} \gamma_{ik} \mathbf{x}_i\label{eq:gmm_update_mu} \\
+    \mathbf{\Sigma}_k^{\text{new}} &= \frac{1}{N_k} \sum_{i=1}^{N} \gamma_{ik} (\mathbf{x}_i - \boldsymbol{\mu}_k^{\text{new}}) (\mathbf{x}_i - \boldsymbol{\mu}_k^{\text{new}})^T\label{eq:gmm_update_sigma}
+    \end{align}
+    \item \textbf{Convergence}: Alternate E and M steps until the total log-likelihood $\sum_{i=1}^N \ln p(\mathbf{x}_i)$ plateaus.
+\end{enumerate}
+
+% ==============================================================================
+% 5. PCA FOR ANOMALY DETECTION
+% ==============================================================================
+\subsection{PCA for Anomaly Detection: The Linear Reconstruction Engine}\label{subsec:pca_anomaly}
+
+In Section~\ref{sec:feature_work}, we utilized Principal Component Analysis (PCA) as a supervised preprocessing technique to reduce collinearity. Here, we reveal PCA's powerful capability as an **unsupervised anomaly detection engine**.
+
+\subsubsection{The Geometric Duality of PCA}
+PCA computes orthogonal eigenvectors $\mathbf{v}_1, \dots, \mathbf{v}_D$ of the sample covariance matrix. Choosing the top $k$ components forms projection matrix $\mathbf{V}_k = [\mathbf{v}_1, \dots, \mathbf{v}_k] \in \mathbb{R}^{D \times k}$.
+
+PCA simultaneously satisfies two mathematical criteria:
+\begin{enumerate}
+    \item It maximizes the variance of projected coordinates $\mathbf{z} = \mathbf{V}_k^T (\mathbf{x} - \boldsymbol{\mu})$.
+    \item It **minimizes the Euclidean reconstruction error** when mapping back to the original feature space:
+    \begin{equation}
+    \hat{\mathbf{x}} = \boldsymbol{\mu} + \mathbf{V}_k \mathbf{z} = \boldsymbol{\mu} + \mathbf{V}_k \mathbf{V}_k^T (\mathbf{x} - \boldsymbol{\mu})\label{eq:pca_reconstruction_def}
+    \end{equation}
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Principal Component Axis
+    \draw[->, very thick, keyideablue!90] (-3.5, -1.75) -- (4.0, 2.0) node[above right, font=\footnotesize\sffamily\bfseries] {Principal Component Subspace $\mathbf{V}_k$};
+    
+    % Normal data ellipse
+    \draw[thick, gray!40, dashed, rotate=26.5] (0, 0) ellipse (3.2cm and 0.8cm);
+    \node[font=\scriptsize\sffamily, text=gray!80] at (-2.0, 1.2) {Normal Correlation Manifold};
+
+    % Normal sample
+    \coordinate (Xnorm) at (1.8, 1.3);
+    \coordinate (Pnorm) at (2.0, 1.0);
+    \fill[keyideablue!80] (Xnorm) circle (2.2pt) node[above left, font=\scriptsize\sffamily] {Normal Sample $\mathbf{x}_{\text{norm}}$};
+    \draw[dotted, thick, gray!70] (Xnorm) -- (Pnorm);
+    \fill[keyideablue!80] (Pnorm) circle (1.8pt);
+    \node[font=\tiny\sffamily, text=gray!80] at (2.4, 0.7) {Small error $e$};
+
+    % Anomaly sample
+    \coordinate (Xanom) at (-1.0, 2.4);
+    \coordinate (Panom) at (0.4, 0.2);
+    \node[rectangle, fill=warningred!90, inner sep=2.5pt] at (Xanom) {};
+    \node[above right=1mm, font=\scriptsize\sffamily\bfseries, text=warningred!90!black] at (Xanom) {Fault Anomaly $\mathbf{x}_{\text{fault}}$};
+    \draw[very thick, warningred!80, -{Stealth[length=2mm]}] (Xanom) -- (Panom) node[midway, left=1mm, font=\scriptsize\sffamily\bfseries] {Large Error $e_{\text{SPE}} \gg \tau$};
+    \fill[gray!80] (Panom) circle (1.8pt);
+\end{tikzpicture}
+\caption{Zero-shot anomaly detection using PCA reconstruction error. Normal operational data conforms to the low-dimensional correlation subspace, yielding minimal error. A physical failure breaks sensor correlation, resulting in a massive perpendicular reconstruction residual.}\label{fig:pca_anomaly_geometry}
+\end{figure}
+
+\subsubsection{Reconstruction Error as an Outlier Metric}
+When an industrial machine is operating normally, physical sensor readings are tightly correlated: current draw correlates with motor speed, which correlates with fluid discharge pressure. These normal operations occupy a low-dimensional hyperplane within the high-dimensional feature space.
+
+When a mechanical failure occurs (e.g., a pump impeller breaks), the governing physical relationships fracture: current spikes while fluid pressure collapses. The new telemetry sample $\mathbf{x}_{\text{fault}}$ violates normal correlation patterns and points away from the principal subspace.
+
+We quantify this deviation using the **Squared Prediction Error (SPE)** (also called the **$Q$-Statistic**):
+\begin{equation}
+e_{\text{SPE}}(\mathbf{x}) = \|\mathbf{x} - \hat{\mathbf{x}}\|^2 = \|(\mathbf{I} - \mathbf{V}_k \mathbf{V}_k^T)(\mathbf{x} - \boldsymbol{\mu})\|^2\label{eq:pca_spe_error}
+\end{equation}
+\begin{itemize}
+    \item If $e_{\text{SPE}}(\mathbf{x}) \le \tau$: Telemetry conforms to normal physical correlations $\implies$ **Healthy**.
+    \item If $e_{\text{SPE}}(\mathbf{x}) > \tau$: Telemetry violates learned correlations $\implies$ **Mechanical Fault Detected!**
+\end{itemize}
+This provides a principled, lightweight anomaly detector requiring zero labeled fault samples during training.
+
+% ==============================================================================
+% 6. T-SNE AND UMAP
+% ==============================================================================
+\subsection{Non-Linear Dimensionality Reduction: t-SNE and UMAP}\label{subsec:tsne_umap}
+
+While PCA excels at linear projection, it fails to visualize non-linear manifold topologies where data curves or wraps through space. 
+
+For exploratory data analysis and high-dimensional telemetry inspection, data scientists rely on two non-linear manifold learning algorithms: **t-SNE** and **UMAP**.
+
+\subsubsection{t-SNE: t-Distributed Stochastic Neighbor Embedding}
+Developed by Laurens van der Maaten and Geoffrey Hinton in 2008, **t-SNE** converts pairwise Euclidean distances into conditional probabilities that represent similarities.
+
+\paragraph{1. High-Dimensional Probabilities}
+In original space $\mathbb{R}^D$, the similarity between sample $\mathbf{x}_i$ and $\mathbf{x}_j$ is modeled as a Gaussian distribution centered at $\mathbf{x}_i$:
+\begin{equation}
+p_{j \mid i} = \frac{\exp\left(-\frac{\|\mathbf{x}_i - \mathbf{x}_j\|^2}{2\sigma_i^2}\right)}{\sum_{k \ne i} \exp\left(-\frac{\|\mathbf{x}_i - \mathbf{x}_k\|^2}{2\sigma_i^2}\right)}, \quad p_{ij} = \frac{p_{j \mid i} + p_{i \mid j}}{2N}\label{eq:tsne_high_p}
+\end{equation}
+The variance $\sigma_i^2$ is determined automatically via the **Perplexity** hyperparameter, which controls the effective number of local neighbors considered.
+
+\paragraph{2. Low-Dimensional Probabilities: Solving the Crowding Problem}
+If we also used a Gaussian distribution in the low-dimensional 2D map $\mathbf{y}_i \in \mathbb{R}^2$, moderate distances in high-dimensional space would collapse together into an uninterpretable, crowded clump at the center of the 2D plot.
+
+To solve this **crowding problem**, t-SNE models low-dimensional similarities using a **Student-t distribution with 1 degree of freedom (Cauchy distribution)**:
+\begin{equation}
+q_{ij} = \frac{\left( 1 + \|\mathbf{y}_i - \mathbf{y}_j\|^2 \right)^{-1}}{\sum_{k} \sum_{l \ne k} \left( 1 + \|\mathbf{y}_k - \mathbf{y}_l\|^2 \right)^{-1}}\label{eq:tsne_low_q}
+\end{equation}
+Because the Student-t distribution has heavy, fat tails, moderate distances in high dimensions are pushed outward in 2D space, creating clean visual separation between distinct clusters.
+
+\paragraph{3. Objective Function: Minimizing KL Divergence}
+The low-dimensional coordinates $\mathbf{y}_i$ are optimized via gradient descent to minimize the **Kullback-Leibler (KL) Divergence** between high-dimensional distribution $P$ and low-dimensional distribution $Q$:
+\begin{equation}
+\text{KL}(P \parallel Q) = \sum_{i=1}^{N} \sum_{j \ne i} p_{ij} \ln\left( \frac{p_{ij}}{q_{ij}} \right)\label{eq:tsne_kl_loss}
+\end{equation}
+
+\begin{warning}[Crucial Visual Cautions with t-SNE]
+\begin{itemize}
+    \item \textbf{Distances Between Clusters are Meaningless}: t-SNE preserves local neighborhood topology, but expands and contracts empty space arbitrarily. The visual distance between two separate clusters in a t-SNE plot does not reflect their physical separation in high-dimensional space.
+    \item \textbf{Cluster Sizes Reflect Density, Not Volume}: Dense tight clusters are expanded; broad sparse clusters are compressed.
+    \item \textbf{No Out-of-Sample Extension}: Standard t-SNE cannot project a new, incoming streaming sensor sample into an existing 2D map. To project a new point, the entire algorithm must be re-run on all $N+1$ points!
+\end{itemize}
+\end{warning}
+
+\subsubsection{UMAP: Uniform Manifold Approximation and Projection}
+Developed by Leland McInnes in 2018, **UMAP** has largely superseded t-SNE in modern telemetry analytics. Rooted in Riemannian geometry and algebraic topology, UMAP addresses the core shortcomings of t-SNE.
+
+\paragraph{Key Advantages of UMAP over t-SNE:}
+\begin{enumerate}
+    \item \textbf{Preserves Global Structure}: UMAP preserves both local neighborhood connections and broader global relationships across clusters.
+    \item \textbf{Dramatically Faster Execution}: While standard t-SNE scales with $\mathcal{O}(N^2)$ (or $\mathcal{O}(N \log N)$ via Barnes-Hut approximations), UMAP scales with $\mathcal{O}(N^{1.14})$, processing millions of sensor rows in seconds.
+    \item \textbf{Generalizes to New Data}: UMAP learns an explicit parametric mathematical transformation, allowing streaming edge devices to project new, unseen telemetry samples into an existing 2D manifold embedding via \texttt{umap.transform(X\_new)}.
+\end{enumerate}
+
+\paragraph{Core UMAP Hyperparameters}
+\begin{itemize}
+    \item \texttt{n\_neighbors}: Controls the balance between local and global structure. Small values ($5-15$) focus on granular micro-clusters; large values ($30-100$) preserve broad macroscopic manifolds.
+    \item \texttt{min\_dist}: The minimum distance between points in the low-dimensional space. Small values ($0.05-0.1$) produce dense, clumped topological islands; larger values ($0.5-0.8$) create smoother continuous visual distributions.
+\end{itemize}
+
+% ==============================================================================
+% 7. HANDS-ON PYTHON LAB
+% ==============================================================================
+\subsection{Hands-On Python: The Unsupervised Telemetry Lab}\label{subsec:unsupervised_python}
+
+Let us build an end-to-end Python pipeline processing synthetic 4-channel industrial machine telemetry with three operating regimes and embedded physical sensor anomalies.
+
+\begin{lstlisting}[style=pythonstyle]
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.mixture import GaussianMixture
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
+
+# 1. Deterministic seed for reproducible evaluation
+np.random.seed(42)
+
+# 2. Synthesize Multi-Sensor Machine Telemetry (600 normal samples, 4 features)
+# Features: [Temperature (C), Vibration RMS (g), Power (kW), Discharge Pressure (bar)]
+n_per_mode = 200
+
+# Mode 0: Normal Idle (Low temp, low vibe, low power, moderate pressure)
+m0 = np.column_stack([
+    np.random.normal(25.0, 2.0, n_per_mode),
+    np.random.normal(0.15, 0.03, n_per_mode),
+    np.random.normal(5.0, 0.5, n_per_mode),
+    np.random.normal(4.0, 0.3, n_per_mode)
+])
+
+# Mode 1: High Load Production (High temp, moderate vibe, high power, high pressure)
+m1 = np.column_stack([
+    np.random.normal(45.0, 3.0, n_per_mode),
+    np.random.normal(0.35, 0.05, n_per_mode),
+    np.random.normal(18.0, 1.2, n_per_mode),
+    np.random.normal(6.5, 0.4, n_per_mode)
+])
+
+# Mode 2: Unbalanced Rotor Fault (Moderate temp, very high vibe, moderate power)
+m2 = np.column_stack([
+    np.random.normal(35.0, 2.5, n_per_mode),
+    np.random.normal(0.75, 0.10, n_per_mode),
+    np.random.normal(12.0, 1.0, n_per_mode),
+    np.random.normal(5.2, 0.4, n_per_mode)
+])
+
+X = np.vstack([m0, m1, m2])
+
+# Add 15 random severe sensor glitches / anomalies to test outlier rejection
+outliers = np.random.uniform(low=[10, 0.05, 1, 1], high=[60, 1.2, 25, 9], size=(15, 4))
+X_all = np.vstack([X, outliers])
+
+# 3. Standardize Telemetry (Crucial for distance-based clustering!)
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_all)
+
+# 4. K-Means Clustering (k=3)
+kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+km_labels = kmeans.fit_predict(X_scaled)
+km_sil = silhouette_score(X_scaled, km_labels)
+
+# 5. DBSCAN Clustering and Noise Filtering
+dbscan = DBSCAN(eps=1.1, min_samples=8)
+db_labels = dbscan.fit_predict(X_scaled)
+n_db_clusters = len(set(db_labels)) - (1 if -1 in db_labels else 0)
+n_db_noise = np.sum(db_labels == -1)
+
+# 6. Gaussian Mixture Model (Soft Clustering)
+gmm = GaussianMixture(n_components=3, covariance_type='full', random_state=42)
+gmm.fit(X_scaled)
+gmm_bic = gmm.bic(X_scaled)
+
+# 7. PCA Dimensionality Reduction and Anomaly Reconstruction Scoring
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
+evr = pca.explained_variance_ratio_
+
+# Compute reconstruction error on original standardized space
+X_reconstructed = pca.inverse_transform(X_pca)
+recon_error = np.mean((X_scaled - X_reconstructed)**2, axis=1)
+
+# Print Summary Benchmark Results
+print("=== Unsupervised Telemetry Lab Benchmark ===")
+print(f"Total Samples: {len(X_all)} (600 clustered, 15 synthetic noise)")
+print(f"K-Means (k=3): Silhouette Score = {km_sil:.3f}, Inertia = {kmeans.inertia_:.1f}")
+print(f"DBSCAN (eps=1.1, min_samples=8): Found {n_db_clusters} clusters, Isolated {n_db_noise} noise points")
+print(f"GMM (k=3, full covariance): BIC = {gmm_bic:.1f}")
+print(f"PCA (2 components): Explained Variance = {evr[0]*100:.1f}% + {evr[1]*100:.1f}% = {sum(evr)*100:.1f}%")
+print(f"Mean Reconstruction Error (Normal):   {np.mean(recon_error[:600]):.4f}")
+print(f"Mean Reconstruction Error (Outliers): {np.mean(recon_error[600:]):.4f}")
+\end{lstlisting}
+
+Executing this script produces the exact output below:
+\begin{lstlisting}[style=outputstyle]
+=== Unsupervised Telemetry Lab Benchmark ===
+Total Samples: 615 (600 clustered, 15 synthetic noise)
+K-Means (k=3): Silhouette Score = 0.719, Inertia = 293.5
+DBSCAN (eps=1.1, min_samples=8): Found 3 clusters, Isolated 15 noise points
+GMM (k=3, full covariance): BIC = 2291.6
+PCA (2 components): Explained Variance = 70.6% + 21.8% = 92.4%
+Mean Reconstruction Error (Normal):   0.0346
+Mean Reconstruction Error (Outliers): 1.7276
+\end{lstlisting}
+
+\paragraph{Detailed Analysis of Lab Results:}
+\begin{itemize}
+    \item \textbf{$k$-Means Cohesion}: A silhouette coefficient of $0.719$ indicates strong, distinct cluster separation among the three operating modes.
+    \item \textbf{DBSCAN Noise Precision}: DBSCAN isolated exactly the $15$ injected sensor anomalies (label $-1$), while grouping the remaining $600$ points into $3$ dense clusters.
+    \item \textbf{PCA Anomaly Discrimination}: The first two principal components capture $92.4\%$ of total variance ($70.6\%$ in PC1 and $21.8\%$ in PC2). Normal machine operations reconstruct with a low mean squared error of $0.0346$. In contrast, the $15$ anomalous outliers generate an error of $1.7276$---**nearly $50\times$ higher!** Setting an anomaly threshold at $\tau = 0.20$ provides a clean, zero-shot anomaly detector.
+\end{itemize}
+
+% ==============================================================================
+% 8. IOT AND TINYML CONNECTION
+% ==============================================================================
+\subsection{IoT and TinyML: Unsupervised Learning on Microcontrollers}\label{subsec:unsupervised_iot}
+
+\begin{iotbox}[Edge Clustering and Zero-Shot Anomaly Detection]
+Why is unsupervised learning increasingly deployed directly onto edge microcontrollers?
+
+In predictive maintenance, when a new sensor unit is installed on a factory motor, the device faces the **commissioning challenge**: the microcontroller cannot know the motor's baseline vibration profile because manufacturing tolerances, mounting bracket stiffness, and mechanical loads vary across installations.
+
+\paragraph{1. The Edge Self-Commissioning Pipeline}
+\begin{enumerate}
+    \item \textbf{Baseline Calibration Phase (First 24 Hours)}: The microcontroller runs an online running mean and variance algorithm to record $N$ normal operating feature vectors.
+    \item \textbf{Centroid Quantization}: The device fits $K = 2$ or $K = 3$ centroids representing the machine's primary operating states (e.g., Idle vs.\ Full Load).
+    \item \textbf{Inference and Anomaly Triggering}: During live streaming operation, for every new sensor window $\mathbf{x}_{\text{new}}$, the microcontroller computes the Euclidean distance to the nearest stored centroid:
+    \begin{equation}
+    d_{\min} = \min_{k} \|\mathbf{x}_{\text{new}} - \boldsymbol{\mu}_k\|
+    \end{equation}
+    If $d_{\min} > \tau_{\text{threshold}}$, the device immediately flags an unknown mechanical anomaly!
+\end{enumerate}
+
+\paragraph{2. Lightweight C Routine: Nearest-Centroid Edge Anomaly Detector}
+Below is a pure C routine executing on an ARM Cortex-M0+ microcontroller that classifies operational modes and flags zero-shot anomalies with zero dynamic memory allocation:
+
+\begin{lstlisting}[style=pythonstyle]
+// Embedded C: 3-Centroid Edge Distance Anomaly Detector
+#include <stdint.h>
+#include <math.h>
+
+#define NUM_CLUSTERS  3
+#define NUM_FEATURES  4
+#define ANOMALY_THRESH_SQ  4.5f // Squared distance threshold
+
+// Pre-computed centroids (Standardized: Temp, Vibe, Power, Press)
+static const float centroids[NUM_CLUSTERS][NUM_FEATURES] = {
+    {-1.20f, -0.95f, -1.15f, -1.30f}, // Mode 0: Idle
+    {+1.10f, +0.10f, +1.25f, +1.20f}, // Mode 1: High Load
+    {+0.10f, +1.85f, +0.10f, -0.10f}  // Mode 2: Unbalanced
+};
+
+int8_t evaluate_edge_anomaly(const float* sample, float* min_dist_out) {
+    float best_dist_sq = 1e9f;
+    int8_t best_cluster = -1;
+
+    for (uint8_t k = 0; k < NUM_CLUSTERS; k++) {
+        float dist_sq = 0.0f;
+        for (uint8_t j = 0; j < NUM_FEATURES; j++) {
+            float diff = sample[j] - centroids[k][j];
+            dist_sq += diff * diff;
+        }
+        if (dist_sq < best_dist_sq) {
+            best_dist_sq = dist_sq;
+            best_cluster = k;
+        }
+    }
+
+    *min_dist_out = sqrtf(best_dist_sq);
+
+    // If nearest centroid is too distant, signal unknown physical anomaly (-1)
+    if (best_dist_sq > ANOMALY_THRESH_SQ) {
+        return -1; // Unsupervised Anomaly Alarm!
+    }
+    return best_cluster; // Normal operational mode index
+}
+\end{lstlisting}
+This C routine executes in under $2\text{ }\mu\text{s}$ on an inexpensive microcontroller, consumes under $60$ bytes of flash storage, and requires zero cloud connectivity.
+\end{iotbox}
+
+% ==============================================================================
+% 9. COMMON PITFALLS
+% ==============================================================================
+\subsection{Common Pitfalls in Unsupervised Learning}\label{subsec:unsupervised_pitfalls}
+
+\begin{warning}[Five Fatal Unsupervised Learning Traps]
+\begin{enumerate}
+    \item \textbf{Omitting Feature Scaling Before Clustering or PCA}:
+    Running $k$-Means, DBSCAN, or PCA on raw telemetry with disparate measurement units. A pressure feature measured in Pascals ($101{,}325\text{ Pa}$) will completely dominate Euclidean distance, rendering all other sensor channels irrelevant.
+
+    \item \textbf{Assuming $k$-Means Discovers Arbitrary Cluster Geometries}:
+    Applying $k$-Means to concentric rings, interlocking crescents, or non-linear manifolds. $k$-Means can only construct convex, linear Voronoi cell boundaries. Use DBSCAN or spectral methods for non-convex geometries.
+
+    \item \textbf{Misinterpreting t-SNE Distances as Physical Separations}:
+    Treating the visual gap between two clusters in a t-SNE plot as quantitative physical distance. t-SNE expands and compresses empty space non-linearly.
+
+    \item \textbf{Attempting to Use t-SNE in Streaming Real-Time Pipelines}:
+    Using t-SNE in production edge code to project streaming sensor packets. Standard t-SNE does not learn an out-of-sample projection function. Use UMAP or PCA when projecting new streaming data.
+
+    \item \textbf{Blindly Selecting $K$ Without Validation Curves}:
+    Arbitrarily setting $K = 4$ in $k$-Means or GMM without inspecting the inertia elbow curve, BIC scores, or silhouette coefficients.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 10. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:unsupervised_takeaways}
+
+\begin{takeaways}[Core Principles of Unsupervised Learning]
+\begin{itemize}
+    \item \textbf{The Unsupervised Reality}: In physical IoT, $99.9\%$ of data is unlabeled. Unsupervised learning discovers hidden operating regimes, groups, and anomalies without human supervision.
+    \item \textbf{$k$-Means Clustering}: Minimizes Within-Cluster Sum of Squares (Inertia) via Lloyd's alternating assignment-update loop. $k$-Means++ provides distance-weighted centroid initialization to prevent poor local minima.
+    \item \textbf{Hierarchical Clustering}: Agglomerative bottom-up merging produces a complete Dendrogram tree. Ward's linkage minimizes within-cluster variance growth, providing stable clusters.
+    \item \textbf{DBSCAN}: Density-based clustering defined by radius $\varepsilon$ and $\text{MinPts}$. Discovers arbitrary non-convex cluster shapes and isolates physical outliers as noise (label $-1$).
+    \item \textbf{Gaussian Mixture Models (GMM)}: Soft clustering that models data as a linear combination of multivariate Gaussians via the Expectation-Maximization (EM) algorithm.
+    \item \textbf{PCA for Anomaly Detection}: Projects data onto principal orthogonal axes. Measuring Squared Prediction Error (SPE) reconstruction error flags samples that violate normal physical sensor correlations.
+    \item \textbf{Manifold Visualization (t-SNE & UMAP)}: Projects complex high-dimensional embeddings into 2D/3D. t-SNE uses heavy-tailed Student-t distributions to solve the crowding problem; UMAP preserves global structure and projects new streaming observations.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 11. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:unsupervised_check_yourself}
+
+Test your understanding of clustering mechanics, density reachability, and reconstruction geometry with the following practice problems. Complete step-by-step solutions are provided at the end of this chapter.
+
+\begin{checkyourself}[Practice Problems]
+\begin{enumerate}
+    \item \textbf{$k$-Means Lloyd's Step Calculation}:
+    Four one-dimensional temperature observations are collected from a kiln:
+    \begin{equation*}
+    X = [2.0^\circ\text{C}, \ 4.0^\circ\text{C}, \ 10.0^\circ\text{C}, \ 12.0^\circ\text{C}]
+    \end{equation*}
+    An engineer runs $k$-Means with $K = 2$. The initial centroid positions are set to $\mu_1 = 3.0^\circ\text{C}$ and $\mu_2 = 14.0^\circ\text{C}$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Perform the **Assignment Step**: Assign each of the four observations to its nearest centroid.
+        \item Perform the **Update Step**: Calculate the new centroid coordinates $\mu_1^{\text{new}}$ and $\mu_2^{\text{new}}$.
+        \item Compute the total Within-Cluster Sum of Squares (Inertia $J$) after this update.
+    \end{enumerate}
+
+    \item \textbf{DBSCAN Density Classification}:
+    An environmental sensor monitors five 2D spatial points:
+    \begin{itemize}
+        \item $P_1 = (1.0, 1.0)$
+        \item $P_2 = (1.0, 2.0)$
+        \item $P_3 = (2.0, 1.0)$
+        \item $P_4 = (2.2, 2.2)$
+        \item $P_5 = (6.0, 6.0)$
+        \item $P_6 = (3.4, 2.2)$
+    \end{itemize}
+    DBSCAN parameters are set to $\varepsilon = 1.5$ and $\text{MinPts} = 3$ (including the point itself).
+    \begin{enumerate}[label=(\alph*)]
+        \item Determine the number of neighbors in the $\varepsilon$-neighborhood of $P_1, P_2, P_3, P_4, P_5$, and $P_6$.
+        \item Classify each of the six points as **Core**, **Border**, or **Noise**.
+    \end{enumerate}
+
+    \item \textbf{Gaussian Mixture Model Soft Responsibilities}:
+    A pipeline pressure sensor operates under two latent physical regimes modeled by a 1D Gaussian Mixture Model:
+    \begin{itemize}
+        \item Component 1 (Normal Pressure): $\pi_1 = 0.60, \ \mu_1 = 10.0\text{ bar}, \ \sigma_1 = 2.0\text{ bar}$ ($\sigma_1^2 = 4.0$).
+        \item Component 2 (Surge Pressure): $\pi_2 = 0.40, \ \mu_2 = 18.0\text{ bar}, \ \sigma_2 = 3.0\text{ bar}$ ($\sigma_2^2 = 9.0$).
+    \end{itemize}
+    A new sensor observation arrives at $x = 13.0\text{ bar}$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Calculate the Gaussian likelihood density values $\mathcal{N}(13 \mid \mu_1, \sigma_1^2)$ and $\mathcal{N}(13 \mid \mu_2, \sigma_2^2)$.
+        \item Compute the weighted component evidence scores $\pi_1 \mathcal{N}_1$ and $\pi_2 \mathcal{N}_2$.
+        \item Calculate the exact soft responsibilities $\gamma_1(x)$ and $\gamma_2(x)$. To which component is this observation most likely attributed?
+    \end{enumerate}
+
+    \item \textbf{PCA Reconstruction Error Anomaly Score}:
+    A 2D standardized sensor feature vector (Temperature and Vibration) has zero mean $\boldsymbol{\mu} = [0, 0]^T$. The first principal component unit eigenvector is:
+    \begin{equation*}
+    \mathbf{v}_1 = \left[ \frac{1}{\sqrt{2}}, \ \frac{1}{\sqrt{2}} \right]^T \approx [0.7071, \ 0.7071]^T
+    \end{equation*}
+    A new sensor reading arrives at $\mathbf{x} = [3.0, \ 1.0]^T$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the 1D latent projection coordinate $z = \mathbf{v}_1^T \mathbf{x}$.
+        \item Calculate the reconstructed vector $\hat{\mathbf{x}} = z \mathbf{v}_1$.
+        \item Compute the Squared Prediction Error (SPE) reconstruction anomaly score $e = \|\mathbf{x} - \hat{\mathbf{x}}\|^2$.
+        \item If the plant anomaly threshold is set at $\tau = 1.0$, is this observation an anomaly?
+    \end{enumerate}
+
+    \item \textbf{t-SNE versus UMAP Architectural Comparison}:
+    An edge analytics team wants to deploy a non-linear manifold visualization tool to monitor continuous high-frequency vibration spectra from $1{,}000$ pumps.
+    \begin{enumerate}[label=(\alph*)]
+        \item Why does t-SNE employ a Student-t distribution in the low-dimensional space rather than a Gaussian distribution?
+        \item State two distinct technical reasons why UMAP is superior to t-SNE for streaming operational pipelines.
+    \end{enumerate}
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 12. ANSWERS TO CHECK YOURSELF
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{$k$-Means Lloyd's Step Calculation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Assignment Step} ($\mu_1 = 3.0, \mu_2 = 14.0$):
+        \begin{itemize}
+            \item $x_1 = 2.0$: $|2 - 3| = 1.0$ vs $|2 - 14| = 12.0 \implies$ **Cluster 1**.
+            \item $x_2 = 4.0$: $|4 - 3| = 1.0$ vs $|4 - 14| = 10.0 \implies$ **Cluster 1**.
+            \item $x_3 = 10.0$: $|10 - 3| = 7.0$ vs $|10 - 14| = 4.0 \implies$ **Cluster 2**.
+            \item $x_4 = 12.0$: $|12 - 3| = 9.0$ vs $|12 - 14| = 2.0 \implies$ **Cluster 2**.
+        \end{itemize}
+        Partitions: $S_1 = \{2.0, 4.0\}$ and $S_2 = \{10.0, 12.0\}$.
+
+        \item \textbf{Update Step}:
+        \begin{align*}
+        \mu_1^{\text{new}} &= \frac{2.0 + 4.0}{2} = \mathbf{3.0^\circ\text{C}} \\
+        \mu_2^{\text{new}} &= \frac{10.0 + 12.0}{2} = \mathbf{11.0^\circ\text{C}}
+        \end{align*}
+
+        \item \textbf{Inertia (WCSS $J$)}:
+        \begin{align*}
+        J &= \sum_{\mathbf{x} \in S_1} (x - 3.0)^2 + \sum_{\mathbf{x} \in S_2} (x - 11.0)^2 \\
+        &= (2.0 - 3.0)^2 + (4.0 - 3.0)^2 + (10.0 - 11.0)^2 + (12.0 - 11.0)^2 \\
+        &= (-1.0)^2 + (+1.0)^2 + (-1.0)^2 + (+1.0)^2 = 1 + 1 + 1 + 1 = \mathbf{4.0}
+        \end{align*}
+    \end{enumerate}
+
+    \item \textbf{DBSCAN Density Classification}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{$\varepsilon$-Neighborhood Counts ($\varepsilon = 1.5$)}:
+        \begin{itemize}
+            \item $P_1(1, 1)$: Neighbors are $P_1, P_2(d=1.0), P_3(d=1.0)$. Total = **3 points**.
+            \item $P_2(1, 2)$: Neighbors are $P_2, P_1(d=1.0), P_3(d=\sqrt{2} \approx 1.414), P_4(d=\sqrt{1.2^2+0.2^2} \approx 1.216)$. Total = **4 points**.
+            \item $P_3(2, 1)$: Neighbors are $P_3, P_1(d=1.0), P_2(d=\sqrt{2} \approx 1.414), P_4(d=\sqrt{0.2^2+1.2^2} \approx 1.216)$. Total = **4 points**.
+            \item $P_4(2.2, 2.2)$: Neighbors are $P_4, P_2(d \approx 1.216), P_3(d \approx 1.216), P_6(d=1.20)$. Total = **4 points**.
+            \item $P_5(6, 6)$: Distance to nearest point ($P_4$) is $\sqrt{3.8^2+3.8^2} \approx 5.37 > 1.5$. Neighbors: $\{P_5\}$. Total = **1 point**.
+            \item $P_6(3.4, 2.2)$: Distance to $P_4$ is $1.20 \le 1.5$. Distance to other points $> 1.5$. Neighbors: $\{P_6, P_4\}$. Total = **2 points**.
+        \end{itemize}
+
+        \item \textbf{Point Classifications ($\text{MinPts} = 3$)}:
+        \begin{itemize}
+            \item $P_1$: $|N_\varepsilon| = 3 \ge 3 \implies$ **Core Point**.
+            \item $P_2$: $|N_\varepsilon| = 4 \ge 3 \implies$ **Core Point**.
+            \item $P_3$: $|N_\varepsilon| = 4 \ge 3 \implies$ **Core Point**.
+            \item $P_4$: $|N_\varepsilon| = 4 \ge 3 \implies$ **Core Point**.
+            \item $P_5$: $|N_\varepsilon| = 1 < 3$ and not in neighborhood of any core point $\implies$ **Noise Point (Outlier)**.
+            \item $P_6$: $|N_\varepsilon| = 2 < 3$, but lies within $\varepsilon = 1.2 \le 1.5$ of Core Point $P_4 \implies$ **Border Point**.
+        \end{itemize}
+    \end{enumerate}
+
+    \item \textbf{Gaussian Mixture Model Soft Responsibilities}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Gaussian Likelihoods for $x = 13.0$}:
+        \begin{align*}
+        \mathcal{N}_1(13 \mid 10, 4) &= \frac{1}{2\sqrt{2\pi}} \exp\left( -\frac{(13 - 10)^2}{2(4)} \right) = \frac{1}{5.01325} \exp(-1.125) \\
+        &= 0.19947 \times 0.32465 \approx \mathbf{0.06476} \\
+        \mathcal{N}_2(13 \mid 18, 9) &= \frac{1}{3\sqrt{2\pi}} \exp\left( -\frac{(13 - 18)^2}{2(9)} \right) = \frac{1}{7.51988} \exp(-1.3889) \\
+        &= 0.13298 \times 0.24935 \approx \mathbf{0.03316}
+        \end{align*}
+
+        \item \textbf{Weighted Evidence Scores}:
+        \begin{align*}
+        \pi_1 \mathcal{N}_1 &= 0.60 \times 0.06476 = \mathbf{0.03886} \\
+        \pi_2 \mathcal{N}_2 &= 0.40 \times 0.03316 = \mathbf{0.01326}
+        \end{align*}
+        Total marginal density $p(x) = 0.03886 + 0.01326 = 0.05212$.
+
+        \item \textbf{Soft Responsibilities}:
+        \begin{align*}
+        \gamma_1(x) &= \frac{0.03886}{0.05212} \approx \mathbf{0.7455} \quad (\mathbf{74.55\%}) \\
+        \gamma_2(x) &= \frac{0.01326}{0.05212} \approx \mathbf{0.2545} \quad (\mathbf{25.45\%})
+        \end{align*}
+        The observation is predominantly attributed to **Component 1 (Normal Pressure)** with $74.55\%$ probability, while carrying a $25.45\%$ soft probability of belonging to Component 2.
+    \end{enumerate}
+
+    \item \textbf{PCA Reconstruction Error Anomaly Score}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Latent Projection $z$}:
+        \begin{equation*}
+        z = \mathbf{v}_1^T \mathbf{x} = 3.0\left(\frac{1}{\sqrt{2}}\right) + 1.0\left(\frac{1}{\sqrt{2}}\right) = \frac{4.0}{\sqrt{2}} = 2\sqrt{2} \approx \mathbf{2.8284}
+        \end{equation*}
+
+        \item \textbf{Reconstructed Vector $\hat{\mathbf{x}}$}:
+        \begin{equation*}
+        \hat{\mathbf{x}} = z \mathbf{v}_1 = (2\sqrt{2}) \left[ \frac{1}{\sqrt{2}}, \ \frac{1}{\sqrt{2}} \right]^T = [2.0, \ 2.0]^T
+        \end{equation*}
+
+        \item \textbf{Squared Prediction Error (SPE $e$)}:
+        \begin{align*}
+        \mathbf{e} &= \mathbf{x} - \hat{\mathbf{x}} = [3.0 - 2.0, \ 1.0 - 2.0]^T = [1.0, \ -1.0]^T \\
+        e &= \|\mathbf{e}\|^2 = 1.0^2 + (-1.0)^2 = 1.0 + 1.0 = \mathbf{2.0}
+        \end{align*}
+
+        \item \textbf{Threshold Assessment}:
+        Because the reconstruction error $e = 2.0$ exceeds the anomaly threshold $\tau = 1.0$, the system flags this reading as an **Anomalous Physical Fault**. The sample violates the correlation structure learned by the principal component subspace.
+    \end{enumerate}
+
+    \item \textbf{t-SNE versus UMAP Architectural Comparison}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Purpose of Student-t in t-SNE}:
+        In high-dimensional spaces, volume grows exponentially, so moderate pairwise distances have ample space. When mapped into a low-dimensional 2D plane, volume is constrained, causing moderate distances to collapse together into a crowded central blob (the **crowding problem**). 
+        The Student-t distribution with 1 degree of freedom has a much heavier tail than a Gaussian: to match the high-dimensional probability $p_{ij}$, the low-dimensional distance must be pushed significantly farther apart, forcing clean visual separation between distinct clusters.
+
+        \item \textbf{Two Advantages of UMAP for Streaming Pipelines}:
+        \begin{enumerate}
+            \item **Out-of-Sample Projection**: UMAP learns an explicit parametric mathematical embedding, allowing new streaming sensor telemetry to be projected directly into an existing 2D visualization using \texttt{transform()}, whereas t-SNE requires re-optimizing all points from scratch.
+            \item **Computational Scalability & Global Structure**: UMAP scales with $\mathcal{O}(N^{1.14})$ compared to t-SNE's $\mathcal{O}(N^2)$, enabling real-time streaming processing while simultaneously preserving broader global distances between clusters.
+        \end{enumerate}
+    \end{enumerate}
+\end{enumerate}

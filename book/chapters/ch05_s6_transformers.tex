@@ -1,0 +1,676 @@
+% FILE: chapters/ch05_s6_transformers.tex
+\section{Attention and Transformers}\label{sec:attention_transformers}
+
+In Section~\ref{sec:sequence_models}, we explored recurrent sequence models: vanilla RNNs, LSTMs, and GRUs. While gated architectures successfully resolved the vanishing gradient dilemma for moderate sequences, they remain constrained by a fundamental structural bottleneck: \textbf{sequential processing}.
+
+An RNN must compute step $t-1$ before it can begin computing step $t$. This sequential dependence prevents parallelization on modern parallel hardware (such as GPUs, TPUs, and parallel neural accelerators). Training an LSTM on a sequence of 1,000 time steps requires 1,000 sequential matrix multiplications, leaving thousands of GPU compute cores idle. Furthermore, despite gating mechanisms, passing information across hundreds of sequential steps inevitably compresses and degrades long-range historical context.
+
+In 2017, Ashish Vaswani and colleagues at Google Brain and Google Research introduced a radical architectural breakthrough in their seminal paper, \emph{``Attention Is All You Need''}: the \textbf{Transformer}. The Transformer completely eliminates recurrence and convolutions. Instead, it relies entirely on a mechanism called \textbf{Attention}, which connects every single token in a sequence directly to every other token in a single, constant $O(1)$ computational step.
+
+Today, the Transformer architecture forms the foundation of modern artificial intelligence: large language models (such as GPT-4, Gemini, and LLaMA), visual foundation models (Vision Transformers), multi-modal systems, and state-of-the-art multi-sensor time-series forecasting. In this section, we demystify attention from first principles, dissect the inner workings of multi-head self-attention and positional encodings, break down the complete Transformer architecture, and compare the two defining architectural paradigms: BERT and GPT.
+
+% ==============================================================================
+% 1. THE ATTENTION MECHANISM: QUERIES, KEYS, AND VALUES
+% ==============================================================================
+\subsection{The Attention Mechanism: Queries, Keys, and Values}\label{subsec:attention_qkv}
+
+\begin{keyidea}[Attention as Soft Database Retrieval]
+The \textbf{Attention mechanism} is a differentiable, soft lookup operation. 
+
+Instead of searching a database for an exact key match, attention compares a continuous \textbf{Query} vector against a dictionary of \textbf{Key} vectors. It computes a compatibility score for each key, converts these scores into normalized probability weights via softmax, and returns a weighted sum of the corresponding \textbf{Value} vectors.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+In sequence modeling, not all past time steps are equally relevant to the current decision. Consider a vibration sensor on an industrial milling spindle:
+\begin{itemize}
+    \item During 99\% of normal cutting, current vibrations match baseline oscillations from five seconds ago.
+    \item When an intermittent cutting tooth fracture occurs, the spindle produces an acoustic shockwave.
+    \item To diagnose whether the tool is chipped three minutes later, the model must look back directly at that specific acoustic shockwave, ignoring thousands of irrelevant intermediate baseline readings.
+\end{itemize}
+An RNN must squeeze that shockwave through hundreds of recurrent states, where it risks being washed out. Attention acts as a direct memory retrieval pointer: it reaches back across time and retrieves the exact moment of impact with zero signal degradation.
+
+\begin{analogy}[The Digital Library Search Engine]
+Imagine you are writing a technical report on electric motor bearing faults in a vast library:
+\begin{itemize}
+    \item \textbf{Query ($\mathbf{q}$)}: What you are currently researching. You type: \emph{``high-frequency vibration bearing wear''}.
+    \item \textbf{Keys ($\mathbf{k}_i$)}: The title and keywords stamped on the spine of every book on the library shelves.
+    \item \textbf{Compatibility Score}: The search engine compares your Query against every Key. A book titled \emph{``Hydraulic Fluid Dynamics''} receives a match score of $0.05$. A book titled \emph{``Acoustic Signatures of Rolling Element Bearings''} receives a match score of $0.92$.
+    \item \textbf{Softmax Weights}: The scores are normalized into percentages that sum to 100\% ($90\%$ attention to the bearing book, $2\%$ to the fluid book, etc.).
+    \item \textbf{Values ($\mathbf{v}_i$)}: The actual content written inside the books. You extract a summary containing $90\%$ of the bearing book's content and $2\%$ of the fluid book's content.
+\end{itemize}
+\end{analogy}
+
+\paragraph{Mathematical Formulation: Scaled Dot-Product Attention}
+Let an input sequence be projected into three matrices:
+\begin{itemize}
+    \item $\mathbf{Q} \in \mathbb{R}^{N \times d_k}$: $N$ Query vectors of dimension $d_k$.
+    \item $\mathbf{K} \in \mathbb{R}^{M \times d_k}$: $M$ Key vectors of dimension $d_k$.
+    \item $\mathbf{V} \in \mathbb{R}^{M \times d_v}$: $M$ Value vectors of dimension $d_v$.
+\end{itemize}
+The \textbf{Scaled Dot-Product Attention} is defined as:
+\begin{equation}
+\operatorname{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \operatorname{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^T}{\sqrt{d_k}}\right)\mathbf{V}\label{eq:scaled_dot_attention}
+\end{equation}
+
+Let us dissect each component of Equation~\eqref{eq:scaled_dot_attention}:
+\begin{enumerate}
+    \item $\mathbf{Q}\mathbf{K}^T \in \mathbb{R}^{N \times M}$: Computes the pairwise dot product between every query $\mathbf{q}_i$ and every key $\mathbf{k}_j$. A large positive dot product indicates high geometric alignment and strong relevance.
+    \item $\frac{1}{\sqrt{d_k}}$: The \textbf{Scaling Factor}.
+    \begin{itemize}
+        \item If components of $\mathbf{q}$ and $\mathbf{k}$ are independent random variables with zero mean and variance $1$, their dot product $\mathbf{q} \cdot \mathbf{k} = \sum_{i=1}^{d_k} q_i k_i$ has mean $0$ and variance $d_k$.
+        \item For large feature dimensions (e.g., $d_k = 64$ or $512$), dot products can grow very large in magnitude ($|z| \gg 10$).
+        \item Large inputs push the \textbf{softmax} function into regions with extremely small gradients ($\frac{d}{dz}\sigma(z) \approx 0$).
+        \item Dividing by $\sqrt{d_k}$ scales the variance back down to $1.0$, preventing gradients from vanishing during backpropagation.
+    \end{itemize}
+    \item $\operatorname{softmax}(\cdot)$: Normalizes each row of compatibility scores into non-negative weights that sum to $1$:
+    \begin{equation}
+    A_{i, j} = \frac{\exp\left(\frac{\mathbf{q}_i \cdot \mathbf{k}_j}{\sqrt{d_k}}\right)}{\sum_{m=1}^M \exp\left(\frac{\mathbf{q}_i \cdot \mathbf{k}_m}{\sqrt{d_k}}\right)}\label{eq:attention_weights}
+    \end{equation}
+    \item Multiplying by $\mathbf{V}$: Computes the weighted average of the value vectors based on the attention weights: $\mathbf{out}_i = \sum_{j=1}^M A_{i, j} \mathbf{v}_j$.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    node distance=1.2cm,
+    block/.style={rectangle, draw=keyideablue, fill=keyideablue!15, rounded corners=1.5mm, thick, minimum width=2.4cm, minimum height=0.75cm, font=\small\sffamily\bfseries, align=center},
+    io/.style={rectangle, draw=gray!70, fill=white, rounded corners=1mm, thick, minimum width=1.1cm, minimum height=0.6cm, font=\small\sffamily\bfseries},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Scaled Dot-Product Attention (Left)
+    \begin{scope}[shift={(0,0)}]
+        \node[font=\bfseries\sffamily] at (0, 4.4) {Scaled Dot-Product Attention};
+        
+        \node[io] (q) at (-1.4, -0.6) {$\mathbf{Q}$};
+        \node[io] (k) at (0, -0.6) {$\mathbf{K}$};
+        \node[io] (v) at (1.4, -0.6) {$\mathbf{V}$};
+
+        \node[block] (matmul1) at (-0.7, 0.6) {MatMul ($\mathbf{Q}\mathbf{K}^T$)};
+        \node[block] (scale) at (-0.7, 1.5) {Scale ($\div \sqrt{d_k}$)};
+        \node[block, fill=warningred!15, draw=warningred] (mask) at (-0.7, 2.4) {Mask (Optional)};
+        \node[block, fill=analogygreen!15, draw=analogygreen] (softmax) at (-0.7, 3.3) {Softmax};
+        \node[block] (matmul2) at (0.35, 4.2) {MatMul};
+        \node[io, fill=keyideablue!20] (out) at (0.35, 5.2) {Output};
+
+        \draw[arrow] (q) |- (matmul1.west);
+        \draw[arrow] (k) |- (matmul1.east);
+        \draw[arrow] (matmul1) -- (scale);
+        \draw[arrow] (scale) -- (mask);
+        \draw[arrow] (mask) -- (softmax);
+        \draw[arrow] (softmax) |- (matmul2.west);
+        \draw[arrow] (v) |- (matmul2.east);
+        \draw[arrow] (matmul2) -- (out);
+    \end{scope}
+
+    % Multi-Head Attention (Right)
+    \begin{scope}[shift={(6.5, 0)}]
+        \node[font=\bfseries\sffamily] at (0, 4.4) {Multi-Head Attention};
+
+        \node[io] (mq) at (-1.2, -0.6) {$\mathbf{Q}$};
+        \node[io] (mk) at (0, -0.6) {$\mathbf{K}$};
+        \node[io] (mv) at (1.2, -0.6) {$\mathbf{V}$};
+
+        \node[block, minimum width=0.9cm] (lq) at (-1.2, 0.6) {Linear};
+        \node[block, minimum width=0.9cm] (lk) at (0, 0.6) {Linear};
+        \node[block, minimum width=0.9cm] (lv) at (1.2, 0.6) {Linear};
+
+        \node[block, fill=keyideablue!25, minimum width=3.2cm] (att) at (0, 1.8) {Scaled Dot-Product\\Attention ($h$ heads)};
+        \node[block, minimum width=3.2cm] (concat) at (0, 2.9) {Concat};
+        \node[block, minimum width=3.2cm] (linear_out) at (0, 3.8) {Linear ($\mathbf{W}^O$)};
+        \node[io, fill=keyideablue!20] (mout) at (0, 4.9) {Output};
+
+        \draw[arrow] (mq) -- (lq);
+        \draw[arrow] (mk) -- (lk);
+        \draw[arrow] (mv) -- (lv);
+
+        \draw[arrow] (lq) -- (-1.2, 1.3);
+        \draw[arrow] (lk) -- (0, 1.3);
+        \draw[arrow] (lv) -- (1.2, 1.3);
+
+        \draw[arrow] (att) -- (concat);
+        \draw[arrow] (concat) -- (linear_out);
+        \draw[arrow] (linear_out) -- (mout);
+    \end{scope}
+\end{tikzpicture}
+\caption{Scaled Dot-Product Attention (left) and Multi-Head Attention (right). Multi-Head Attention runs $h$ attention operations in parallel across projected subspaces.}\label{fig:attention_mechanisms}
+\end{figure}
+
+\begin{example}[Hand-Calculating Scaled Dot-Product Attention]
+Let us calculate the attention output for a single Query vector $\mathbf{q}$ attending to three Keys ($\mathbf{k}_1, \mathbf{k}_2, \mathbf{k}_3$) and three Values ($\mathbf{v}_1, \mathbf{v}_2, \mathbf{v}_3$) with dimension $d_k = 4$.
+
+\textbf{Given Vectors}:
+\begin{align*}
+\mathbf{q} &= [2, 0, 2, 0] \\
+\mathbf{k}_1 &= [2, 0, 2, 0], \quad \mathbf{k}_2 = [0, 2, 0, 2], \quad \mathbf{k}_3 = [1, 1, 1, 1] \\
+\mathbf{v}_1 &= [10, 0], \quad \mathbf{v}_2 = [0, 20], \quad \mathbf{v}_3 = [5, 5]
+\end{align*}
+Because $d_k = 4$, the scaling factor is $\sqrt{d_k} = \sqrt{4} = 2$.
+
+\textbf{Step 1: Compute Raw Dot Products}
+\begin{align*}
+\mathbf{q} \cdot \mathbf{k}_1 &= (2 \times 2) + (0 \times 0) + (2 \times 2) + (0 \times 0) = 4 + 0 + 4 + 0 = 8 \\
+\mathbf{q} \cdot \mathbf{k}_2 &= (2 \times 0) + (0 \times 2) + (2 \times 0) + (0 \times 2) = 0 \\
+\mathbf{q} \cdot \mathbf{k}_3 &= (2 \times 1) + (0 \times 1) + (2 \times 1) + (0 \times 1) = 2 + 0 + 2 + 0 = 4
+\end{align*}
+
+\textbf{Step 2: Scale by $\sqrt{d_k} = 2$}
+\begin{equation*}
+z_1 = \frac{8}{2} = 4, \quad z_2 = \frac{0}{2} = 0, \quad z_3 = \frac{4}{2} = 2
+\end{equation*}
+
+\textbf{Step 3: Compute Softmax Weights}
+Compute exponentials ($e^z$):
+\begin{align*}
+e^{z_1} &= e^4 \approx 54.598 \\
+e^{z_2} &= e^0 = 1.000 \\
+e^{z_3} &= e^2 \approx 7.389 \\
+\sum_{j=1}^3 e^{z_j} &= 54.598 + 1.000 + 7.389 = 62.987
+\end{align*}
+Normalize to probabilities:
+\begin{align*}
+A_1 &= \frac{54.598}{62.987} \approx \mathbf{0.8668} \quad (86.7\%) \\
+A_2 &= \frac{1.000}{62.987} \approx \mathbf{0.0159} \quad (1.6\%) \\
+A_3 &= \frac{7.389}{62.987} \approx \mathbf{0.1173} \quad (11.7\%)
+\end{align*}
+Notice that $\mathbf{k}_1$, which had an identical directional orientation to $\mathbf{q}$, captures over $86\%$ of the total attention.
+
+\textbf{Step 4: Compute Weighted Sum of Values}
+\begin{align*}
+\mathbf{out} &= A_1 \mathbf{v}_1 + A_2 \mathbf{v}_2 + A_3 \mathbf{v}_3 \\
+             &= 0.8668 \begin{bmatrix} 10 \\ 0 \end{bmatrix} + 0.0159 \begin{bmatrix} 0 \\ 20 \end{bmatrix} + 0.1173 \begin{bmatrix} 5 \\ 5 \end{bmatrix} \\
+             &= \begin{bmatrix} 8.668 \\ 0 \end{bmatrix} + \begin{bmatrix} 0 \\ 0.318 \end{bmatrix} + \begin{bmatrix} 0.5865 \\ 0.5865 \end{bmatrix} \\
+             &= \begin{bmatrix} 8.668 + 0 + 0.5865 \\ 0 + 0.318 + 0.5865 \end{bmatrix} = \begin{bmatrix} \mathbf{9.2545} \\ \mathbf{0.9045} \end{bmatrix}
+\end{align*}
+The output vector is heavily dominated by $\mathbf{v}_1$, reflecting the strong match with $\mathbf{k}_1$.
+\end{example}
+
+% ==============================================================================
+% 2. SELF-ATTENTION AND MULTI-HEAD ATTENTION
+% ==============================================================================
+\subsection{Self-Attention and Multi-Head Attention}\label{subsec:self_multihead}
+
+\paragraph{Self-Attention: The Sequence Attending to Itself}
+In standard attention, Queries can come from one sequence (e.g., a language translation target) while Keys and Values come from another (the source sentence). 
+
+In \textbf{Self-Attention}, the Queries, Keys, and Values all originate from the \emph{exact same sequence}. Given an input sequence matrix $\mathbf{X} \in \mathbb{R}^{N \times d_{\text{model}}}$ (where each row represents a token or time step), we compute:
+\begin{equation}
+\mathbf{Q} = \mathbf{X}\mathbf{W}^Q, \quad \mathbf{K} = \mathbf{X}\mathbf{W}^K, \quad \mathbf{V} = \mathbf{X}\mathbf{W}^V\label{eq:qkv_projections}
+\end{equation}
+where $\mathbf{W}^Q, \mathbf{W}^K \in \mathbb{R}^{d_{\text{model}} \times d_k}$ and $\mathbf{W}^V \in \mathbb{R}^{d_{\text{model}} \times d_v}$ are learnable projection matrices. 
+
+Self-attention allows every word or sensor measurement to look at every other position in the sequence, directly capturing dependencies regardless of how far apart they sit.
+
+\paragraph{Multi-Head Attention: Looking from Multiple Perspectives}
+A single attention head averages information across the entire representation subspace. But complex physical and textual relationships require simultaneous attention from different angles:
+\begin{itemize}
+    \item In natural language: One head might focus on syntactic subject-verb agreement, while another tracks pronoun reference, and a third detects emotional tone.
+    \item In multi-sensor IoT telemetry: One head might track immediate thermal inertia across adjacent minutes, while another tracks daily 24-hour cyclical periodicity, and a third monitors high-frequency vibration spikes.
+\end{itemize}
+
+Instead of computing a single attention function with dimension $d_{\text{model}}$, \textbf{Multi-Head Attention (MHA)} linearly projects Queries, Keys, and Values $h$ times with different, learned projection matrices to lower-dimensional subspaces ($d_k = d_{\text{model}} / h$):
+\begin{equation}
+\operatorname{MultiHead}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \operatorname{Concat}(\text{head}_1, \dots, \text{head}_h)\mathbf{W}^O\label{eq:multihead_eq}
+\end{equation}
+where each individual head is:
+\begin{equation}
+\text{head}_i = \operatorname{Attention}(\mathbf{Q}\mathbf{W}_i^Q, \mathbf{K}\mathbf{W}_i^K, \mathbf{V}\mathbf{W}_i^V)\label{eq:head_i}
+\end{equation}
+The outputs of all $h$ heads are concatenated along the feature dimension and multiplied by an output projection matrix $\mathbf{W}^O \in \mathbb{R}^{d_{\text{model}} \times d_{\text{model}}}$. 
+
+Because each head operates in a reduced dimension $d_k = d_{\text{model}} / h$, \textbf{the total computational cost of multi-head attention is identical to single-head attention with full dimensionality}!
+
+% ==============================================================================
+% 3. POSITIONAL ENCODINGS
+% ==============================================================================
+\subsection{Positional Encodings: Injecting Order into Sets}\label{subsec:positional_encoding}
+
+\begin{keyidea}[Self-Attention is Permutation Invariant]
+Notice a startling property of Equation~\eqref{eq:scaled_dot_attention}: \textbf{the attention formula contains no concept of order or position}. 
+
+If you randomly shuffle the rows of the input sequence $\mathbf{X}$, the attention output will simply be the exact same output rows, shuffled in the identical order. To a pure self-attention layer, the phrase \emph{``The pump overheated before the alarm''} and \emph{``The alarm overheated before the pump''} look identical!
+\end{keyidea}
+
+Because Transformers have no recurrence (which processes $t$ sequentially) and no convolutions (which enforce local spatial neighborhoods), we must \textbf{explicitly inject positional information} into the token embeddings.
+
+\paragraph{Sinusoidal Positional Encoding}
+In the original Transformer, Vaswani et al. introduced fixed, deterministic \textbf{Sinusoidal Positional Encodings}. For each position $pos \in \{0, 1, \dots, N-1\}$ in the sequence and each dimension index $i \in \{0, 1, \dots, d_{\text{model}}/2 - 1\}$:
+\begin{align}
+PE_{(pos, 2i)} &= \sin\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right)\label{eq:pe_sin} \\
+PE_{(pos, 2i+1)} &= \cos\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right)\label{eq:pe_cos}
+\end{align}
+The positional vector $\mathbf{PE}_{pos}$ has the exact same dimension $d_{\text{model}}$ as the token embedding vector $\mathbf{E}_{pos}$. The two vectors are simply \textbf{added together}:
+\begin{equation}
+\mathbf{X}_{pos} = \mathbf{E}_{pos} + \mathbf{PE}_{pos}\label{eq:pe_addition}
+\end{equation}
+
+\paragraph{Why Sines and Cosines?}
+\begin{enumerate}
+    \item \textbf{Geometric Wavelength Spectrum}: The frequencies form a geometric progression from $2\pi$ to $10000 \cdot 2\pi$. Low dimension indices $i$ correspond to high-frequency waves (changing rapidly with each adjacent token), while high dimension indices $i$ correspond to low-frequency waves (changing slowly over long distances).
+    \item \textbf{Relative Linear Shifts}: By standard trigonometric angle-addition identities:
+    \begin{align*}
+    \sin(\alpha + \beta) &= \sin(\alpha)\cos(\beta) + \cos(\alpha)\sin(\beta) \\
+    \cos(\alpha + \beta) &= \cos(\alpha)\cos(\beta) - \sin(\alpha)\sin(\beta)
+    \end{align*}
+    For any fixed offset $k$, the positional encoding at position $pos + k$ can be represented as a \textbf{linear transformation} of the encoding at position $pos$:
+    \begin{equation}
+    \mathbf{PE}_{pos+k} = \mathbf{M}_k \mathbf{PE}_{pos}\label{eq:linear_pe}
+    \end{equation}
+    where $\mathbf{M}_k$ is a constant rotation matrix independent of $pos$. This allows the attention mechanism to easily learn to attend by relative distances (``look at the sensor reading 3 steps ago'').
+\end{enumerate}
+
+% ==============================================================================
+% 4. THE FULL TRANSFORMER ARCHITECTURE
+% ==============================================================================
+\subsection{The Complete Transformer Architecture}\label{subsec:full_transformer}
+
+The complete Transformer follows an \textbf{Encoder-Decoder} structure.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.82,
+    block/.style={rectangle, draw=keyideablue, fill=keyideablue!15, rounded corners=1.5mm, thick, minimum width=3.4cm, minimum height=0.7cm, font=\footnotesize\sffamily\bfseries, align=center},
+    norm/.style={rectangle, draw=analogygreen, fill=analogygreen!20, rounded corners=1.5mm, thick, minimum width=3.4cm, minimum height=0.6cm, font=\footnotesize\sffamily\bfseries},
+    io/.style={rectangle, draw=gray!70, fill=white, rounded corners=1mm, thick, minimum width=2.4cm, minimum height=0.6cm, font=\footnotesize\sffamily},
+    arrow/.style={-{Stealth[length=2mm]}, thick, draw=gray!80}
+]
+    % ENCODER (Left)
+    \draw[thick, draw=keyideablue!60, fill=keyideablue!5, rounded corners=4mm] (-4.6, 0.4) rectangle (-0.6, 7.8);
+    \node[font=\bfseries\sffamily, text=keyideablue] at (-2.6, 7.5) {Encoder Block ($\times N$)};
+
+    \node[io] (enc_in) at (-2.6, -1.0) {Input Tokens};
+    \node[block] (enc_emb) at (-2.6, -0.1) {Input Embedding};
+    \node[font=\footnotesize\sffamily] (enc_pe) at (-4.2, -0.1) {$+$ PE};
+    \draw[arrow] (enc_in) -- (enc_emb);
+    \draw[arrow] (enc_pe) -- (enc_emb);
+
+    \node[block] (enc_sa) at (-2.6, 1.2) {Multi-Head Self-Attn};
+    \node[norm] (enc_norm1) at (-2.6, 2.3) {Add \& LayerNorm};
+    \node[block] (enc_ffn) at (-2.6, 3.8) {Feed-Forward Network};
+    \node[norm] (enc_norm2) at (-2.6, 4.9) {Add \& LayerNorm};
+
+    \draw[arrow] (enc_emb) -- (enc_sa);
+    \draw[arrow] (enc_sa) -- (enc_norm1);
+    \draw[arrow] (enc_norm1) -- (enc_ffn);
+    \draw[arrow] (enc_ffn) -- (enc_norm2);
+
+    % Residual arrows in Encoder
+    \draw[thick, draw=warningred!80] (enc_emb.north) -- (-2.6, 0.6) -- (-4.2, 0.6) -- (-4.2, 2.3) -- (enc_norm1.west);
+    \draw[thick, draw=warningred!80] (enc_norm1.north) -- (-2.6, 3.1) -- (-4.2, 3.1) -- (-4.2, 4.9) -- (enc_norm2.west);
+
+    % DECODER (Right)
+    \draw[thick, draw=analogygreen!60, fill=analogygreen!5, rounded corners=4mm] (0.6, 0.4) rectangle (4.6, 7.8);
+    \node[font=\bfseries\sffamily, text=analogygreen!80!black] at (2.6, 7.5) {Decoder Block ($\times N$)};
+
+    \node[io] (dec_in) at (2.6, -1.0) {Target Tokens};
+    \node[block, draw=analogygreen, fill=analogygreen!15] (dec_emb) at (2.6, -0.1) {Output Embedding};
+    \node[font=\footnotesize\sffamily] (dec_pe) at (4.2, -0.1) {$+$ PE};
+    \draw[arrow] (dec_in) -- (dec_emb);
+    \draw[arrow] (dec_pe) -- (dec_emb);
+
+    \node[block, draw=analogygreen, fill=analogygreen!15] (dec_msa) at (2.6, 1.2) {Masked Multi-Head Attn};
+    \node[norm] (dec_norm1) at (2.6, 2.1) {Add \& LayerNorm};
+    \node[block, draw=warningred, fill=warningred!15] (dec_ca) at (2.6, 3.2) {Cross-Attention};
+    \node[norm] (dec_norm2) at (2.6, 4.2) {Add \& LayerNorm};
+    \node[block, draw=analogygreen, fill=analogygreen!15] (dec_ffn) at (2.6, 5.3) {Feed-Forward Network};
+    \node[norm] (dec_norm3) at (2.6, 6.3) {Add \& LayerNorm};
+
+    \draw[arrow] (dec_emb) -- (dec_msa);
+    \draw[arrow] (dec_msa) -- (dec_norm1);
+    \draw[arrow] (dec_norm1) -- (dec_ca);
+    \draw[arrow] (dec_ca) -- (dec_norm2);
+    \draw[arrow] (dec_norm2) -- (dec_ffn);
+    \draw[arrow] (dec_ffn) -- (dec_norm3);
+
+    % Cross-attention link
+    \draw[arrow, thick, keyideablue] (enc_norm2.east) -- (0.0, 4.9) -- (0.0, 3.2) -- node[above, font=\tiny\bfseries] {K, V} (dec_ca.west);
+
+    % Output head
+    \node[block, minimum width=2.4cm] (linear_final) at (2.6, 8.5) {Linear};
+    \node[norm, fill=warningred!20, draw=warningred, minimum width=2.4cm] (softmax_final) at (2.6, 9.4) {Softmax};
+    \node[io] (out_probs) at (2.6, 10.3) {Output Probabilities};
+    \draw[arrow] (dec_norm3) -- (linear_final);
+    \draw[arrow] (linear_final) -- (softmax_final);
+    \draw[arrow] (softmax_final) -- (out_probs);
+\end{tikzpicture}
+\caption{The full Transformer Architecture (Vaswani et al., 2017). The Encoder processes input sequences bidirectionally. The Decoder generates outputs autoregressively using causal masking and cross-attention.}\label{fig:transformer_full}
+\end{figure}
+
+\paragraph{1. The Encoder Pipeline}
+The Encoder consists of a stack of $N$ identical layers (typically $N=6$ or $12$). Each layer has two sub-layers:
+\begin{enumerate}
+    \item \textbf{Multi-Head Self-Attention}: Computes full bidirectional relationships.
+    \item \textbf{Position-Wise Feed-Forward Network (FFN)}: Applied to each position separately and identically:
+    \begin{equation}
+    \operatorname{FFN}(\mathbf{x}) = \max(0, \mathbf{x}\mathbf{W}_1 + \mathbf{b}_1)\mathbf{W}_2 + \mathbf{b}_2\label{eq:ffn_eq}
+    \end{equation}
+    Typically, the intermediate dimension expands by a factor of 4 ($d_{\text{ffn}} = 4 \times d_{\text{model}}$) before projecting back.
+\end{enumerate}
+Each sub-layer is surrounded by a \textbf{Residual Connection} followed by \textbf{Layer Normalization}:
+\begin{equation}
+\mathbf{x}_{\text{sub}} = \operatorname{LayerNorm}(\mathbf{x} + \operatorname{SubLayer}(\mathbf{x}))\label{eq:add_norm}
+\end{equation}
+
+\begin{keyidea}[Layer Normalization vs Batch Normalization]
+In Batch Normalization (Section~\ref{sec:training_techniques}), activations are normalized across the batch dimension. This fails if batch size is small or sequence lengths vary. 
+
+\textbf{Layer Normalization (LayerNorm)} normalizes activations \textbf{across the feature channels} for a single training sample independently:
+\begin{equation}
+\mu = \frac{1}{d} \sum_{i=1}^d x_i, \quad \sigma^2 = \frac{1}{d} \sum_{i=1}^d (x_i - \mu)^2, \quad \hat{x}_i = \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}} \cdot \gamma_i + \beta_i\label{eq:layernorm}
+\end{equation}
+LayerNorm does not depend on other batch items, making it perfectly stable for sequences and edge micro-batches of size $1$.
+\end{keyidea}
+
+\paragraph{2. The Decoder Pipeline}
+The Decoder is also a stack of $N$ layers, but includes three sub-layers:
+\begin{enumerate}
+    \item \textbf{Masked Multi-Head Self-Attention}: Prevents tokens from attending to subsequent future tokens during autoregressive generation. A triangular upper mask sets future compatibility scores to $-\infty$, ensuring $\operatorname{softmax}(-\infty) = 0$.
+    \item \textbf{Cross-Attention (Encoder-Decoder Attention)}:
+    \begin{itemize}
+        \item \textbf{Queries} come from the previous decoder layer.
+        \item \textbf{Keys} and \textbf{Values} come from the final output of the Encoder stack.
+        \item This allows the decoder to query the entire encoded input sequence at every generation step.
+    \end{itemize}
+    \item \textbf{Feed-Forward Network}.
+\end{enumerate}
+
+% ==============================================================================
+% 5. BERT VS GPT
+% ==============================================================================
+\subsection{BERT vs GPT: Two Architectural Philosophies}\label{subsec:bert_vs_gpt}
+
+After 2017, the deep learning community realized that the full Encoder-Decoder architecture is not always necessary. Splitting the Transformer in half yielded two dominant, competing paradigms: \textbf{Encoder-Only (BERT)} and \textbf{Decoder-Only (GPT)}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Comprehensive Comparison: BERT vs GPT}\label{tab:bert_vs_gpt}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Property} & \textbf{BERT} & \textbf{GPT} \\
+\midrule
+Architectural Backbone & Encoder-Only & Decoder-Only \\
+Attention Type & Bidirectional (Full Attention) & Causal (Masked / Unidirectional) \\
+Context Visibility & Sees past, present, and future & Sees strictly past and present \\
+Pretraining Task & Masked Language Modeling (MLM) & Autoregressive Next-Token Prediction \\
+Pretraining Objective & Predict masked tokens: $P(x_{\text{mask}} \mid x_{\setminus \text{mask}})$ & Predict next token: $P(x_t \mid x_{<t})$ \\
+Primary Strength & Representation, Analysis, Classification & Generation, Reasoning, Completion \\
+IoT / Edge Applications & Sensor fault diagnostic, Anomaly detection & Multi-step forecasting, Edge chat / agents \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{1. BERT: Bidirectional Representation for Diagnostics}
+Introduced by Jacob Devlin et al. in 2018, BERT (\textbf{Bidirectional Encoder Representations from Transformers}) uses only the Encoder. 
+\begin{itemize}
+    \item Because every token can attend to tokens on both its left and right, BERT has complete, bidirectional context.
+    \item During pretraining, $15\%$ of input tokens are replaced with a special \texttt{[MASK]} token. BERT learns to reconstruct the missing tokens.
+    \item \textbf{Edge/IoT Role}: BERT-style encoders are ideal for \textbf{offline diagnosis and classification}. If an ESP32 captures an entire 10-second vibration window, a bidirectional encoder can inspect the entire window at once to classify whether an anomaly exists.
+\end{itemize}
+
+\paragraph{2. GPT: Autoregressive Generative Intelligence}
+Introduced by Alec Radford et al. at OpenAI in 2018, GPT (\textbf{Generative Pre-trained Transformer}) uses only the Decoder.
+\begin{itemize}
+    \item GPT enforces a strict causal mask: token $t$ can only attend to tokens $1, \dots, t$.
+    \item It is trained by predicting the immediate next token $x_{t+1}$ given historical context.
+    \item \textbf{Edge/IoT Role}: GPT-style decoders are ideal for \textbf{online predictive streaming and multi-step forecasting}. A microcontroller reads sensor values sequentially and predicts what the temperature or battery drain will be over the subsequent five minutes.
+\end{itemize}
+
+% ==============================================================================
+% 6. CODE: PYTORCH MULTI-HEAD ATTENTION FROM SCRATCH
+% ==============================================================================
+\subsection{PyTorch Implementation: Building a Multi-Head Attention Layer}\label{subsec:pytorch_attention}
+
+Let us build a self-contained Multi-Head Self-Attention block from first principles in PyTorch.
+
+\paragraph{The PyTorch Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import math
+
+class MultiHeadSelfAttention(nn.Module):
+    """
+    Multi-Head Self-Attention module implemented from first principles.
+    Splits d_model into h heads of dimension d_k = d_model // h.
+    """
+    def __init__(self, d_model=64, num_heads=4):
+        super(MultiHeadSelfAttention, self).__init__()
+        assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
+        
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_k = d_model // num_heads  # Dimension per head: 64 // 4 = 16
+        
+        # Linear projection matrices for Queries, Keys, and Values
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        
+        # Final output projection matrix
+        self.W_o = nn.Linear(d_model, d_model)
+
+    def forward(self, x, mask=None):
+        # x shape: (batch_size, seq_len, d_model)
+        batch_size, seq_len, _ = x.shape
+        
+        # 1. Project inputs and split into h heads:
+        # Transform (B, N, d_model) -> (B, N, h, d_k) -> Transpose to (B, h, N, d_k)
+        Q = self.W_q(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        K = self.W_k(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        V = self.W_v(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        
+        # 2. Scaled Dot-Product: Q @ K^T / sqrt(d_k)
+        # Q: (B, h, N, d_k), K^T: (B, h, d_k, N) -> Scores: (B, h, N, N)
+        scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d_k)
+        
+        # 3. Apply optional causal or padding mask
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
+            
+        # 4. Softmax over last dimension (over Keys)
+        attn_weights = torch.softmax(scores, dim=-1)
+        
+        # 5. Multiply weights by Values: (B, h, N, N) @ (B, h, N, d_k) -> (B, h, N, d_k)
+        context = torch.matmul(attn_weights, V)
+        
+        # 6. Recombine heads: (B, h, N, d_k) -> (B, N, h, d_k) -> (B, N, d_model)
+        context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        
+        # 7. Final linear projection
+        output = self.W_o(context)
+        return output, attn_weights
+
+# Verification Script
+torch.manual_seed(42)
+batch_size = 2
+seq_len = 8      # Sequence of 8 sensor time steps
+d_model = 64     # Embedding dimension
+
+# Input sensor embeddings
+sensor_stream = torch.randn(batch_size, seq_len, d_model)
+
+# Instantiate attention layer
+mha = MultiHeadSelfAttention(d_model=64, num_heads=4)
+output, weights = mha(sensor_stream)
+
+print(f"Input Shape:          {sensor_stream.shape}")
+print(f"Output Shape:         {output.shape}")
+print(f"Attention Map Shape:  {weights.shape} (Batch, Heads, Query_pos, Key_pos)")
+
+# Parameter count audit
+total_params = sum(p.numel() for p in mha.parameters())
+print(f"Total Parameters:     {total_params:,}")
+\end{lstlisting}
+
+\paragraph{Expected Output}
+\begin{lstlisting}[style=outputstyle]
+Input Shape:          torch.Size([2, 8, 64])
+Output Shape:         torch.Size([2, 8, 64])
+Attention Map Shape:  torch.Size([2, 4, 8, 8]) (Batch, Heads, Query_pos, Key_pos)
+Total Parameters:     16,640
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Breakdown}
+\begin{itemize}
+    \item \textbf{Line 17}: \code{self.d\_k = d\_model // num\_heads}. Each of the 4 heads operates on a 16-dimensional slice ($64 / 4 = 16$).
+    \item \textbf{Lines 29--31}: The tensor reshape and transpose \code{.view(B, N, h, d\_k).transpose(1, 2)} reorders dimensions to \code{(batch, num\_heads, seq\_len, d\_k)}. This allows PyTorch to execute all 4 attention heads in parallel with a single batched matrix multiplication!
+    \item \textbf{Line 35}: \code{scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d\_k)}. Multiplies Queries by transposed Keys across all heads and scales by $\sqrt{16} = 4.0$.
+    \item \textbf{Line 45}: \code{context.transpose(1, 2).contiguous().view(B, N, d\_model)} concatenates the 4 head outputs side by side, restoring the original $(B \times N \times 64)$ shape.
+    \item \textbf{Line 64}: The 4 projection matrices ($\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V, \mathbf{W}^O$), each of size $64 \times 64$ plus 64 biases, yield exactly $4 \times (4{,}096 + 64) = \mathbf{16{,}640}$ parameters.
+\end{itemize}
+
+% ==============================================================================
+% 7. IOT & TINYML CONNECTION
+% ==============================================================================
+\subsection{ML for IoT and Edge: Transformers on Embedded Devices}\label{subsec:iot_transformers}
+
+\begin{iotbox}[The Edge Transformer Challenge: $O(N^2)$ Complexity]
+While Transformers dominate cloud servers, deploying them to resource-constrained microcontrollers (e.g., ESP32, STM32, ARM Cortex-M55) introduces a major bottleneck: \textbf{Quadratic Attention Complexity}.
+\begin{itemize}
+    \item \textbf{Time and Space Complexity}: Computing and storing the attention matrix $\mathbf{Q}\mathbf{K}^T \in \mathbb{R}^{N \times N}$ scales quadratically ($O(N^2)$) with sequence length $N$.
+    \item For a sequence of 128 sensor readings with 4 heads in 32-bit float:
+    \begin{equation*}
+    \text{Attention Matrix RAM} = 4 \times (128 \times 128) \times 4 \text{ bytes} = \mathbf{262\text{ KB of SRAM}}
+    \end{equation*}
+    On an ESP32 with 320 KB of free internal RAM, storing the attention matrix of a single layer consumes over \textbf{$80\%$ of all available memory}!
+\end{itemize}
+\end{iotbox}
+
+\paragraph{How TinyML Engineers Deploy Transformers to Edge Devices}
+To run Transformers on edge microcontrollers and industrial gateways, engineers deploy four key optimizations:
+\begin{enumerate}
+    \item \textbf{Short Context Windows}: Rather than running sequences of 2,048 tokens, edge models operate on compact windows (e.g., $N = 16$ to $32$ sensor readings). At $N = 32$, the attention matrix requires only $32 \times 32 \times 4 \text{ bytes} \approx 4 \text{ KB}$ of RAM.
+    \item \textbf{Linear Attention (FlashAttention / Reformer)}: By decomposing the softmax kernel using associative properties, linear attention computes $(\mathbf{K}^T \mathbf{V})$ first, reducing complexity from $O(N^2 \cdot d)$ to $O(N \cdot d^2)$. When $N \gg d$, this slashes RAM usage drastically.
+    \item \textbf{Vision Transformers (ViT) on Audio Spectrograms}: Rather than feeding 16,000 raw audio samples into a 1D Transformer, the edge device computes a 2D Mel-Spectrogram (Section~\ref{sec:cnn}), divides it into $8 \times 8$ patches, and treats the patches as tokens. A 1-second audio clip is compressed into just 16 patch tokens!
+    \item \textbf{Quantization (INT8 and INT4)}: Weight and activation quantization converts 32-bit floats into 8-bit or 4-bit integers. This cuts Flash storage by $4\times$ to $8\times$ and enables fast SIMD integer dot-product execution on ARM Cortex-M processors using the CMSIS-NN library.
+\end{enumerate}
+
+% ==============================================================================
+% 8. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\subsection{Common Mistakes and Misconceptions}\label{subsec:mistakes}
+
+\begin{warning}[Five Pitfalls in Transformer Engineering]
+\begin{enumerate}
+    \item \textbf{Omitting the $\frac{1}{\sqrt{d_k}}$ Scaling Factor}: Forgetting to divide dot products by $\sqrt{d_k}$. For large embedding dimensions ($d_k \ge 64$), the dot products become large numbers ($>30$). Softmax saturates, assigning weight $1.0$ to a single token and $0.0$ to all others, which immediately kills gradient flow during backpropagation.
+    \item \textbf{Normalizing Across the Sequence Dimension}: Applying Layer Normalization across the sequence length $N$ rather than across the hidden feature dimension $d_{\text{model}}$. LayerNorm must normalize each token's feature vector independently.
+    \item \textbf{Information Leakage in Autoregressive Forecasting}: Using a bidirectional encoder (like BERT) for step-by-step future forecasting without a causal mask. If the model can attend to future time steps during training, it achieves near-zero training error by cheating, but completely fails during live edge inference.
+    \item \textbf{Confusing Self-Attention with Cross-Attention}: In self-attention, $\mathbf{Q}, \mathbf{K}, \mathbf{V}$ all come from the same sequence. In cross-attention, $\mathbf{Q}$ comes from the decoder, while $\mathbf{K}$ and $\mathbf{V}$ come from the encoder.
+    \item \textbf{Shuffling Time-Series Data Before Positional Encoding}: Shuffling sequences or applying random temporal jitter before adding positional encodings scrambles physical causality. The model will learn nonsensical temporal patterns.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 9. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:takeaways}
+
+\begin{takeaways}[Core Principles of Attention and Transformers]
+\begin{itemize}
+    \item \textbf{Constant Path Length}: Attention connects any two tokens in a sequence in $O(1)$ operations, eliminating the long-range forgetting inherent to sequential RNNs.
+    \item \textbf{Scaled Dot-Product Formula}: Attention computes compatibility via $\operatorname{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^T}{\sqrt{d_k}}\right)\mathbf{V}$, where $\sqrt{d_k}$ prevents softmax gradient saturation.
+    \item \textbf{Positional Encodings Are Mandatory}: Because self-attention is inherently permutation invariant, deterministic sinusoidal waves or learned embeddings must be added to inject token order.
+    \item \textbf{BERT vs GPT Division}: Encoder-only models (BERT) are bidirectional and excel at classification and diagnostics; Decoder-only models (GPT) are causal and excel at generation and forecasting.
+    \item \textbf{Quadratic SRAM Bottleneck}: Attention requires $O(N^2)$ memory. On edge microcontrollers, sequence lengths must remain short or use linear attention to prevent SRAM exhaustion.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 10. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:check_yourself}
+
+\begin{checkyourself}[Practice Questions and Calculations]
+\begin{enumerate}
+    \item \textbf{Scaled Dot-Product Attention Calculation}: A Query vector $\mathbf{q} = [1, 2]$ is compared against two Key vectors $\mathbf{k}_1 = [2, 1]$ and $\mathbf{k}_2 = [-1, 2]$ with $d_k = 2$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the scaled dot products $z_1 = \frac{\mathbf{q} \cdot \mathbf{k}_1}{\sqrt{d_k}}$ and $z_2 = \frac{\mathbf{q} \cdot \mathbf{k}_2}{\sqrt{d_k}}$ (round $\sqrt{2} \approx 1.414$).
+        \item Compute the softmax attention weights $A_1$ and $A_2$.
+        \item Given Value vectors $\mathbf{v}_1 = [10, 0]^T$ and $\mathbf{v}_2 = [0, 10]^T$, calculate the final output vector $\mathbf{out}$.
+    \end{enumerate}
+    \item \textbf{Parameter Counting in Multi-Head Attention}: A Transformer layer uses embedding dimension $d_{\text{model}} = 128$ and $h = 4$ attention heads. The module contains projection matrices $\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V$, and output projection $\mathbf{W}^O$, each with a bias vector. Exactly how many trainable parameters are in this Multi-Head Attention block?
+    \item \textbf{Quadratic Memory Scaling}: A predictive maintenance Transformer processes sensor sequences of length $N = 50$. If the sequence length is increased to $N = 250$ to capture longer weekly cycles, by what factor does the memory required to store the self-attention weight matrix $(\mathbf{Q}\mathbf{K}^T)$ increase?
+    \item \textbf{Causal Masking Arithmetic}: In a decoder with sequence length $N = 3$, write down the $3 \times 3$ boolean attention mask matrix where $1$ allows attention and $0$ forbids attention. Why is position $(0, 2)$ set to $0$?
+    \item \textbf{TinyML SRAM Feasibility}: An engineer wishes to run an attention layer on an STM32 microcontroller with 128 KB of free SRAM. The sequence length is $N = 64$ sensor steps, with $h = 8$ heads, stored in 32-bit float precision (4 bytes per number). How many kilobytes of SRAM are required to store the attention score tensor $(\mathbf{Q}\mathbf{K}^T)$? Does it fit?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 11. ANSWERS
+% ==============================================================================
+\subsection*{Answers}\label{subsec:answers}
+
+\begin{enumerate}
+    \item \textbf{Scaled Dot-Product Attention Calculation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Raw and Scaled Dot Products}:
+        \begin{align*}
+        \mathbf{q} \cdot \mathbf{k}_1 &= (1 \times 2) + (2 \times 1) = 2 + 2 = 4 \\
+        z_1 &= \frac{4}{\sqrt{2}} \approx \frac{4}{1.4142} \approx \mathbf{2.8284} \\
+        \mathbf{q} \cdot \mathbf{k}_2 &= (1 \times (-1)) + (2 \times 2) = -1 + 4 = 3 \\
+        z_2 &= \frac{3}{\sqrt{2}} \approx \frac{3}{1.4142} \approx \mathbf{2.1213}
+        \end{align*}
+
+        \item \textbf{Softmax Attention Weights}:
+        \begin{align*}
+        e^{z_1} &= e^{2.8284} \approx 16.918 \\
+        e^{z_2} &= e^{2.1213} \approx 8.342 \\
+        \text{Sum} &= 16.918 + 8.342 = 25.260 \\
+        A_1 &= \frac{16.918}{25.260} \approx \mathbf{0.6698} \quad (67.0\%) \\
+        A_2 &= \frac{8.342}{25.260} \approx \mathbf{0.3302} \quad (33.0\%)
+        \end{align*}
+
+        \item \textbf{Final Output Vector}:
+        \begin{align*}
+        \mathbf{out} &= A_1 \mathbf{v}_1 + A_2 \mathbf{v}_2 \\
+                     &= 0.6698 \begin{bmatrix} 10 \\ 0 \end{bmatrix} + 0.3302 \begin{bmatrix} 0 \\ 10 \end{bmatrix} = \begin{bmatrix} \mathbf{6.698} \\ \mathbf{3.302} \end{bmatrix}
+        \end{align*}
+    \end{enumerate}
+
+    \item \textbf{Parameter Counting in Multi-Head Attention}:
+    The module contains four linear projection layers: $\mathbf{W}^Q, \mathbf{W}^K, \mathbf{W}^V$, and $\mathbf{W}^O$.
+    Each projection maps $d_{\text{model}} \to d_{\text{model}}$ (since all $h$ heads are combined in a single matrix).
+    For each linear layer of dimension $128 \to 128$:
+    \begin{align*}
+    \text{Weights per layer} &= 128 \times 128 = 16{,}384 \\
+    \text{Biases per layer} &= 128 \\
+    \text{Parameters per layer} &= 16{,}384 + 128 = 16{,}512
+    \end{align*}
+    For all 4 projection matrices:
+    \begin{equation*}
+    \text{Total Parameters} = 4 \times 16{,}512 = \mathbf{66{,}048 \text{ parameters}}
+    \end{equation*}
+
+    \item \textbf{Quadratic Memory Scaling}:
+    The self-attention matrix has size $N \times N = N^2$.
+    \begin{align*}
+    \text{Size at } N_1 = 50 &\implies 50^2 = 2{,}500 \text{ elements} \\
+    \text{Size at } N_2 = 250 &\implies 250^2 = 62{,}500 \text{ elements} \\
+    \text{Scaling Factor} &= \frac{62{,}500}{2{,}500} = \left(\frac{250}{50}\right)^2 = 5^2 = \mathbf{25\times}
+    \end{align*}
+    Increasing the sequence length by a factor of 5 causes the attention matrix memory to increase by a factor of \textbf{25}.
+
+    \item \textbf{Causal Masking Arithmetic}:
+    In a causal decoder, token $i$ can only attend to tokens $j \le i$. The mask matrix $\mathbf{M} \in \mathbb{R}^{3 \times 3}$ is a lower-triangular matrix:
+    \begin{equation*}
+    \mathbf{M} = \begin{bmatrix}
+    1 & 0 & 0 \\
+    1 & 1 & 0 \\
+    1 & 1 & 1
+    \end{bmatrix}
+    \end{equation*}
+    Position $(0, 2)$ represents Query token 0 attending to Key token 2. It is set to $0$ (which maps to $-\infty$ before softmax) because token 2 represents future information that has not yet occurred when predicting at time step 0. Allowing attention to position $(0, 2)$ would constitute temporal data cheating.
+
+    \item \textbf{TinyML SRAM Feasibility}:
+    The attention score tensor has shape $(h \times N \times N)$.
+    For $h = 8$ and $N = 64$:
+    \begin{align*}
+    \text{Total Elements} &= 8 \times (64 \times 64) = 8 \times 4{,}096 = 32{,}768 \text{ float values} \\
+    \text{Bytes Required} &= 32{,}768 \times 4 \text{ bytes} = 131{,}072 \text{ bytes} \\
+    \text{Kilobytes} &= \frac{131{,}072}{1024} = \mathbf{128 \text{ KB}}
+    \end{align*}
+    \textbf{Conclusion}: The attention tensor alone consumes \textbf{exactly 128 KB}. Because the microcontroller has only \textbf{128 KB} of free SRAM, this single intermediate activation tensor completely exhausts all available memory, leaving zero bytes for the operating system, network stack, or model weights. The system will suffer an immediate \textbf{Out-of-Memory (OOM) crash}.
+    \textbf{Remedy}: The engineer must reduce the sequence length to $N=32$ (which cuts the tensor size by $4\times$ to $32\text{ KB}$), reduce the number of heads from 8 to 2, or implement chunked streaming attention.
+\end{enumerate}

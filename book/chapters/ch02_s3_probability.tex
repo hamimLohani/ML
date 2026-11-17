@@ -1,0 +1,1187 @@
+% FILE: chapters/ch02_s3_probability.tex
+\section{Probability}\label{sec:probability}
+
+In the preceding sections, we studied linear algebra---the language of multidimensional geometric spaces---and calculus---the engine of continuous optimization. Together, they allow us to build parameterized models and update their weights by descending along error gradients.
+
+However, deterministic mathematics operates under a dangerous assumption: that the universe is predictable, clean, and perfectly observed. A deterministic function promises that if you supply the exact same inputs $\mathbf{x}$, you will receive the exact same output $y$ every single time.
+
+In the real world---and particularly in machine learning and edge Internet of Things (IoT) engineering---this assumption collapses immediately. Consider an ambient temperature sensor placed in an industrial greenhouse. If the room is at a steady $24.0^\circ\text{C}$, ten consecutive analog-to-digital converter (ADC) readings will not all read $24.00^\circ\text{C}$. Instead, microscopic thermal fluctuations in the silicon, electromagnetic interference from nearby electric motors, and power supply ripple will produce a jittery stream:
+\begin{equation*}
+24.08^\circ\text{C}, \quad 23.94^\circ\text{C}, \quad 24.12^\circ\text{C}, \quad 24.01^\circ\text{C}, \quad 23.89^\circ\text{C}, \quad \dots
+\end{equation*}
+
+Uncertainty is not an engineering flaw to be ignored; it is an unavoidable law of nature. Sources of uncertainty in machine learning include:
+\begin{itemize}
+    \item \textbf{Sensor and Measurement Noise}: Hardware thermal noise, quantization round-off, optical glare, and fluctuating voltages.
+    \item \textbf{Incomplete Observability}: A smart thermostat measures indoor temperature, but it cannot measure whether a resident opened a window in the next room or whether a cloud passed over the sun.
+    \item \textbf{Stochastic System Dynamics}: Wireless packet collisions over LoRa or Wi-Fi, human user behavioral shifts, and wear-and-tear degradation.
+    \item \textbf{Model Ambiguity}: Given a limited training dataset, many different mathematical hypotheses can explain the observations equally well.
+\end{itemize}
+
+\textbf{Probability} is the mathematical framework for quantifying, reasoning about, and making optimal decisions in the presence of uncertainty. In machine learning, probability serves two monumental purposes:
+\begin{enumerate}
+    \item It allows models to output calibrated confidence levels rather than dogmatic guesses (e.g., ``$92\%$ probability of a bearing fracture'' rather than a blind ``yes'').
+    \item It provides the theoretical foundation for machine learning loss functions. As we will prove in this section, minimizing Mean Squared Error (MSE) and minimizing Cross-Entropy are simply direct consequences of \textbf{Maximum Likelihood Estimation (MLE)}.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    prob_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!8, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
+]
+    % Deterministic
+    \node[font=\bfseries\sffamily\small, text=keyideablue] at (-3.2, 1.8) {Deterministic View (Idealized)};
+    \node[box, minimum width=2.2cm] (x_det) at (-5.2, 0.6) {Input $\mathbf{x}$};
+    \node[box, minimum width=2.4cm] (f_det) at (-2.2, 0.6) {Model $f(\mathbf{x})$};
+    \node[box, minimum width=2.2cm] (y_det) at (0.8, 0.6) {Fixed $y$};
+    \draw[arrow] (x_det) -- (f_det);
+    \draw[arrow] (f_det) -- (y_det);
+
+    % Probabilistic
+    \node[font=\bfseries\sffamily\small, text=analogygreen!80!black] at (-3.2, -1.0) {Probabilistic View (Real-World ML)};
+    \node[prob_box, minimum width=2.2cm] (x_prob) at (-5.2, -2.2) {Input $\mathbf{x}$};
+    \node[prob_box, minimum width=2.4cm] (f_prob) at (-2.2, -2.2) {Likelihood\\$P(\mathbf{y} \mid \mathbf{x}, \mathbf{w})$};
+    \node[prob_box, minimum width=2.8cm] (y_prob) at (1.2, -2.2) {Distribution $P(y)$\\(Mean $\mu$, Variance $\sigma^2$)};
+    \draw[arrow] (x_prob) -- (f_prob);
+    \draw[arrow] (f_prob) -- (y_prob);
+\end{tikzpicture}
+\caption{The shift from deterministic computing to probabilistic modeling. Rather than returning a single brittle value, a probabilistic model quantifies the distribution of likely outcomes and its inherent uncertainty.}\label{fig:deterministic_vs_probabilistic}
+\end{figure}
+
+% ==============================================================================
+% 1. RANDOM VARIABLES AND DISTRIBUTIONS
+% ==============================================================================
+\subsection{Random Variables and Probability Distributions}\label{subsec:prob_random_variables}
+
+\begin{keyidea}[What is a Random Variable?]
+A \textbf{random variable} is a variable whose possible values depend on the outcomes of an underlying random phenomenon. It is mathematically formalized as a function that maps outcomes from an uncertain sample space $\Omega$ to real numbers:
+\begin{equation}
+X: \Omega \to \mathbb{R}
+\end{equation}
+By convention, we denote random variables with capital letters ($X, Y, Z$) and their specific, realized numerical values with lowercase letters ($x, y, z$).
+\end{keyidea}
+
+\begin{analogy}[The Analog-to-Digital Converter (ADC)]
+Think of a physical temperature sensor connected to an ESP32 microcontroller pin. The real physical environment has microscopic thermal fluctuations and electromagnetic waves radiating through the air (the sample space $\Omega$). 
+
+The microcontroller does not see the physical molecules vibrating. Instead, its internal ADC samples the voltage pin at a discrete instant and converts that physical state into an integer count between $0$ and $4095$. The ADC is a physical random variable: it translates chaotic environmental states into concrete numerical values $x \in \mathbb{R}$.
+\end{analogy}
+
+Random variables are divided into two fundamental mathematical categories:
+\begin{enumerate}
+    \item \textbf{Discrete Random Variables}: Can take on only isolated, countable values (e.g., $X \in \{0, 1\}$ for a motor failure flag, or $X \in \{0, 1, 2, \dots\}$ for the number of packets dropped by a router).
+    \item \textbf{Continuous Random Variables}: Can take on any real value within an uninterrupted interval (e.g., $X \in \mathbb{R}$ for sensor voltage, ambient humidity, or vehicle speed).
+\end{enumerate}
+
+\subsubsection{Discrete Random Variables and the Probability Mass Function (PMF)}
+For a discrete random variable $X$, the probability that $X$ takes on a specific value $x$ is defined by its \textbf{Probability Mass Function (PMF)}, denoted $P(X = x)$ or simply $p(x)$. 
+
+A valid PMF must satisfy two non-negotiable Kolmogorov probability axioms:
+\begin{align}
+p(x) &\ge 0 \quad \text{for all } x \in \text{Support}(X) \label{eq:pmf_non_neg}\\
+\sum_{x \in \text{Support}(X)} p(x) &= 1 \label{eq:pmf_sum_one}
+\end{align}
+Every single probability must be non-negative, and the sum across all possible mutually exclusive outcomes must equal exactly $1$ ($100\%$ total certainty).
+
+\subsubsection{Continuous Random Variables and the Probability Density Function (PDF)}
+Continuous variables present a subtle conceptual challenge that frequently confuses newcomers:
+\begin{warning}[The Continuous Probability Paradox: $P(X = x) = 0$]
+For any continuous random variable $X$, the probability that $X$ equals \textbf{any exact single number} is precisely zero:
+\begin{equation}
+P(X = 24.0000000\dots) = 0
+\end{equation}
+Because there are an infinite, uncountable number of real values between $23.9$ and $24.1$, the chance of landing on any one exact mathematical point with infinite decimal precision is $\frac{1}{\infty} = 0$.
+\end{warning}
+
+Instead of point probabilities, continuous variables are governed by a \textbf{Probability Density Function (PDF)}, denoted $f(x)$ or $p(x)$. A density function does not represent probability directly; rather, the \textbf{area under the curve} between two points represents probability:
+\begin{equation}
+P(a \le X \le b) = \int_{a}^{b} f(x)\,dx\label{eq:pdf_integral}
+\end{equation}
+
+The continuous counterparts to the probability axioms are:
+\begin{align}
+f(x) &\ge 0 \quad \text{for all } x \in \mathbb{R} \label{eq:pdf_non_neg}\\
+\int_{-\infty}^{\infty} f(x)\,dx &= 1 \label{eq:pdf_total_area}
+\end{align}
+Notice that while a discrete probability $p(x)$ can never exceed $1.0$, a probability \textit{density} $f(x)$ \textbf{can} exceed $1.0$, provided the total integral (the area under the curve) remains equal to $1$.
+
+\subsubsection{The Cumulative Distribution Function (CDF)}
+The \textbf{Cumulative Distribution Function (CDF)}, denoted $F(x)$, bridges both discrete and continuous domains. It answers the question: \textit{``What is the probability that the random variable $X$ will take a value less than or equal to $x$?''}
+\begin{equation}
+F(x) = P(X \le x)\label{eq:cdf_definition}
+\end{equation}
+
+For discrete and continuous distributions, $F(x)$ is computed as:
+\begin{align}
+\text{Discrete:}\quad F(x) &= \sum_{x_i \le x} p(x_i) \\
+\text{Continuous:}\quad F(x) &= \int_{-\infty}^{x} f(t)\,dt
+\end{align}
+
+By the Fundamental Theorem of Calculus, for continuous variables the PDF is simply the derivative of the CDF:
+\begin{equation}
+f(x) = \frac{d}{dx}F(x)
+\end{equation}
+
+Every valid CDF satisfies three universal properties:
+\begin{itemize}
+    \item Monotonically non-decreasing: if $x_1 \le x_2$, then $F(x_1) \le F(x_2)$.
+    \item Limits at infinity: $\lim_{x \to -\infty} F(x) = 0$ and $\lim_{x \to \infty} F(x) = 1$.
+    \item Interval calculation: The probability of $X$ falling in the half-open interval $(a, b]$ is simply:
+    \begin{equation}
+    P(a < X \le b) = F(b) - F(a)
+    \end{equation}
+\end{itemize}
+
+\begin{example}[Calculating PMF and CDF for a 3-State IoT Node]
+Consider an autonomous solar-powered IoT weather station that operates in three distinct operational states during each sampling window:
+\begin{itemize}
+    \item State $0$: Deep Sleep (ultra-low power, radio and sensors off).
+    \item State $1$: Active Sensing (reading I2C sensor bus).
+    \item State $2$: Radio Broadcast (transmitting telemetry via LoRa radio).
+\end{itemize}
+Historical logging shows that in any given minute, the node has a $75\%$ chance of sleeping, a $20\%$ chance of sensing, and a $5\%$ chance of transmitting.
+\begin{enumerate}
+    \item Define the random variable $X \in \{0, 1, 2\}$ and write its PMF $p(x)$.
+    \item Verify that the PMF satisfies the probability axioms.
+    \item Compute the CDF $F(x)$ for all states.
+    \item Find the probability that the node is active ($X \ge 1$).
+\end{enumerate}
+
+\paragraph{Solution:}
+\begin{enumerate}
+    \item The PMF is given by:
+    \begin{equation*}
+    p(0) = 0.75, \quad p(1) = 0.20, \quad p(2) = 0.05
+    \end{equation*}
+    \item Verification:
+    Each probability is non-negative ($0.75, 0.20, 0.05 \ge 0$).
+    The total sum is:
+    \begin{equation*}
+    \sum_{x=0}^{2} p(x) = 0.75 + 0.20 + 0.05 = 1.00
+    \end{equation*}
+    Both axioms are satisfied.
+    \item The CDF accumulates the probabilities step-by-step:
+    \begin{align*}
+    F(0) &= P(X \le 0) = p(0) = 0.75 \\
+    F(1) &= P(X \le 1) = p(0) + p(1) = 0.75 + 0.20 = 0.95 \\
+    F(2) &= P(X \le 2) = p(0) + p(1) + p(2) = 0.75 + 0.20 + 0.05 = 1.00
+    \end{align*}
+    For values outside this range, $F(x) = 0$ for $x < 0$ and $F(x) = 1$ for $x \ge 2$.
+    \item The probability that the node is active ($X \ge 1$) can be calculated directly or via the complement rule:
+    \begin{equation*}
+    P(X \ge 1) = 1 - P(X < 1) = 1 - P(X \le 0) = 1 - F(0) = 1 - 0.75 = \mathbf{0.25} \quad (25\%)
+    \end{equation*}
+\end{enumerate}
+\end{example}
+
+% ==============================================================================
+% 2. EXPECTATION, VARIANCE, AND COVARIANCE
+% ==============================================================================
+\subsection{Expectation, Variance, and Covariance}\label{subsec:prob_moments}
+
+Having a complete probability distribution is powerful, but in engineering we frequently need summary metrics: Where is the center of the data? How wide is the scatter? How do two different sensors fluctuate together?
+
+\subsubsection{Expected Value: The Center of Mass}
+The \textbf{Expected Value} (also called the \textbf{mean} or \textbf{first moment}), denoted $\mathbb{E}[X]$ or $\mu$, represents the long-run weighted average of a random variable across infinite repeated trials.
+
+\paragraph{Formal Definition: Expected Value}
+
+For discrete and continuous random variables, expectation is defined as:
+\begin{align}
+\text{Discrete:}\quad \mathbb{E}[X] &= \sum_{x \in \text{Support}(X)} x \cdot p(x) \label{eq:exp_discrete} \\
+\text{Continuous:}\quad \mathbb{E}[X] &= \int_{-\infty}^{\infty} x \cdot f(x)\,dx \label{eq:exp_continuous}
+\end{align}
+
+
+\paragraph{Linearity of Expectation}
+Expectation possesses a mathematical property that makes modern machine learning optimization feasible: \textbf{linearity}. For any random variables $X$ and $Y$ (regardless of whether they are independent or completely entangled) and any real constants $a, b, c \in \mathbb{R}$:
+\begin{equation}
+\mathbb{E}[aX + bY + c] = a\mathbb{E}[X] + b\mathbb{E}[Y] + c\label{eq:linearity_of_expectation}
+\end{equation}
+
+\subsubsection{Variance and Standard Deviation: Measuring Spread}
+While expectation tells us where the distribution is centered, it tells us nothing about its dispersion. Consider two temperature sensors:
+\begin{itemize}
+    \item Sensor A yields readings $\{23.9^\circ\text{C}, 24.0^\circ\text{C}, 24.1^\circ\text{C}\}$. Mean = $24.0^\circ\text{C}$.
+    \item Sensor B yields readings $\{14.0^\circ\text{C}, 24.0^\circ\text{C}, 34.0^\circ\text{C}\}$. Mean = $24.0^\circ\text{C}$.
+\end{itemize}
+Both have identical means, but Sensor B is wildly unstable and completely unusable for precision control.
+
+\paragraph{Formal Definition: Variance and Standard Deviation}
+
+The \textbf{Variance}, denoted $\text{Var}(X)$ or $\sigma^2$, measures the expected squared deviation of a random variable from its mean:
+\begin{equation}
+\text{Var}(X) = \mathbb{E}\left[(X - \mu)^2\right] = \sigma^2\label{eq:variance_def}
+\end{equation}
+The \textbf{Standard Deviation}, denoted $\sigma$, is the positive square root of the variance:
+\begin{equation}
+\sigma = \sqrt{\text{Var}(X)}
+\end{equation}
+Standard deviation has the crucial advantage of being expressed in the \textbf{exact same physical units} as the original measurements (e.g., $^\circ\text{C}$ or Volts), whereas variance is expressed in squared units ($^\circ\text{C}^2$ or $\text{V}^2$).
+
+
+\paragraph{The Computational Shortcut for Variance}
+Expanding the squared binomial inside Equation~\eqref{eq:variance_def} yields the most useful algebraic identity in practical statistics:
+\begin{align}
+\text{Var}(X) &= \mathbb{E}\left[X^2 - 2X\mu + \mu^2\right] \notag\\
+&= \mathbb{E}[X^2] - 2\mu \mathbb{E}[X] + \mu^2 \notag\\
+&= \mathbb{E}[X^2] - 2\mu^2 + \mu^2 \notag\\
+&= \mathbf{\mathbb{E}[X^2] - (\mathbb{E}[X])^2}\label{eq:variance_shortcut}
+\end{align}
+In words: \textit{Variance equals the mean of the squares minus the square of the mean}.
+
+\paragraph{Scaling Rules for Variance}
+Unlike expectation, variance is \textbf{not} linear:
+\begin{equation}
+\text{Var}(aX + c) = a^2 \text{Var}(X)\label{eq:variance_scaling}
+\end{equation}
+Adding a constant $c$ shifts the entire distribution along the axis without changing its spread ($\text{Var}(c) = 0$). Multiplying by a scale factor $a$ stretches the distances by $a$, which squares the variance by $a^2$.
+
+\subsubsection{Covariance and Correlation: How Variables Interact}
+When working with multidimensional sensor platforms (e.g., an Inertial Measurement Unit measuring 3-axis acceleration and gyroscope rates), variables rarely vary in isolation.
+
+\paragraph{Formal Definition: Covariance}
+
+The \textbf{Covariance} between two random variables $X$ and $Y$, denoted $\text{Cov}(X, Y)$ or $\sigma_{XY}$, measures the joint tendency of the two variables to vary in the same direction:
+\begin{equation}
+\text{Cov}(X, Y) = \mathbb{E}\left[(X - \mu_X)(Y - \mu_Y)\right] = \mathbb{E}[XY] - \mu_X \mu_Y\label{eq:covariance_def}
+\end{equation}
+\begin{itemize}
+    \item $\text{Cov}(X, Y) > 0$: When $X$ is above its mean, $Y$ tends to be above its mean (positive linear association).
+    \item $\text{Cov}(X, Y) < 0$: When $X$ is above its mean, $Y$ tends to be below its mean (inverse relationship).
+    \item $\text{Cov}(X, Y) = 0$: No linear relationship between the fluctuations of $X$ and $Y$.
+    \item $\text{Cov}(X, X) = \text{Var}(X)$: The covariance of a variable with itself is its variance.
+\end{itemize}
+
+
+\paragraph{The Pearson Correlation Coefficient}
+The drawback of raw covariance is that its numerical magnitude depends entirely on the units of measurement. If you measure temperature in millidegrees instead of degrees, the covariance multiplies by $1000$, even though the underlying relationship hasn't changed at all!
+
+To remove units, we normalize covariance by the product of both standard deviations, yielding the \textbf{Pearson Correlation Coefficient} $\rho_{XY}$ (or simply $r$):
+\begin{equation}
+\rho_{XY} = \frac{\text{Cov}(X, Y)}{\sigma_X \sigma_Y} \quad \text{where} \quad -1 \le \rho_{XY} \le +1\label{eq:correlation_def}
+\end{equation}
+\begin{itemize}
+    \item $\rho = +1$: Perfect positive linear correlation.
+    \item $\rho = -1$: Perfect negative linear correlation.
+    \item $\rho = 0$: Completely uncorrelated linearly.
+\end{itemize}
+
+\begin{warning}[Correlation Does Not Imply Independence!]
+If two random variables are statistically independent, their correlation is guaranteed to be zero ($\rho = 0$). 
+\textbf{The converse is NOT true}: A correlation of zero does \textit{not} mean the variables are independent! 
+
+Pearson correlation measures \textit{linear} dependency only. If $X \sim \mathcal{U}(-1, 1)$ and $Y = X^2$, $Y$ is completely, deterministically dictated by $X$. Yet, because the relationship is a symmetric parabola, their covariance and correlation are exactly zero ($\text{Cov}(X, Y) = 0$). Always plot your data before assuming that zero correlation means no relationship!
+\end{warning}
+
+\begin{example}[Complete Hand-Worked Calculation of Moments and Correlation]
+An IoT edge module measures microcontroller die temperature $T$ ($^\circ\text{C}$) and operating battery voltage $V$ ($\text{Volts}$) across 5 discrete inspection cycles:
+\begin{center}
+\begin{tabular}{cccccc}
+\toprule
+\textbf{Cycle $i$} & 1 & 2 & 3 & 4 & 5 \\
+\midrule
+\textbf{Temperature $T_i$ ($^\circ\text{C}$)} & 20 & 22 & 24 & 26 & 28 \\
+\textbf{Battery Voltage $V_i$ ($\text{V}$)} & 4.2 & 4.1 & 3.9 & 3.8 & 3.5 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Compute the sample means $\mu_T, \mu_V$, variances $\sigma_T^2, \sigma_V^2$, covariance $\text{Cov}(T, V)$, and Pearson correlation coefficient $\rho_{TV}$ by hand.
+
+\paragraph{Step 1: Compute Means}
+\begin{align*}
+\mu_T &= \frac{20 + 22 + 24 + 26 + 28}{5} = \frac{120}{5} = \mathbf{24.0^\circ\text{C}} \\
+\mu_V &= \frac{4.2 + 4.1 + 3.9 + 3.8 + 3.5}{5} = \frac{19.5}{5} = \mathbf{3.90\text{ V}}
+\end{align*}
+
+\paragraph{Step 2: Construct the Arithmetic Deviation Table}
+We construct the table of individual deviations $(T_i - \mu_T)$ and $(V_i - \mu_V)$:
+\begin{center}
+\begin{tabular}{cccccc}
+\toprule
+$i$ & $(T_i - \mu_T)$ & $(V_i - \mu_V)$ & $(T_i - \mu_T)^2$ & $(V_i - \mu_V)^2$ & $(T_i - \mu_T)(V_i - \mu_V)$ \\
+\midrule
+1 & $-4$ & $+0.30$ & $16$ & $0.09$ & $-1.20$ \\
+2 & $-2$ & $+0.20$ & $4$  & $0.04$ & $-0.40$ \\
+3 & $0$  & $0.00$  & $0$  & $0.00$ & $0.00$ \\
+4 & $+2$ & $-0.10$ & $4$  & $0.01$ & $-0.20$ \\
+5 & $+4$ & $-0.40$ & $16$ & $0.16$ & $-1.60$ \\
+\midrule
+\textbf{Sum} & \textbf{0} & \textbf{0} & \textbf{40} & \textbf{0.30} & \textbf{$-3.40$} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Step 3: Compute Variances and Standard Deviations}
+Using population formulation (divisor $N = 5$):
+\begin{align*}
+\sigma_T^2 &= \frac{1}{5} \sum (T_i - \mu_T)^2 = \frac{40}{5} = \mathbf{8.00^\circ\text{C}^2} \implies \sigma_T = \sqrt{8.00} \approx \mathbf{2.828^\circ\text{C}} \\
+\sigma_V^2 &= \frac{1}{5} \sum (V_i - \mu_V)^2 = \frac{0.30}{5} = \mathbf{0.060\text{ V}^2} \implies \sigma_V = \sqrt{0.060} \approx \mathbf{0.2449\text{ V}}
+\end{align*}
+
+\paragraph{Step 4: Compute Covariance and Pearson Correlation}
+\begin{align*}
+\text{Cov}(T, V) &= \frac{1}{5} \sum (T_i - \mu_T)(V_i - \mu_V) = \frac{-3.40}{5} = \mathbf{-0.680\text{ }^\circ\text{C}\cdot\text{V}} \\
+\rho_{TV} &= \frac{\text{Cov}(T, V)}{\sigma_T \cdot \sigma_V} = \frac{-0.680}{2.8284 \times 0.2449} = \frac{-0.680}{0.6928} \approx \mathbf{-0.9815}
+\end{align*}
+\textbf{Interpretation}: There is an extremely strong negative linear correlation ($\rho \approx -0.98$). As the edge processor heats up under load, internal resistance causes the battery terminal voltage to drop predictably.
+\end{example}
+
+% ==============================================================================
+% 3. CONDITIONAL PROBABILITY AND BAYES' RULE
+% ==============================================================================
+\subsection{Conditional Probability and Bayes' Rule}\label{subsec:prob_bayes}
+
+In static environments, marginal probability $P(A)$ describes how often an event occurs in general. But in intelligent systems, we are constantly absorbing \textit{new evidence} from sensors and must update our beliefs in response.
+
+\subsubsection{Joint, Marginal, and Conditional Probability}
+Let $A$ and $B$ be two events in our sample space:
+\begin{itemize}
+    \item \textbf{Joint Probability} $P(A \cap B)$ or $P(A, B)$: The probability that \textbf{both} event $A$ and event $B$ occur simultaneously.
+    \item \textbf{Marginal Probability} $P(A)$: The standalone probability of event $A$, obtained by summing (or integrating) across all possible states of $B$:
+    \begin{equation}
+    P(A) = \sum_{b} P(A, B = b)\label{eq:marginalization}
+    \end{equation}
+    This operation is called \textbf{marginalization}.
+    \item \textbf{Conditional Probability} $P(A \mid B)$: The probability that event $A$ occurs, \textbf{given the certainty} that event $B$ has already occurred:
+    \begin{equation}
+    P(A \mid B) = \frac{P(A \cap B)}{P(B)}, \quad \text{provided } P(B) > 0\label{eq:conditional_def}
+    \end{equation}
+\end{itemize}
+
+\subsubsection{Statistical Independence}
+Two events $A$ and $B$ are defined as \textbf{statistically independent} if knowledge of $B$ gives absolutely zero information about the likelihood of $A$:
+\begin{equation}
+P(A \mid B) = P(A) \iff P(A \cap B) = P(A) \cdot P(B)\label{eq:independence_def}
+\end{equation}
+
+\subsubsection{The Law of Total Probability}
+If the universe of hypotheses is partitioned into mutually exclusive and collectively exhaustive scenarios $H_1, H_2, \dots, H_k$ (meaning exactly one hypothesis must be true, so $\sum P(H_i) = 1$), then the total probability of observing any event $E$ is:
+\begin{equation}
+P(E) = \sum_{i=1}^{k} P(E \mid H_i) P(H_i)\label{eq:law_of_total_prob}
+\end{equation}
+
+\subsubsection{Bayes' Rule: Inverting Cause and Effect}
+From the definition of conditional probability in Equation~\eqref{eq:conditional_def}, we can write the joint probability in two equivalent ways:
+\begin{equation}
+P(A \cap B) = P(A \mid B) P(B) = P(B \mid A) P(A)
+\end{equation}
+Dividing both sides by $P(B)$ yields the celebrated theorem of \textbf{Bayes' Rule}:
+\begin{equation}
+P(A \mid B) = \frac{P(B \mid A) \cdot P(A)}{P(B)}\label{eq:bayes_rule}
+\end{equation}
+Expanding the denominator with the Law of Total Probability gives the standard computational form:
+\begin{equation}
+P(A \mid B) = \frac{P(B \mid A) P(A)}{P(B \mid A)P(A) + P(B \mid \neg A)P(\neg A)}\label{eq:bayes_rule_expanded}
+\end{equation}
+where $\neg A$ represents the complement (event $A$ did not occur).
+
+\begin{keyidea}[The Anatomy of Bayes' Rule]
+Bayes' Rule is the formal calculus of belief updating. Each term has a specialized name:
+\begin{itemize}
+    \item \textbf{Prior} $P(A)$: Our baseline belief in hypothesis $A$ \textit{before} observing any sensor evidence.
+    \item \textbf{Likelihood} $P(B \mid A)$: If hypothesis $A$ were true, how likely is it that the sensor would produce this specific evidence $B$?
+    \item \textbf{Evidence (Marginal Likelihood)} $P(B)$: The total probability of observing the evidence $B$ across all possible truths.
+    \item \textbf{Posterior} $P(A \mid B)$: Our updated, revised belief in hypothesis $A$ \textit{after} absorbing the evidence.
+\end{itemize}
+\begin{equation*}
+\text{Posterior} = \frac{\text{Likelihood} \times \text{Prior}}{\text{Evidence}}
+\end{equation*}
+\end{keyidea}
+
+\begin{example}[The Base-Rate Fallacy in IoT Anomaly Detection]
+A factory installs a high-frequency acoustic sensor on an industrial milling spindle to detect catastrophic bearing cracks.
+\begin{itemize}
+    \item Bearing cracks are rare: only $1$ in every $200$ spindles suffers a crack in a given month ($P(\text{Crack}) = 0.005$ or $0.5\%$).
+    \item When a crack is present, the acoustic classifier triggers an alarm $98\%$ of the time (\textbf{Sensitivity} or True Positive Rate):
+    \begin{equation*}
+    P(\text{Alarm} \mid \text{Crack}) = 0.98
+    \end{equation*}
+    \item When the bearing is healthy, environmental factory noise triggers a false alarm $2\%$ of the time (\textbf{False Positive Rate}):
+    \begin{equation*}
+    P(\text{Alarm} \mid \text{Healthy}) = 0.02
+    \end{equation*}
+\end{itemize}
+A sensor on Machine 42 suddenly sounds an emergency alarm. What is the probability that the spindle bearing is \textbf{actually cracked}?
+
+\paragraph{Step 1: Identify Known Probabilities}
+\begin{align*}
+\text{Prior:}\quad P(\text{Crack}) &= 0.005 \\
+P(\text{Healthy}) &= 1 - 0.005 = 0.995 \\
+\text{Likelihood:}\quad P(\text{Alarm} \mid \text{Crack}) &= 0.98 \\
+\text{False Alarm:}\quad P(\text{Alarm} \mid \text{Healthy}) &= 0.02
+\end{align*}
+
+\paragraph{Step 2: Compute Total Evidence $P(\text{Alarm})$}
+Using the Law of Total Probability:
+\begin{align*}
+P(\text{Alarm}) &= P(\text{Alarm} \mid \text{Crack})P(\text{Crack}) + P(\text{Alarm} \mid \text{Healthy})P(\text{Healthy}) \\
+&= (0.98 \times 0.005) + (0.02 \times 0.995) \\
+&= 0.00490 + 0.01990 \\
+&= \mathbf{0.02480} \quad (2.48\%)
+\end{align*}
+
+\paragraph{Step 3: Calculate the Posterior $P(\text{Crack} \mid \text{Alarm})$}
+Applying Bayes' Rule:
+\begin{align*}
+P(\text{Crack} \mid \text{Alarm}) &= \frac{P(\text{Alarm} \mid \text{Crack}) P(\text{Crack})}{P(\text{Alarm})} \\
+&= \frac{0.00490}{0.02480} \approx \mathbf{0.19758} \implies \mathbf{19.76\%}
+\end{align*}
+
+\paragraph{Pedagogical Analysis: Why is the Probability Under $20\%$?}
+Most untrained engineers instinctively guess that because the sensor has ``$98\%$ accuracy,'' an alarm means a $98\%$ chance of a crack. 
+
+To see why the actual answer is only $\approx 20\%$, picture a fleet of $10,000$ machine spindles over the month:
+\begin{itemize}
+    \item $50$ spindles actually crack ($0.5\%$). The sensor detects $98\%$ of them $\to$ \textbf{49 true alarms}.
+    \item $9,950$ spindles remain completely healthy. But $2\%$ trigger false alarms $\to$ \textbf{199 false alarms}.
+    \item Total alarms sounding across the factory: $49 + 199 = \mathbf{248}$.
+    \item Fraction of sounding alarms that represent true cracks: $\frac{49}{248} \approx \mathbf{19.76\%}$.
+\end{itemize}
+Because healthy machines vastly outnumber cracked machines ($9,950$ vs $50$), the small $2\%$ false positive rate generates four times more false alarms ($199$) than genuine alarms ($49$)! This phenomenon is the infamous \textbf{Base-Rate Fallacy}.
+\end{example}
+
+% ==============================================================================
+% 4. KEY PROBABILITY DISTRIBUTIONS IN ML
+% ==============================================================================
+\subsection{Parametric Probability Distributions in Machine Learning}\label{subsec:prob_distributions}
+
+Rather than tracking raw data tables, machine learning relies on \textbf{parametric probability distributions}. A parametric distribution is a standardized mathematical formula whose shape is fully governed by a compact vector of numbers called \textbf{parameters} $\mathbf{\theta}$ (e.g., mean $\mu$ and variance $\sigma^2$). 
+
+Selecting the right distribution matches the physical structure of your sensor signals and problem domain.
+
+% ------------------------------------------------------------------------------
+\subsubsection{The Gaussian (Normal) Distribution: $\mathcal{N}(\mu, \sigma^2)$}
+The \textbf{Gaussian distribution} (colloquially called the \textbf{bell curve}) is the uncontested titan of probability and machine learning.
+
+\paragraph{Formal Definition: Gaussian Distribution PDF}
+
+A continuous random variable $X$ is normally distributed with mean $\mu \in \mathbb{R}$ and variance $\sigma^2 > 0$, written $X \sim \mathcal{N}(\mu, \sigma^2)$, if its PDF is:
+\begin{equation}
+f(x; \mu, \sigma) = \frac{1}{\sigma \sqrt{2\pi}} \exp\left( -\frac{(x - \mu)^2}{2\sigma^2} \right)\label{eq:gaussian_pdf}
+\end{equation}
+
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.95,
+    zone1/.style={fill=keyideablue!30, opacity=0.7},
+    zone2/.style={fill=keyideablue!18, opacity=0.7},
+    zone3/.style={fill=keyideablue!8, opacity=0.7}
+]
+    % Axes
+    \draw[->, thick] (-4.5, 0) -- (4.5, 0) node[right, font=\footnotesize\sffamily] {$x$};
+    \draw[->, thick] (0, 0) -- (0, 3.8) node[above, font=\footnotesize\sffamily] {$f(x)$};
+
+    % Shaded zones under standard normal (scaled by 3.4 for display)
+    % 3 sigma zone (-3 to 3)
+    \draw[zone3, domain=-3:3, samples=60] plot (\x, {3.4*exp(-(\x)*(\x)/2)}) -- (3,0) -- (-3,0) -- cycle;
+    % 2 sigma zone (-2 to 2)
+    \draw[zone2, domain=-2:2, samples=50] plot (\x, {3.4*exp(-(\x)*(\x)/2)}) -- (2,0) -- (-2,0) -- cycle;
+    % 1 sigma zone (-1 to 1)
+    \draw[zone1, domain=-1:1, samples=40] plot (\x, {3.4*exp(-(\x)*(\x)/2)}) -- (1,0) -- (-1,0) -- cycle;
+
+    % Gaussian Curve outline
+    \draw[domain=-4.2:4.2, samples=80, smooth, very thick, keyideablue!90!black] plot (\x, {3.4*exp(-(\x)*(\x)/2)});
+
+    % Mean and Sigma Marks
+    \draw[dashed, thick, black!60] (0, 0) -- (0, 3.4);
+    \node[below=1mm, font=\footnotesize\sffamily\bfseries] at (0, 0) {$\mu$};
+    \node[below=1mm, font=\scriptsize\sffamily] at (1, 0) {$\mu+\sigma$};
+    \node[below=1mm, font=\scriptsize\sffamily] at (-1, 0) {$\mu-\sigma$};
+    \node[below=1mm, font=\scriptsize\sffamily] at (2, 0) {$\mu+2\sigma$};
+    \node[below=1mm, font=\scriptsize\sffamily] at (-2, 0) {$\mu-2\sigma$};
+    \node[below=1mm, font=\scriptsize\sffamily] at (3, 0) {$\mu+3\sigma$};
+    \node[below=1mm, font=\scriptsize\sffamily] at (-3, 0) {$\mu-3\sigma$};
+
+    % Percentage annotations
+    \node[font=\footnotesize\sffamily\bfseries, text=keyideablue!90!black] at (0, 1.4) {68.27\%};
+    \draw[<->, thick, text=black] (-1, 1.7) -- (1, 1.7) node[midway, above, font=\scriptsize\sffamily] {$\pm 1\sigma$};
+    \draw[<->, thick, text=black] (-2, 2.3) -- (2, 2.3) node[midway, above, font=\scriptsize\sffamily] {$\pm 2\sigma$ (95.45\%)};
+    \draw[<->, thick, text=black] (-3, 2.9) -- (3, 2.9) node[midway, above, font=\scriptsize\sffamily] {$\pm 3\sigma$ (99.73\%)};
+\end{tikzpicture}
+\caption{The Gaussian distribution and the empirical 68--95--99.7 rule. The area under the curve between $\mu - k\sigma$ and $\mu + k\sigma$ dictates the exact statistical probability of bounded fluctuations.}\label{fig:gaussian_rule}
+\end{figure}
+
+Key properties of the Gaussian distribution:
+\begin{itemize}
+    \item \textbf{Symmetry}: Perfectly symmetric around its mean $\mu$. The mean, median, and mode are all identical ($\mu = \text{median} = \text{mode}$).
+    \item \textbf{The Empirical 68--95--99.7 Rule}:
+    \begin{align}
+    P(\mu - 1\sigma \le X \le \mu + 1\sigma) &\approx 0.6827 \quad (68.27\%) \notag\\
+    P(\mu - 2\sigma \le X \le \mu + 2\sigma) &\approx 0.9545 \quad (95.45\%) \notag\\
+    P(\mu - 3\sigma \le X \le \mu + 3\sigma) &\approx 0.9973 \quad (99.73\%) \label{eq:68_95_99_rule}
+    \end{align}
+    In an edge sensor with Gaussian noise, fewer than $3$ out of every $1,000$ readings will naturally wander beyond $\pm 3\sigma$. Any reading beyond $3\sigma$ is a prime candidate for an anomaly!
+    \item \textbf{Standard Normal Variable $Z$}: Any Gaussian variable $X \sim \mathcal{N}(\mu, \sigma^2)$ can be converted to the Standard Normal Distribution $Z \sim \mathcal{N}(0, 1)$ via the \textbf{$Z$-score transformation}:
+    \begin{equation}
+    Z = \frac{X - \mu}{\sigma}\label{eq:z_score}
+    \end{equation}
+    \item \textbf{The Central Limit Theorem (CLT)}: Why is the Gaussian distribution ubiquitous in physical sensors? The CLT proves that if you take the sum or average of $N$ independent random variables from \textbf{any} arbitrary distribution (with finite variance), their normalized sum converges toward a Gaussian distribution as $N \to \infty$. 
+
+    Because sensor noise is the physical superposition of billions of vibrating silicon atoms, fluctuating electromagnetic fields, and power supply hums, the sum of all these independent microscopic disturbances emerges at the microcontroller pin as a nearly perfect Gaussian bell curve.
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+\subsubsection{The Bernoulli Distribution: $\text{Bernoulli}(p)$}
+The \textbf{Bernoulli distribution} models a single trial that has only two possible outcomes: Success ($X = 1$) or Failure ($X = 0$).
+
+\paragraph{Formal Definition: Bernoulli PMF and Moments}
+
+A discrete random variable $X \in \{0, 1\}$ follows $\text{Bernoulli}(p)$ with success parameter $p \in [0, 1]$ if:
+\begin{equation}
+P(X = x) = p^x (1 - p)^{1 - x}, \quad x \in \{0, 1\}\label{eq:bernoulli_pmf}
+\end{equation}
+Its mean and variance are:
+\begin{align}
+\mathbb{E}[X] &= 1(p) + 0(1 - p) = \mathbf{p} \label{eq:bernoulli_mean}\\
+\text{Var}(X) &= \mathbb{E}[X^2] - (\mathbb{E}[X])^2 = p - p^2 = \mathbf{p(1 - p)}\label{eq:bernoulli_var}
+\end{align}
+
+
+\paragraph{Machine Learning Connection}
+The output layer of every binary classification neural network (e.g., distinguishing crack vs.\ healthy) terminates in a \textbf{sigmoid activation function}:
+\begin{equation}
+\sigma(z) = \frac{1}{1 + e^{-z}} \in (0, 1)
+\end{equation}
+The neural network does not output a deterministic class label. It outputs the numerical parameter $\hat{p} = \sigma(z)$ of a Bernoulli distribution!
+
+% ------------------------------------------------------------------------------
+\subsubsection{The Binomial Distribution: $\text{Binomial}(n, p)$}
+What happens if we repeat an identical Bernoulli trial $n$ times? The \textbf{Binomial distribution} models the number of successes $k$ in $n$ independent and identically distributed (i.i.d.) Bernoulli trials.
+
+\paragraph{Formal Definition: Binomial PMF and Moments}
+
+A discrete random variable $X \in \{0, 1, \dots, n\}$ follows $\text{Binomial}(n, p)$ if:
+\begin{equation}
+P(X = k) = \binom{n}{k} p^k (1 - p)^{n - k}\label{eq:binomial_pmf}
+\end{equation}
+where the binomial coefficient $\binom{n}{k} = \frac{n!}{k!(n - k)!}$ counts the number of distinct ways to arrange $k$ successes across $n$ attempts.
+Its mean and variance are:
+\begin{align}
+\mathbb{E}[X] &= \mathbf{np} \label{eq:binomial_mean}\\
+\text{Var}(X) &= \mathbf{np(1 - p)}\label{eq:binomial_var}
+\end{align}
+
+
+\begin{example}[LoRa Wireless Packet Retransmissions]
+An agricultural sensor transmits $n = 4$ independent data packets to a gateway over an unshielded long-range LoRa wireless channel. The channel suffers an average packet loss rate of $20\%$ (success rate $p = 0.80$).
+What is the probability that \textbf{at least 3} of the 4 packets arrive successfully?
+
+\paragraph{Solution:}
+We evaluate $P(X \ge 3) = P(X = 3) + P(X = 4)$:
+\begin{align*}
+P(X = 4) &= \binom{4}{4} (0.80)^4 (0.20)^0 = 1 \times 0.4096 \times 1 = \mathbf{0.4096} \\
+P(X = 3) &= \binom{4}{3} (0.80)^3 (0.20)^1 = \frac{4!}{3!1!} (0.512)(0.20) = 4 \times 0.1024 = \mathbf{0.4096} \\
+P(X \ge 3) &= 0.4096 + 0.4096 = \mathbf{0.8192} \quad (81.92\%)
+\end{align*}
+There is an $81.92\%$ probability that the cloud gateway receives at least 3 packets.
+\end{example}
+
+% ------------------------------------------------------------------------------
+\subsubsection{The Poisson Distribution: $\text{Poisson}(\lambda)$}
+The \textbf{Poisson distribution} models the count of discrete events that occur randomly and independently in a fixed, continuous interval of time or space, given a known constant average arrival rate $\lambda > 0$.
+
+\paragraph{Formal Definition: Poisson PMF and Moments}
+
+A discrete random variable $X \in \{0, 1, 2, \dots\}$ follows $\text{Poisson}(\lambda)$ if:
+\begin{equation}
+P(X = k) = \frac{\lambda^k e^{-\lambda}}{k!}, \quad k \in \{0, 1, 2, \dots\}\label{eq:poisson_pmf}
+\end{equation}
+The hallmark mathematical signature of the Poisson distribution is that its \textbf{mean and variance are identical}:
+\begin{equation}
+\mathbb{E}[X] = \lambda, \quad \text{Var}(X) = \lambda\label{eq:poisson_moments}
+\end{equation}
+
+
+\paragraph{Relationship to the Binomial Distribution}
+The Poisson distribution is the mathematical limit of the Binomial distribution as the number of trials approaches infinity ($n \to \infty$) and the probability of each event shrinks to zero ($p \to 0$), while their product remains constant: $\lambda = np$. 
+
+It is ideal for modeling ``rare'' events in continuous streams:
+\begin{itemize}
+    \item Telemetry packet arrivals at an MQTT edge message broker.
+    \item Cosmic ray bit-flips in microcontroller SRAM.
+    \item The number of vehicular arrivals detected by an infrared traffic sensor per minute.
+\end{itemize}
+
+\begin{example}[MQTT Broker Ingestion]
+An MQTT gateway server receives telemetry packets from a deployed sensor swarm at an average rate of $\lambda = 3$ packets per second.
+\begin{enumerate}
+    \item What is the probability that zero packets arrive in a 1-second interval (broker starvation)?
+    \item What is the probability that exactly 2 packets arrive?
+\end{enumerate}
+
+\paragraph{Solution:}
+Using Equation~\eqref{eq:poisson_pmf} with $\lambda = 3$:
+\begin{enumerate}
+    \item For $k = 0$:
+    \begin{equation*}
+    P(X = 0) = \frac{3^0 e^{-3}}{0!} = \frac{1 \times e^{-3}}{1} \approx \mathbf{0.04979} \quad (4.98\%)
+    \end{equation*}
+    \item For $k = 2$:
+    \begin{equation*}
+    P(X = 2) = \frac{3^2 e^{-3}}{2!} = \frac{9 \times 0.04979}{2} = \mathbf{0.2240} \quad (22.40\%)
+    \end{equation*}
+\end{enumerate}
+\end{example}
+
+\begin{table}[htbp]
+\centering
+\caption{Comprehensive summary of core probability distributions in machine learning.}\label{tab:distribution_summary}
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Distribution} & \textbf{Type} & \textbf{Parameters} & \textbf{Mean $\mathbb{E}[X]$} & \textbf{Variance $\text{Var}(X)$} & \textbf{Typical ML/IoT Role} \\
+\midrule
+\textbf{Gaussian} & Continuous & $\mu \in \mathbb{R}, \sigma > 0$ & $\mu$ & $\sigma^2$ & Sensor noise, Linear regression errors \\
+\textbf{Bernoulli} & Discrete & $p \in [0, 1]$ & $p$ & $p(1 - p)$ & Binary classification output \\
+\textbf{Binomial} & Discrete & $n \in \mathbb{N}, p \in [0, 1]$ & $np$ & $np(1 - p)$ & Packet retry counts, Batch quality \\
+\textbf{Poisson} & Discrete & $\lambda > 0$ & $\lambda$ & $\lambda$ & Telemetry arrival rate, Event triggers \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ==============================================================================
+% 5. MAXIMUM LIKELIHOOD ESTIMATION (MLE)
+% ==============================================================================
+\subsection{Maximum Likelihood Estimation (MLE)}\label{subsec:prob_mle}
+
+We have reached the conceptual summit of this section. We know how probability distributions behave when their parameters ($\mu, \sigma^2, p, \lambda$) are known. But in machine learning, we face the exact opposite problem:
+\begin{center}
+\textbf{We have collected raw sensor data $\mathcal{D} = \{x_1, x_2, \dots, x_n\}$, but we do NOT know the parameters that generated it.}
+\end{center}
+How do we find the optimal parameters $\hat{\mathbf{\theta}}$ that best explain the data we just collected? The answer is \textbf{Maximum Likelihood Estimation (MLE)}.
+
+\subsubsection{Probability versus Likelihood}
+Although everyday English treats ``probability'' and ``likelihood'' as synonyms, in statistics they have strictly opposite meanings:
+\begin{itemize}
+    \item \textbf{Probability} $P(\text{Data} \mid \mathbf{\theta})$: The parameters $\mathbf{\theta}$ are fixed and known. We calculate the probability of observing various hypothetical datasets.
+    \item \textbf{Likelihood} $L(\mathbf{\theta} \mid \text{Data})$: The dataset $\mathcal{D}$ has already been observed and is fixed. We evaluate how plausible various candidate parameters $\mathbf{\theta}$ are.
+\end{itemize}
+
+\subsubsection{The Likelihood Function}
+Assuming that our $n$ observations $x_1, x_2, \dots, x_n$ are \textbf{Independent and Identically Distributed (i.i.d.)}, the total probability of observing the entire dataset is the product of their individual probabilities:
+\begin{equation}
+L(\mathbf{\theta}; x_1, \dots, x_n) = \prod_{i=1}^{n} p(x_i \mid \mathbf{\theta})\label{eq:likelihood_product}
+\end{equation}
+
+\subsubsection{The Log-Likelihood Function}
+Directly maximizing Equation~\eqref{eq:likelihood_product} on a computer is disastrous. If you multiply $n = 500$ small probabilities together ($0.03^{500} \approx 10^{-761}$), the hardware floating-point registers suffer catastrophic \textbf{arithmetic underflow} and instantly round the product down to absolute zero.
+
+To solve this, we take the natural logarithm of the likelihood, defining the \textbf{Log-Likelihood} $\ell(\mathbf{\theta})$:
+\begin{equation}
+\ell(\mathbf{\theta}) = \ln L(\mathbf{\theta}) = \ln \left( \prod_{i=1}^{n} p(x_i \mid \mathbf{\theta}) \right) = \sum_{i=1}^{n} \ln p(x_i \mid \mathbf{\theta})\label{eq:log_likelihood_sum}
+\end{equation}
+
+Taking the logarithm provides three enormous advantages:
+\begin{enumerate}
+    \item \textbf{Numerical Stability}: It converts tiny products into manageable sums of negative numbers (e.g., $\ln(10^{-761}) \approx -1752.1$, which easily fits in a standard 32-bit float).
+    \item \textbf{Calculus Simplicity}: Differentiating a sum applies the simple sum rule: the derivative of a sum is the sum of the derivatives. You never have to evaluate an intractable $n$-term product rule.
+    \item \textbf{Preservation of the Maximum}: The natural log function $\ln(z)$ is strictly monotonically increasing for $z > 0$. Therefore, whatever parameter $\mathbf{\theta}^*$ maximizes $\ell(\mathbf{\theta})$ is guaranteed to be the exact same parameter that maximizes $L(\mathbf{\theta})$:
+    \begin{equation}
+    \hat{\mathbf{\theta}}_{\text{MLE}} = \arg\max_{\mathbf{\theta}} L(\mathbf{\theta}) = \arg\max_{\mathbf{\theta}} \ell(\mathbf{\theta})
+    \end{equation}
+\end{enumerate}
+
+% ------------------------------------------------------------------------------
+\subsubsection{Derivation 1: MLE for Bernoulli Trials}
+Suppose we observe $n$ independent binary transmissions from an edge device, resulting in dataset $\mathcal{D} = \{x_1, x_2, \dots, x_n\}$ where each $x_i \in \{0, 1\}$. 
+Let $k = \sum_{i=1}^{n} x_i$ be the total number of successful transmissions ($x_i = 1$), leaving $(n - k)$ failures ($x_i = 0$).
+
+\paragraph{Step 1: Write the Likelihood and Log-Likelihood}
+Using the Bernoulli PMF from Equation~\eqref{eq:bernoulli_pmf}:
+\begin{align}
+L(p) &= \prod_{i=1}^{n} p^{x_i} (1 - p)^{1 - x_i} = p^{\sum x_i} (1 - p)^{\sum (1 - x_i)} = p^k (1 - p)^{n - k} \notag\\
+\ell(p) &= \ln \left[ p^k (1 - p)^{n - k} \right] = \mathbf{k \ln(p) + (n - k) \ln(1 - p)}\label{eq:bernoulli_log_lik}
+\end{align}
+
+\paragraph{Step 2: Differentiate with Respect to $p$}
+\begin{equation}
+\frac{d\ell}{dp} = \frac{k}{p} + \frac{n - k}{1 - p} \cdot \frac{d}{dp}(1 - p) = \frac{k}{p} - \frac{n - k}{1 - p}
+\end{equation}
+
+\paragraph{Step 3: Set the Derivative to Zero and Solve for $p$}
+\begin{align}
+\frac{k}{p} - \frac{n - k}{1 - p} = 0 &\implies \frac{k}{p} = \frac{n - k}{1 - p} \notag\\
+k(1 - p) &= (n - k)p \notag\\
+k - kp &= np - kp \notag\\
+k &= np \implies \mathbf{\hat{p}_{\text{MLE}} = \frac{k}{n}}\label{eq:bernoulli_mle_result}
+\end{align}
+
+\paragraph{Step 4: Verify the Second Derivative}
+To ensure this critical point is a true maximum (not a minimum):
+\begin{equation}
+\frac{d^2\ell}{dp^2} = -\frac{k}{p^2} - \frac{n - k}{(1 - p)^2} < 0 \quad \text{for all } p \in (0, 1)
+\end{equation}
+Because the second derivative is strictly negative everywhere, the log-likelihood is strictly concave, proving that $\hat{p}_{\text{MLE}} = \frac{k}{n}$ (the sample proportion) is the unique global maximum.
+
+% ------------------------------------------------------------------------------
+\subsubsection{Derivation 2: MLE for the Gaussian Distribution}
+Now suppose we sample $n$ continuous readings $x_1, x_2, \dots, x_n$ from an unknown Gaussian sensor distribution $X \sim \mathcal{N}(\mu, \sigma^2)$. We wish to estimate both $\mu$ and $\sigma^2$ simultaneously.
+
+\paragraph{Step 1: Formulate the Log-Likelihood}
+From Equation~\eqref{eq:gaussian_pdf}:
+\begin{align*}
+L(\mu, \sigma^2) &= \prod_{i=1}^{n} \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left( -\frac{(x_i - \mu)^2}{2\sigma^2} \right) \\
+&= \left( 2\pi\sigma^2 \right)^{-n/2} \exp\left( -\frac{1}{2\sigma^2} \sum_{i=1}^{n} (x_i - \mu)^2 \right)
+\end{align*}
+Taking the natural logarithm:
+\begin{equation}
+\ell(\mu, \sigma^2) = -\frac{n}{2}\ln(2\pi) - \frac{n}{2}\ln(\sigma^2) - \frac{1}{2\sigma^2} \sum_{i=1}^{n} (x_i - \mu)^2\label{eq:gaussian_log_lik}
+\end{equation}
+
+\paragraph{Step 2: Derive $\hat{\mu}_{\text{MLE}}$}
+Take the partial derivative of $\ell$ with respect to $\mu$ and set it to zero:
+\begin{align}
+\frac{\partial \ell}{\partial \mu} &= 0 - 0 - \frac{1}{2\sigma^2} \sum_{i=1}^{n} 2(x_i - \mu)(-1) \notag\\
+&= \frac{1}{\sigma^2} \sum_{i=1}^{n} (x_i - \mu) = 0 \notag\\
+\sum_{i=1}^{n} (x_i - \mu) = 0 &\implies \sum_{i=1}^{n} x_i - n\mu = 0 \implies \mathbf{\hat{\mu}_{\text{MLE}} = \frac{1}{n} \sum_{i=1}^{n} x_i}\label{eq:gaussian_mle_mean}
+\end{align}
+The MLE estimator for the Gaussian mean is the ordinary arithmetic sample average!
+
+\paragraph{Step 3: Derive $\hat{\sigma}^2_{\text{MLE}}$}
+To differentiate with respect to variance, let $v = \sigma^2$. Rewriting Equation~\eqref{eq:gaussian_log_lik}:
+\begin{equation*}
+\ell(\mu, v) = -\frac{n}{2}\ln(2\pi) - \frac{n}{2}\ln(v) - \frac{1}{2v} \sum_{i=1}^{n} (x_i - \mu)^2
+\end{equation*}
+Differentiating with respect to $v$:
+\begin{align}
+\frac{\partial \ell}{\partial v} &= -\frac{n}{2v} + \frac{1}{2v^2} \sum_{i=1}^{n} (x_i - \mu)^2 = 0 \notag\\
+\frac{n}{2v} &= \frac{1}{2v^2} \sum_{i=1}^{n} (x_i - \mu)^2 \notag\\
+n &= \frac{1}{v} \sum_{i=1}^{n} (x_i - \mu)^2 \implies \mathbf{\hat{\sigma}^2_{\text{MLE}} = \frac{1}{n} \sum_{i=1}^{n} (x_i - \hat{\mu})^2}\label{eq:gaussian_mle_variance}
+\end{align}
+Notice that the MLE estimator for variance divides by $n$, not $n - 1$. As we will see in Section~\ref{subsec:prob_pitfalls}, this makes the MLE variance slightly \textbf{biased} for small sample sizes.
+
+% ------------------------------------------------------------------------------
+\subsubsection{The Grand Connection: How MLE Generates Machine Learning Loss Functions}
+
+Why do machine learning practitioners spend hundreds of hours training models using Mean Squared Error (MSE) or Binary Cross-Entropy (BCE)? Where did those loss formulas actually come from?
+
+They are not arbitrary heuristics. \textbf{They are direct mathematical consequences of Maximum Likelihood Estimation!}
+
+\begin{keyidea}[Loss Minimization IS Maximum Likelihood Estimation]
+In optimization, algorithms are conventionally designed to \textbf{minimize} a cost rather than maximize a reward. We can convert any maximum likelihood problem into an equivalent minimization problem by defining the \textbf{Negative Log-Likelihood (NLL)}:
+\begin{equation}
+\text{Loss}(\mathbf{\theta}) = -\ell(\mathbf{\theta}) = -\sum_{i=1}^{n} \ln p(x_i \mid \mathbf{\theta})\label{eq:nll_def}
+\end{equation}
+Minimizing Negative Log-Likelihood is mathematically identical to maximizing Likelihood!
+\end{keyidea}
+
+\paragraph{Case 1: Gaussian Errors Yield Mean Squared Error (MSE)}
+In linear regression, we assume each target $y_i$ is a function of inputs $\mathbf{x}_i$ corrupted by independent zero-mean Gaussian noise $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$:
+\begin{equation}
+y_i = \mathbf{w}^T \mathbf{x}_i + \epsilon_i \implies y_i \sim \mathcal{N}(\mathbf{w}^T \mathbf{x}_i, \sigma^2)
+\end{equation}
+The Negative Log-Likelihood for the weights $\mathbf{w}$ is obtained from Equation~\eqref{eq:gaussian_log_lik}:
+\begin{equation}
+\text{NLL}(\mathbf{w}) = \frac{n}{2}\ln(2\pi\sigma^2) + \frac{1}{2\sigma^2} \sum_{i=1}^{n} \left( y_i - \mathbf{w}^T \mathbf{x}_i \right)^2
+\end{equation}
+Since $n, \pi$, and $\sigma^2$ are fixed constants with respect to the model weights $\mathbf{w}$, minimizing $\text{NLL}(\mathbf{w})$ reduces to:
+\begin{equation}
+\arg\min_{\mathbf{w}} \text{NLL}(\mathbf{w}) = \arg\min_{\mathbf{w}} \frac{1}{n}\sum_{i=1}^{n} \left( y_i - \hat{y}_i \right)^2 \quad \mathbf{\equiv \text{Mean Squared Error (MSE)}}
+\end{equation}
+When you train a linear regression model with MSE loss, you are explicitly asserting that your measurement noise is Gaussian!
+
+\paragraph{Case 2: Bernoulli Targets Yield Binary Cross-Entropy (BCE)}
+In binary classification, each true label $y_i \in \{0, 1\}$ follows a Bernoulli distribution whose success probability is predicted by our neural network $\hat{y}_i = \sigma(\mathbf{w}^T \mathbf{x}_i) \in [0, 1]$.
+From Equation~\eqref{eq:bernoulli_log_lik}, the Negative Log-Likelihood is:
+\begin{equation}
+\text{NLL}(\mathbf{w}) = -\sum_{i=1}^{n} \left[ y_i \ln \hat{y}_i + (1 - y_i) \ln(1 - \hat{y}_i) \right] \quad \mathbf{\equiv \text{Binary Cross-Entropy (BCE)}}
+\end{equation}
+Cross-entropy loss is nothing other than the exact negative log-likelihood of a Bernoulli model.
+
+% ==============================================================================
+% 6. PYTHON DEMONSTRATION
+% ==============================================================================
+\subsection{Hands-On Python: Distributions, Noise Modeling, and MLE}\label{subsec:prob_python}
+
+To cement these principles, let us write a complete, self-contained Python script using NumPy and SciPy. We will:
+\begin{enumerate}
+    \item Simulate an edge temperature sensor contaminated with synthetic Gaussian noise.
+    \item Fit the distribution parameters using analytical MLE formulas and verify them against SciPy's built-in \texttt{stats.norm.fit}.
+    \item Implement an explicit Negative Log-Likelihood function and optimize it with numerical gradient descent to prove that numerical optimization recovers the exact same values.
+    \item Simulate discrete Bernoulli/Binomial LoRa transmissions and Poisson MQTT packet arrivals.
+\end{enumerate}
+
+\begin{lstlisting}[style=pythonstyle]
+import numpy as np
+from scipy import stats, optimize
+
+# 1. Ensure deterministic reproducibility
+np.random.seed(42)
+
+# 2. Simulate Gaussian Sensor Noise (True mu = 24.50 C, sigma = 1.20 C)
+true_mu, true_sigma = 24.5, 1.2
+n_samples = 150
+temp_readings = np.random.normal(loc=true_mu, scale=true_sigma, size=n_samples)
+
+# 3. Analytical MLE formulas
+sample_mean = np.mean(temp_readings)
+sample_std_mle = np.std(temp_readings, ddof=0)       # Divisor N (MLE)
+sample_std_unbiased = np.std(temp_readings, ddof=1)  # Divisor N-1 (Bessel)
+
+# 4. SciPy Built-In Fit (computes analytical MLE under the hood)
+fit_mu, fit_sigma = stats.norm.fit(temp_readings)
+
+# 5. Numerical MLE via explicit Negative Log-Likelihood minimization
+def gaussian_nll(params, data):
+    mu, sigma = params
+    if sigma <= 0:
+        return 1e10  # Enforce positive standard deviation boundary
+    n = len(data)
+    # NLL = (n/2)*ln(2*pi*sigma^2) + sum((x - mu)^2) / (2*sigma^2)
+    return 0.5 * n * np.log(2 * np.pi * sigma**2) + np.sum((data - mu)**2) / (2 * sigma**2)
+
+opt_result = optimize.minimize(
+    gaussian_nll, 
+    x0=[20.0, 2.0], 
+    args=(temp_readings,), 
+    method="L-BFGS-B"
+)
+
+# 6. Discrete Bernoulli / Binomial LoRa Packet Delivery
+# 100 LoRa transmissions with true success rate p = 0.92
+transmissions = np.random.binomial(n=1, p=0.92, size=100)
+successes = np.sum(transmissions)
+p_mle = successes / len(transmissions)
+
+# 7. Poisson MQTT Telemetry Arrival Rate
+# True lambda = 4.0 msgs/min, observed across 30 one-minute windows
+mqtt_arrivals = np.random.poisson(lam=4.0, size=30)
+lambda_mle = np.mean(mqtt_arrivals)
+
+# Display Formatted Results
+print("--- Gaussian Temperature Sensor MLE ---")
+print(f"True Parameters:     mu = {true_mu:.2f} C, sigma = {true_sigma:.2f} C")
+print(f"Sample Mean (MLE):   mu = {sample_mean:.4f} C")
+print(f"Sample Std  (MLE):   sigma = {sample_std_mle:.4f} C (ddof=0)")
+print(f"Sample Std (Bessel): s = {sample_std_unbiased:.4f} C (ddof=1)")
+print(f"SciPy norm.fit:      mu = {fit_mu:.4f} C, sigma = {fit_sigma:.4f} C")
+print(f"Numerical NLL Min:   mu = {opt_result.x[0]:.4f} C, sigma = {opt_result.x[1]:.4f} C")
+print("\n--- Discrete Distributions MLE ---")
+print(f"LoRa Transmissions:  {successes}/100 successful -> p_mle = {p_mle:.4f}")
+print(f"MQTT Arrival Rate:   Mean observed arrivals -> lambda_mle = {lambda_mle:.4f} msgs/min")
+\end{lstlisting}
+
+Executing this script produces the exact output below:
+\begin{lstlisting}[style=outputstyle]
+--- Gaussian Temperature Sensor MLE ---
+True Parameters:     mu = 24.50 C, sigma = 1.20 C
+Sample Mean (MLE):   mu = 24.4012 C
+Sample Std  (MLE):   sigma = 1.1270 C (ddof=0)
+Sample Std (Bessel): s = 1.1308 C (ddof=1)
+SciPy norm.fit:      mu = 24.4012 C, sigma = 1.1270 C
+Numerical NLL Min:   mu = 24.4012 C, sigma = 1.1270 C
+
+--- Discrete Distributions MLE ---
+LoRa Transmissions:  92/100 successful -> p_mle = 0.9200
+MQTT Arrival Rate:   Mean observed arrivals -> lambda_mle = 3.6333 msgs/min
+\end{lstlisting}
+
+\paragraph{Detailed Code Walkthrough:}
+\begin{itemize}
+    \item \textbf{Lines 4--9}: We generate $150$ synthetic measurements with ground-truth parameters $\mu = 24.50^\circ\text{C}$ and $\sigma = 1.20^\circ\text{C}$. The seed ensures identical numbers on any computer.
+    \item \textbf{Lines 12--14}: We compute the analytical MLE estimates using \texttt{np.mean} and \texttt{np.std(ddof=0)}. Notice that setting \texttt{ddof=0} divides by $N$ (the true MLE formula), yielding $\sigma = 1.1270^\circ\text{C}$, whereas \texttt{ddof=1} divides by $N - 1$, yielding the slightly larger unbiased estimate $s = 1.1308^\circ\text{C}$.
+    \item \textbf{Line 17}: SciPy's \texttt{norm.fit} internally executes the analytical formulas, yielding identical numbers ($24.4012^\circ\text{C}$ and $1.1270^\circ\text{C}$).
+    \item \textbf{Lines 20--32}: We write the exact negative log-likelihood formula from Equation~\eqref{eq:gaussian_log_lik} and pass it to an L-BFGS optimizer starting from poor initial guesses ($\mu_0 = 20.0, \sigma_0 = 2.0$). The numerical optimizer descends the likelihood gradient and converges to the exact same global minimum: $\hat{\mu} = 24.4012^\circ\text{C}, \hat{\sigma} = 1.1270^\circ\text{C}$.
+    \item \textbf{Lines 35--43}: We demonstrate that for discrete Bernoulli trials, the MLE parameter $\hat{p}_{\text{MLE}}$ is simply the observed success fraction ($92/100 = 0.9200$), and for Poisson streams, the MLE rate $\hat{\lambda}_{\text{MLE}}$ is the sample mean arrival count ($3.6333\text{ msgs/min}$).
+\end{itemize}
+
+% ==============================================================================
+% 7. IOT AND TINYML CONNECTION
+% ==============================================================================
+\subsection{IoT and TinyML: Sensor Noise, Filtering, and Edge Anomaly Detection}\label{subsec:prob_iot}
+
+\begin{iotbox}[Probabilistic Filtering and Real-Time Edge Anomaly Detection]
+Microcontrollers operating on the physical edge face severe hardware limitations: an ARM Cortex-M0+ running at $48\text{ MHz}$ with $32\text{ KB}$ of SRAM cannot run heavy deep neural networks simply to clean a noisy sensor stream. Instead, edge engineers deploy \textbf{probabilistic signal processing}.
+
+\paragraph{1. The Kalman Filter Preview: Balancing Noise Covariances}
+The gold standard algorithm for microcontroller navigation and state estimation is the \textbf{Kalman Filter}. The filter represents its belief about a physical state (e.g., drone altitude $x_t$) as a Gaussian distribution $\mathcal{N}(\mu_t, \sigma_t^2)$.
+
+At each step, the microcontroller balances two conflicting sources of Gaussian noise:
+\begin{itemize}
+    \item \textbf{Process Noise Covariance $Q$}: How uncertain is the physics model? (e.g., wind gusts pushing the drone).
+    \item \textbf{Measurement Noise Covariance $R$}: How noisy is the barometer hardware? ($\sigma_{\text{sensor}}^2$).
+\end{itemize}
+The \textbf{Kalman Gain} $K$ is dynamically computed from Bayes' rule:
+\begin{equation}
+K = \frac{\sigma_{\text{prior}}^2}{\sigma_{\text{prior}}^2 + R}
+\end{equation}
+If the sensor is terrible ($R \gg \sigma_{\text{prior}}^2$), $K \to 0$, and the microcontroller completely ignores the sensor reading, trusting its physics prediction. If the sensor is ultra-precise ($R \to 0$), $K \to 1$, and the microcontroller overrides its prediction with the fresh measurement.
+
+\paragraph{2. Online Edge Anomaly Detection via Welford's Algorithm}
+A microcontroller cannot store $10,000$ historical floats in RAM to compute sample variance. How can an ESP32 compute running Gaussian parameters $(\mu, \sigma)$ on a continuous data stream?
+
+We implement \textbf{Welford's Algorithm}, an online single-pass algorithm that updates mean and squared deviations incrementally using negligible memory:
+\begin{lstlisting}[style=pythonstyle]
+// Microcontroller C implementation of Online Gaussian Profiler
+typedef struct {
+    uint32_t count;
+    float mean;
+    float M2; // Running sum of squared differences
+} GaussianStats;
+
+void update_stats(GaussianStats* s, float x) {
+    s->count++;
+    float delta = x - s->mean;
+    s->mean += delta / s->count;
+    float delta2 = x - s->mean;
+    s->M2 += delta * delta2;
+}
+
+float get_variance(const GaussianStats* s) {
+    return (s->count > 1) ? (s->M2 / (s->count - 1)) : 0.0f;
+}
+
+bool is_anomaly(const GaussianStats* s, float x, float threshold_z) {
+    if (s->count < 30) return false; // Warm-up period
+    float std_dev = sqrtf(get_variance(s));
+    if (std_dev < 1e-4f) return false;
+    float z_score = fabsf(x - s->mean) / std_dev;
+    return (z_score > threshold_z); // e.g., threshold_z = 3.0 (99.7% bound)
+}
+\end{lstlisting}
+This ultra-compact C snippet runs in less than $50$ processor cycles, uses only $12\text{ bytes}$ of RAM, and detects real-time sensor anomalies on an 8-bit or 32-bit microcontroller without any cloud connectivity!
+\end{iotbox}
+
+% ==============================================================================
+% 8. COMMON PITFALLS
+% ==============================================================================
+\subsection{Common Pitfalls and Fallacies}\label{subsec:prob_pitfalls}
+
+\begin{warning}[Four Probability Traps That Sabotage ML Models]
+\begin{enumerate}
+    \item \textbf{Conflating $P(A \mid B)$ with $P(B \mid A)$ (The Transposed Conditional)}:
+    Assuming that because $P(\text{Symptom} \mid \text{Disease}) = 0.99$, the probability $P(\text{Disease} \mid \text{Symptom})$ must also be $0.99$. As our factory spindle example proved, failing to divide by the marginal evidence and account for the prior leads to catastrophic overconfidence.
+    
+    \item \textbf{Blindly Assuming Gaussian Normality}:
+    Beginners frequently treat all continuous variables as Gaussian. In physical IoT, many signals are strictly bounded or asymmetric:
+    \begin{itemize}
+        \item Received Signal Strength Indicator (RSSI) in Wi-Fi is bounded at $0\text{ dBm}$ and displays skewed negative tails.
+        \item Microcontroller current consumption during radio bursts displays a bimodal or multimodal distribution (sleeping vs.\ transmitting), not a unimodal bell curve.
+    \end{itemize}
+    Fitting a single Gaussian to multimodal data creates a fictional mean that corresponds to a state the system never actually occupies!
+
+    \item \textbf{The $N$ vs.\ $N - 1$ Bessel Correction Trap}:
+    The MLE formula for variance divides by $N$: $\hat{\sigma}^2_{\text{MLE}} = \frac{1}{N}\sum (x_i - \bar{x})^2$. However, because the sample mean $\bar{x}$ is itself estimated from the same data, the deviations $(x_i - \bar{x})$ are slightly too close to their center, systematically underestimating the true population variance by a factor of $\frac{N-1}{N}$.
+    
+    To obtain an \textbf{unbiased} estimator, Bessel's correction divides by $N - 1$:
+    \begin{equation}
+    s^2 = \frac{1}{N - 1}\sum_{i=1}^{N} (x_i - \bar{x})^2
+    \end{equation}
+    For $N = 10,000$, the difference between $\frac{1}{N}$ and $\frac{1}{N-1}$ is negligible. But for small TinyML calibration buffers ($N = 5$), dividing by $N$ produces a massive $20\%$ error in estimated variance!
+
+    \item \textbf{Assuming Temporal Independence in Streaming Data}:
+    The i.i.d. assumption ($L = \prod p(x_i)$) requires that every sample is independent. But if your ADC samples a temperature sensor at $100\text{ Hz}$, the reading at millisecond $t+1$ is almost perfectly correlated with the reading at millisecond $t$. 
+
+    Treating $100\text{ Hz}$ data as $100$ independent samples causes your model to wildly overestimate its statistical certainty, creating brittle models that fail in the field.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 9. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:prob_takeaways}
+
+\begin{takeaways}[Core Principles of Probability for Machine Learning]
+\begin{itemize}
+    \item \textbf{Probability Quantifies Real-World Imperfection}: Sensor hardware is inherently noisy, physical dynamics are stochastic, and real systems are partially observable. Probability provides calibrated confidence intervals.
+    \item \textbf{Mass vs.\ Density}: For discrete variables, the PMF gives exact point probabilities $\sum p(x) = 1$. For continuous variables, point probabilities are zero ($P(X = x) = 0$); probabilities exist only as areas under the PDF curve: $\int f(x)\,dx$.
+    \item \textbf{Linearity of Expectation Holds Universally}: $\mathbb{E}[aX + bY + c] = a\mathbb{E}[X] + b\mathbb{E}[Y] + c$, regardless of whether $X$ and $Y$ are independent. Variance is not linear: $\text{Var}(aX + c) = a^2 \text{Var}(X)$.
+    \item \textbf{Bayes' Rule Inverts Observations}: It updates prior beliefs into posterior conclusions via Likelihood: $P(\text{Hypothesis} \mid \text{Evidence}) \propto P(\text{Evidence} \mid \text{Hypothesis}) \times P(\text{Hypothesis})$. When base rates are rare, false positives can easily overwhelm true positives.
+    \item \textbf{The Core Parametric Families}:
+    \begin{itemize}
+        \item \textbf{Gaussian} $\mathcal{N}(\mu, \sigma^2)$: Continuous bell curve generated by the Central Limit Theorem.
+        \item \textbf{Bernoulli} $\text{Bernoulli}(p)$: Single binary outcome ($0$ or $1$); powers binary classification.
+        \item \textbf{Binomial} $\text{Binomial}(n, p)$: Number of successes in $n$ independent trials.
+        \item \textbf{Poisson} $\text{Poisson}(\lambda)$: Event counts in continuous intervals with $\text{Mean} = \text{Variance} = \lambda$.
+    \end{itemize}
+    \item \textbf{MLE is the Theoretical Mother of Loss Functions}: Minimizing Negative Log-Likelihood (NLL) directly generates Mean Squared Error under Gaussian assumptions, and Binary Cross-Entropy under Bernoulli assumptions.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 10. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:prob_check_yourself}
+
+Test your grasp of probability, moments, distributions, and MLE with the following problems. Fully worked step-by-step solutions are provided at the end of this chapter.
+
+\begin{checkyourself}[Practice Problems]
+\begin{enumerate}
+    \item \textbf{Discrete Moments and Power Consumption}:
+    An IoT microcontroller operates in three distinct current consumption modes across a 24-hour cycle:
+    \begin{itemize}
+        \item Sleep Mode: Consumes $I_0 = 1\text{ mA}$ for $80\%$ of the day ($p_0 = 0.80$).
+        \item Sensing Mode: Consumes $I_1 = 15\text{ mA}$ for $15\%$ of the day ($p_1 = 0.15$).
+        \item Transmission Mode: Consumes $I_2 = 100\text{ mA}$ for $5\%$ of the day ($p_2 = 0.05$).
+    \end{itemize}
+    Calculate the expected current consumption $\mathbb{E}[I]$ and the standard deviation $\sigma_I$ in milliamperes.
+
+    \item \textbf{Bayesian Alarm Verification}:
+    An optical flame detector monitors a petrochemical storage tank.
+    \begin{itemize}
+        \item The prior probability of a fire in any given hour is $P(\text{Fire}) = 0.001$ ($0.1\%$).
+        \item The sensor has a True Positive Rate (Sensitivity) of $P(\text{Alarm} \mid \text{Fire}) = 0.99$.
+        \item Sunlight reflections cause a False Positive Rate of $P(\text{Alarm} \mid \text{No Fire}) = 0.01$ ($1.0\%$).
+    \end{itemize}
+    If the alarm sounds, compute the exact posterior probability $P(\text{Fire} \mid \text{Alarm})$ that an actual fire is burning.
+
+    \item \textbf{Poisson Telemetry and Outage Probability}:
+    A cellular edge gateway receives incoming sensor pings at a mean Poisson rate of $\lambda = 4$ pings per minute.
+    \begin{enumerate}[label=(\alph*)]
+        \item What is the probability of receiving \textbf{exactly zero} pings during a 1-minute window?
+        \item What is the probability of receiving \textbf{fewer than 2} pings during a 1-minute window?
+    \end{enumerate}
+
+    \item \textbf{Covariance and Independence}:
+    Let $X$ be a discrete random variable uniformly distributed over $\{-2, -1, 0, 1, 2\}$, such that $P(X = x) = \frac{1}{5}$ for each value. Let $Y = X^2$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute $\mathbb{E}[X]$ and $\mathbb{E}[Y]$.
+        \item Compute $\text{Cov}(X, Y)$.
+        \item Are $X$ and $Y$ independent? Explain the profound statistical lesson illustrated by this result.
+    \end{enumerate}
+
+    \item \textbf{MLE Derivation for the Exponential Distribution}:
+    The operational lifespan $T$ (time until failure) of an edge microcontroller exposed to high humidity follows an \textbf{Exponential distribution} with rate parameter $\lambda > 0$, whose PDF is:
+    \begin{equation*}
+    f(t; \lambda) = \lambda e^{-\lambda t}, \quad t \ge 0
+    \end{equation*}
+    Given $n$ independent observed failure times $\{t_1, t_2, \dots, t_n\}$:
+    \begin{enumerate}[label=(\alph*)]
+        \item Write the complete likelihood $L(\lambda)$ and log-likelihood $\ell(\lambda)$.
+        \item Differentiate $\ell(\lambda)$ with respect to $\lambda$ and derive the analytical Maximum Likelihood Estimator $\hat{\lambda}_{\text{MLE}}$.
+        \item Check the second derivative $\frac{d^2\ell}{d\lambda^2}$ to prove that $\hat{\lambda}_{\text{MLE}}$ is a true maximum.
+    \end{enumerate}
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 11. ANSWERS TO CHECK YOURSELF
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Discrete Moments and Power Consumption}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Expected Current $\mathbb{E}[I]$}:
+        Using Equation~\eqref{eq:exp_discrete}:
+        \begin{align*}
+        \mathbb{E}[I] &= \sum_{i=0}^{2} I_i \cdot p_i \\
+        &= (1\text{ mA} \times 0.80) + (15\text{ mA} \times 0.15) + (100\text{ mA} \times 0.05) \\
+        &= 0.80 + 2.25 + 5.00 = \mathbf{8.05\text{ mA}}
+        \end{align*}
+        \item \textbf{Second Moment $\mathbb{E}[I^2]$}:
+        \begin{align*}
+        \mathbb{E}[I^2] &= \sum_{i=0}^{2} I_i^2 \cdot p_i \\
+        &= (1^2 \times 0.80) + (15^2 \times 0.15) + (100^2 \times 0.05) \\
+        &= (1 \times 0.80) + (225 \times 0.15) + (10000 \times 0.05) \\
+        &= 0.80 + 33.75 + 500.00 = \mathbf{534.55\text{ mA}^2}
+        \end{align*}
+        \item \textbf{Variance and Standard Deviation}:
+        Using Equation~\eqref{eq:variance_shortcut}:
+        \begin{align*}
+        \text{Var}(I) &= \mathbb{E}[I^2] - (\mathbb{E}[I])^2 = 534.55 - (8.05)^2 \\
+        &= 534.55 - 64.8025 = \mathbf{469.7475\text{ mA}^2} \\
+        \sigma_I &= \sqrt{469.7475} \approx \mathbf{21.67\text{ mA}}
+        \end{align*}
+        Even though the device sleeps at $1\text{ mA}$ for $80\%$ of the day, brief $100\text{ mA}$ radio bursts pull the long-run average up to $8.05\text{ mA}$ with a massive standard deviation of $21.67\text{ mA}$.
+    \end{enumerate}
+
+    \item \textbf{Bayesian Alarm Verification}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Identify Probabilities}:
+        \begin{align*}
+        P(\text{Fire}) &= 0.001 \implies P(\text{No Fire}) = 1 - 0.001 = 0.999 \\
+        P(\text{Alarm} \mid \text{Fire}) &= 0.99 \\
+        P(\text{Alarm} \mid \text{No Fire}) &= 0.01
+        \end{align*}
+        \item \textbf{Marginal Evidence $P(\text{Alarm})$}:
+        \begin{align*}
+        P(\text{Alarm}) &= P(\text{Alarm} \mid \text{Fire})P(\text{Fire}) + P(\text{Alarm} \mid \text{No Fire})P(\text{No Fire}) \\
+        &= (0.99 \times 0.001) + (0.01 \times 0.999) \\
+        &= 0.00099 + 0.00999 = \mathbf{0.01098} \quad (1.098\%)
+        \end{align*}
+        \item \textbf{Posterior Probability $P(\text{Fire} \mid \text{Alarm})$}:
+        \begin{equation*}
+        P(\text{Fire} \mid \text{Alarm}) = \frac{P(\text{Alarm} \mid \text{Fire})P(\text{Fire})}{P(\text{Alarm})} = \frac{0.00099}{0.01098} \approx \mathbf{0.09016} \implies \mathbf{9.02\%}
+        \end{equation*}
+        Despite the detector having $99\%$ sensitivity and $99\%$ specificity, sounding the alarm means there is only a $\approx 9.0\%$ chance of an actual fire. Sunlight reflections from the $99.9\%$ non-burning hours generate ten times more false alarms than real fires.
+    \end{enumerate}
+
+    \item \textbf{Poisson Telemetry and Outage Probability}:
+    Given $\lambda = 4$ pings per minute:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Zero pings ($k = 0$)}:
+        \begin{equation*}
+        P(X = 0) = \frac{\lambda^0 e^{-\lambda}}{0!} = \frac{4^0 e^{-4}}{1} = e^{-4} \approx \mathbf{0.01832} \implies \mathbf{1.83\%}
+        \end{equation*}
+        \item \textbf{Fewer than 2 pings ($k < 2 \implies k = 0 \text{ or } k = 1$)}:
+        Compute $P(X = 1)$:
+        \begin{equation*}
+        P(X = 1) = \frac{4^1 e^{-4}}{1!} = 4 e^{-4} \approx 4 \times 0.0183156 = 0.07326 \quad (7.33\%)
+        \end{equation*}
+        Summing:
+        \begin{equation*}
+        P(X < 2) = P(X = 0) + P(X = 1) = e^{-4} + 4e^{-4} = 5e^{-4} \approx 5 \times 0.0183156 \approx \mathbf{0.09158} \implies \mathbf{9.16\%}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{Covariance and Independence}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Compute Expectations}:
+        \begin{equation*}
+        \mathbb{E}[X] = \frac{1}{5}(-2) + \frac{1}{5}(-1) + \frac{1}{5}(0) + \frac{1}{5}(1) + \frac{1}{5}(2) = \frac{-2 - 1 + 0 + 1 + 2}{5} = \mathbf{0}
+        \end{equation*}
+        The values of $Y = X^2$ for $X \in \{-2, -1, 0, 1, 2\}$ are $\{4, 1, 0, 1, 4\}$.
+        \begin{equation*}
+        \mathbb{E}[Y] = \frac{1}{5}(4) + \frac{1}{5}(1) + \frac{1}{5}(0) + \frac{1}{5}(1) + \frac{1}{5}(4) = \frac{4 + 1 + 0 + 1 + 4}{5} = \frac{10}{5} = \mathbf{2}
+        \end{equation*}
+        \item \textbf{Compute Covariance}:
+        \begin{equation*}
+        \text{Cov}(X, Y) = \mathbb{E}[XY] - \mu_X \mu_Y = \mathbb{E}[X \cdot X^2] - (0)(2) = \mathbb{E}[X^3]
+        \end{equation*}
+        Evaluate $\mathbb{E}[X^3]$:
+        \begin{equation*}
+        \mathbb{E}[X^3] = \frac{1}{5}(-8) + \frac{1}{5}(-1) + \frac{1}{5}(0) + \frac{1}{5}(1) + \frac{1}{5}(8) = \frac{-8 - 1 + 0 + 1 + 8}{5} = \mathbf{0}
+        \end{equation*}
+        Therefore, $\mathbf{\text{Cov}(X, Y) = 0}$ and $\mathbf{\rho_{XY} = 0}$.
+        \item \textbf{Independence Check \& Lesson}:
+        Are $X$ and $Y$ independent? Absolutely \textbf{NOT}. If you are told that $X = 2$, then $Y$ is guaranteed to equal $4$ with $100\%$ certainty:
+        \begin{equation*}
+        P(Y = 4 \mid X = 2) = 1.0 \ne P(Y = 4) = \frac{2}{5} = 0.40
+        \end{equation*}
+        \textbf{The profound lesson}: Zero covariance and zero correlation prove only that \textbf{no linear relationship} exists. They do not prove statistical independence. Strong non-linear relationships (such as quadratic functions) can have an exact correlation of zero!
+    \end{enumerate}
+
+    \item \textbf{MLE Derivation for the Exponential Distribution}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Likelihood and Log-Likelihood}:
+        Given i.i.d. observations $t_1, \dots, t_n$:
+        \begin{align*}
+        L(\lambda) &= \prod_{i=1}^{n} \lambda e^{-\lambda t_i} = \lambda^n \exp\left( -\lambda \sum_{i=1}^{n} t_i \right) \\
+        \ell(\lambda) &= \ln L(\lambda) = \ln(\lambda^n) + \ln\left( \exp\left( -\lambda \sum_{i=1}^{n} t_i \right) \right) \\
+        &= \mathbf{n \ln(\lambda) - \lambda \sum_{i=1}^{n} t_i}
+        \end{align*}
+        \item \textbf{Derivative and Solver}:
+        Differentiate with respect to $\lambda$:
+        \begin{equation*}
+        \frac{d\ell}{d\lambda} = \frac{n}{\lambda} - \sum_{i=1}^{n} t_i
+        \end{equation*}
+        Set the derivative to zero:
+        \begin{align*}
+        \frac{n}{\lambda} - \sum_{i=1}^{n} t_i = 0 &\implies \frac{n}{\lambda} = \sum_{i=1}^{n} t_i \\
+        \implies \mathbf{\hat{\lambda}_{\text{MLE}} = \frac{n}{\sum_{i=1}^{n} t_i} = \frac{1}{\bar{t}}}
+        \end{align*}
+        The Maximum Likelihood Estimator for the arrival rate $\lambda$ is the reciprocal of the sample mean failure time $\bar{t}$!
+        \item \textbf{Second Derivative Check}:
+        \begin{equation*}
+        \frac{d^2\ell}{d\lambda^2} = -\frac{n}{\lambda^2}
+        \end{equation*}
+        Since $n \ge 1$ and $\lambda > 0$, the second derivative is strictly negative ($-\frac{n}{\lambda^2} < 0$) for all valid parameter values. This mathematically guarantees that $\ell(\lambda)$ is strictly concave and $\hat{\lambda}_{\text{MLE}} = \frac{1}{\bar{t}}$ is the unique global maximum.
+    \end{enumerate}
+\end{enumerate}

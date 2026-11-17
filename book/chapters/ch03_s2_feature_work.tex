@@ -1,0 +1,788 @@
+% FILE: chapters/ch03_s2_feature_work.tex
+\section{Feature Work}\label{sec:feature_work}
+
+In the opening section of this chapter, we tackled data hygiene: detecting corrupt entries, handling missing values, filtering sensor spikes, and parsing irregular text. However, even when data is completely clean and error-free, it is rarely in a format that machine learning algorithms can ingest effectively.
+
+Raw data arrives in the physical world with mismatched physical dimensions, conflicting measurement scales, categorical text symbols, and complex temporal periodicities:
+\begin{itemize}
+    \item A barometric pressure sensor reads $101{,}325\text{ Pa}$, while an adjacent accelerometer reads $0.05\text{ g}$.
+    \item A machine status column contains text strings like \texttt{"CNC"}, \texttt{"Pump"}, and \texttt{"Turbine"}.
+    \item An IoT environmental timestamp records the transition from $23\text{: }59$ to $00\text{: }01$ as a massive jump from $23$ to $0$, rather than a continuous step of two minutes.
+    \item A wireless monitoring unit collects $150$ correlated features, of which $130$ are redundant noise that degrades model accuracy.
+\end{itemize}
+
+As machine learning pioneer Andrew Ng famously observed: \textit{``Applied machine learning is basically feature engineering.''} A simple, lightweight linear classifier trained on well-engineered, properly scaled features will routinely outperform a massive, poorly optimized neural network trained on naive raw data.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    step_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!8, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
+]
+    % Pipeline Nodes
+    \node[box, minimum width=2.4cm] (raw) at (-5.6, 0) {\textbf{Clean Raw Data}\\Mixed scales, text,\\timestamps, noise};
+    \node[step_box, minimum width=2.6cm] (scale) at (-2.4, 0) {\textbf{1. Scaling \& Enc.}\\Standardize, MinMax,\\One-Hot, Cyclical};
+    \node[step_box, minimum width=2.6cm] (eng) at (1.0, 0) {\textbf{2. Feature Eng.}\\Domain ratios, RMS,\\sliding windows};
+    \node[step_box, minimum width=2.6cm] (select) at (4.4, 0) {\textbf{3. Selection/PCA}\\Filter, Lasso, RFE,\\Orthogonal PCA};
+    \node[box, minimum width=2.2cm] (model) at (7.6, 0) {\textbf{ML Model}\\High accuracy,\\Fast edge run};
+
+    % Connections
+    \draw[arrow] (raw) -- (scale);
+    \draw[arrow] (scale) -- (eng);
+    \draw[arrow] (eng) -- (select);
+    \draw[arrow] (select) -- (model);
+\end{tikzpicture}
+\caption{The end-to-end feature preparation pipeline. Raw clean data is systematically transformed through scaling, encoding, physical feature creation, and dimensionality trimming before feeding the model.}\label{fig:feature_pipeline}
+\end{figure}
+
+In this section, we master the full spectrum of feature transformation:
+\begin{enumerate}
+    \item \textbf{Feature Scaling}: Standardization, Min-Max normalization, Robust scaling, and log transforms.
+    \item \textbf{Categorical Encoding}: Transforming nominal and ordinal categories via Label, One-Hot, and Target encoding without data leakage.
+    \item \textbf{Feature Engineering}: Injecting physical domain knowledge, cyclical time transformations, and time-series sliding window metrics.
+    \item \textbf{Feature Selection}: Trimming the curse of dimensionality using Filter, Wrapper, and Embedded methods.
+    \item \textbf{Dimensionality Reduction as Preprocessing}: Principal Component Analysis (PCA) to extract maximal variance with minimal memory.
+    \item \textbf{The TinyML Bridge}: Ultra-fast integer scaling and real-time window feature extraction in embedded C.
+\end{enumerate}
+
+% ==============================================================================
+% 1. FEATURE SCALING
+% ==============================================================================
+\subsection{Feature Scaling: Unifying Numerical Magnitudes}\label{subsec:feature_scaling}
+
+Consider an industrial vibration monitoring platform logging two continuous features to predict motor bearing failures:
+\begin{itemize}
+    \item Feature 1 ($x_1$): Barometric chamber pressure in Pascals, ranging from $98{,}000\text{ Pa}$ to $104{,}000\text{ Pa}$.
+    \item Feature 2 ($x_2$): Peak radial vibration acceleration in Gs, ranging from $0.05\text{ g}$ to $1.20\text{ g}$.
+\end{itemize}
+
+Now calculate the Euclidean distance between two inspection points $A = (100{,}000, 0.10)$ and $B = (100{,}050, 0.90)$:
+\begin{equation*}
+d(A, B) = \sqrt{(100{,}050 - 100{,}000)^2 + (0.90 - 0.10)^2} = \sqrt{2500 + 0.64} = \sqrt{2500.64} \approx 50.0064
+\end{equation*}
+The pressure feature accounts for $99.97\%$ of the calculated distance! The vibration feature---which contains virtually all the information regarding bearing destruction---is completely smothered by the arbitrary physical unit of Pascals. If we had measured pressure in atmospheres ($0.987\text{ atm}$), vibration would have dominated instead!
+
+\subsubsection{Which Models Require Feature Scaling?}
+Not all machine learning models care about feature scale:
+\begin{itemize}
+    \item \textbf{Critically Sensitive}:
+    \begin{itemize}
+        \item \textbf{Distance-Based Models}: $k$-Nearest Neighbors ($k$-NN), Support Vector Machines (SVMs with RBF kernels), and $k$-Means clustering calculate spatial distances directly. Unscaled features destroy them.
+        \item \textbf{Gradient Descent Optimizers}: Linear Regression, Logistic Regression, and Deep Neural Networks. When features have wildly disparate scales, the loss surface forms narrow, ill-conditioned ravines (as seen in Section~\ref{sec:optimization_information}), causing gradient descent to violently oscillate. Scaling transforms elliptical loss contours into spherical bowls, enabling rapid convergence.
+        \item \textbf{Regularized Models}: Ridge ($L_2$) and Lasso ($L_1$) penalize coefficient magnitudes ($\lambda \sum w_j^2$). A feature with huge numerical scale will naturally have a tiny coefficient, unfairly exempting it from regularization penalties.
+        \item \textbf{Principal Component Analysis (PCA)}: PCA seeks directions of maximal variance. An unscaled feature with variance $10^6$ will automatically be chosen as the first principal component, regardless of whether it carries useful signal.
+    \end{itemize}
+    \item \textbf{Scale-Invariant}:
+    \begin{itemize}
+        \item \textbf{Tree-Based Models}: Decision Trees, Random Forests, and Gradient Boosted Trees (XGBoost, LightGBM). Trees evaluate features individually by finding threshold split points ($x_j \le \theta$). Monotonically scaling a feature does not alter the ordering of points and has zero effect on tree splits!
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Primary Scaling Techniques}
+\paragraph{1. Standardization ($Z$-Score Normalization)}
+Standardization shifts the data to have a mean of zero ($\mu = 0$) and scales it to have unit standard deviation ($\sigma = 1$):
+\begin{equation}
+z = \frac{x - \mu}{\sigma}\label{eq:standardization}
+\end{equation}
+where $\mu$ is the sample mean and $\sigma$ is the sample standard deviation.
+\begin{itemize}
+    \item \textit{Properties}: Does not bound features to a fixed range. Preserves outliers (a reading that is $4$ standard deviations away will cleanly map to $z = +4.0$).
+    \item \textit{Best Used}: When the underlying feature is approximately Gaussian, or when feeding distance-based algorithms, linear models, and PCA.
+\end{itemize}
+
+\paragraph{2. Min-Max Normalization}
+Min-Max scaling linearly compresses the data into a fixed, bounded interval, conventionally $[0, 1]$:
+\begin{equation}
+x' = \frac{x - x_{\min}}{x_{\max} - x_{\min}}\label{eq:minmax_scaling}
+\end{equation}
+To scale to an arbitrary interval $[a, b]$ (such as $[-1, +1]$ for neural networks with tanh activations, or $[0, 255]$ for 8-bit microcontroller registers):
+\begin{equation}
+x' = a + \frac{x - x_{\min}}{x_{\max} - x_{\min}} (b - a)\label{eq:minmax_arbitrary}
+\end{equation}
+\begin{itemize}
+    \item \textit{Properties}: Guarantees identical hard minimum and maximum bounds across all features.
+    \item \textit{Critical Vulnerability}: \textbf{Extremely sensitive to outliers!} If a normal sensor operates between $20^\circ\text{C}$ and $30^\circ\text{C}$, but a single electrical glitch records $x = 1{,}000^\circ\text{C}$, the denominator becomes $1{,}000 - 20 = 980$. All legitimate normal readings will be compressed into a tiny, useless band between $0.00$ and $0.01$!
+\end{itemize}
+
+\paragraph{3. Robust Scaling}
+When a sensor stream is contaminated with frequent spikes and electrical noise, Robust Scaling standardizes using the **Median** ($Q_2$) and the **Interquartile Range** ($\text{IQR} = Q_3 - Q_1$):
+\begin{equation}
+x_{\text{robust}} = \frac{x - Q_2}{Q_3 - Q_1}\label{eq:robust_scaling}
+\end{equation}
+Because median and quartiles are order statistics, they are completely immune to extreme outlier spikes in the tails.
+
+\paragraph{4. Non-Linear and Logarithmic Transformations}
+Physical sensor readings often span multiple orders of magnitude with heavy right-skewed tails (e.g., sound intensity, wireless received signal power in mW, network packet bytes). To compress the tail and normalize variance:
+\begin{equation}
+x' = \log(1 + x) \quad \text{or} \quad x' = \ln(x)\label{eq:log_transform}
+\end{equation}
+The $\log(1 + x)$ transform (implemented as \texttt{np.log1p} in NumPy) gracefully handles zero values without causing $\log(0) = -\infty$.
+
+\begin{example}[Calculating Scaling Methods by Hand]
+Consider 4 raw temperature measurements collected from an industrial kiln:
+\begin{equation*}
+X = [20.0^\circ\text{C}, \ 22.0^\circ\text{C}, \ 26.0^\circ\text{C}, \ 32.0^\circ\text{C}]
+\end{equation*}
+Calculate:
+\begin{enumerate}
+    \item The Min-Max normalized values in $[0, 1]$.
+    \item The Standardized ($Z$-score) values.
+\end{enumerate}
+
+\paragraph{Step 1: Compute Summary Statistics}
+\begin{align*}
+x_{\min} &= 20.0^\circ\text{C}, \quad x_{\max} = 32.0^\circ\text{C} \implies \text{Range} = 32.0 - 20.0 = 12.0^\circ\text{C} \\
+\mu &= \frac{20 + 22 + 26 + 32}{4} = \frac{100}{4} = 25.0^\circ\text{C} \\
+\sigma^2 &= \frac{(20-25)^2 + (22-25)^2 + (26-25)^2 + (32-25)^2}{4} = \frac{25 + 9 + 1 + 49}{4} = \frac{84}{4} = 21.0 \\
+\sigma &= \sqrt{21.0} \approx 4.5826^\circ\text{C}
+\end{align*}
+
+\paragraph{Step 2: Min-Max Normalization}
+Using $x' = \frac{x - 20.0}{12.0}$:
+\begin{align*}
+x_1' &= \frac{20.0 - 20.0}{12.0} = \mathbf{0.0000} \\
+x_2' &= \frac{22.0 - 20.0}{12.0} = \frac{2.0}{12.0} = \mathbf{0.1667} \\
+x_3' &= \frac{26.0 - 20.0}{12.0} = \frac{6.0}{12.0} = \mathbf{0.5000} \\
+x_4' &= \frac{32.0 - 20.0}{12.0} = \frac{12.0}{12.0} = \mathbf{1.0000}
+\end{align*}
+
+\paragraph{Step 3: Standardization}
+Using $z = \frac{x - 25.0}{4.5826}$:
+\begin{align*}
+z_1 &= \frac{20.0 - 25.0}{4.5826} = \frac{-5.0}{4.5826} = \mathbf{-1.0911} \\
+z_2 &= \frac{22.0 - 25.0}{4.5826} = \frac{-3.0}{4.5826} = \mathbf{-0.6547} \\
+z_3 &= \frac{26.0 - 25.0}{4.5826} = \frac{+1.0}{4.5826} = \mathbf{+0.2182} \\
+z_4 &= \frac{32.0 - 25.0}{4.5826} = \frac{+7.0}{4.5826} = \mathbf{+1.5275}
+\end{align*}
+\end{example}
+
+% ==============================================================================
+% 2. CATEGORICAL ENCODING
+% ==============================================================================
+\subsection{Categorical Encoding: Translating Symbols into Numbers}\label{subsec:feature_encoding}
+
+Machine learning algorithms are fundamentally linear algebra engines: they compute dot products $\mathbf{w}^T \mathbf{x}$ and gradients $\nabla L$. They cannot multiply the text string \texttt{"Turbine"} by a numerical weight! All categorical information must be converted into numerical representations.
+
+\subsubsection{Ordinal versus Nominal Categories}
+Before applying any encoding algorithm, you must classify the nature of the category:
+\begin{itemize}
+    \item \textbf{Ordinal Variables}: Possess a clear, natural, intrinsic mathematical hierarchy or ranking.
+    
+    \textit{Examples}: Alert Status (\texttt{Low} $<$ \texttt{Medium} $<$ \texttt{High} $<$ \texttt{Critical}); Firmware Version (\texttt{v1} $<$ \texttt{v2} $<$ \texttt{v3}); Sensor Battery Health (\texttt{Poor} $<$ \texttt{Fair} $<$ \texttt{Good}).
+    
+    \item \textbf{Nominal Variables}: Possess no mathematical hierarchy or order.
+    
+    \textit{Examples}: Machine Subsystem (\texttt{CNC}, \texttt{Pump}, \texttt{Turbine}); Sensor Protocol (\texttt{LoRa}, \texttt{BLE}, \texttt{Zigbee}); Operating City (\texttt{Tokyo}, \texttt{Berlin}, \texttt{Chicago}).
+\end{itemize}
+
+\subsubsection{Primary Encoding Strategies}
+\paragraph{1. Label / Ordinal Encoding}
+Assigns each distinct category an integer ($0, 1, 2, \dots, K-1$).
+\begin{itemize}
+    \item \textit{Correct Usage}: Apply to **ordinal** variables where the integer hierarchy reflects physical reality:
+    \begin{equation*}
+    \text{Low} \to 0, \quad \text{Medium} \to 1, \quad \text{High} \to 2, \quad \text{Critical} \to 3
+    \end{equation*}
+    \item \textit{The Fatal Mistake on Nominal Data}: If you encode \texttt{CNC} $\to 0$, \texttt{Pump} $\to 1$, \texttt{Turbine} $\to 2$, any linear model or neural network will enforce the absurd mathematical assumption that:
+    \begin{equation*}
+    \text{Turbine} = 2 \times \text{Pump} \quad \text{and} \quad \text{Pump} = \frac{\text{CNC} + \text{Turbine}}{2}
+    \end{equation*}
+    Never use Label Encoding on nominal variables for linear or neural models!
+\end{itemize}
+
+\paragraph{2. One-Hot Encoding (OHE)}
+Transforms a nominal column with $K$ unique categories into $K$ separate binary columns, where exactly one column contains a $1$ and all others contain $0$:
+\begin{center}
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Raw Machine Type} & \textbf{Is\_CNC} & \textbf{Is\_Pump} & \textbf{Is\_Turbine} \\
+\midrule
+CNC & 1 & 0 & 0 \\
+Pump & 0 & 1 & 0 \\
+Turbine & 0 & 0 & 1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{keyidea}[The Dummy Variable Trap and Multicollinearity]
+Notice that in the table above, the three binary columns always sum to exactly $1$:
+\begin{equation}
+\text{Is\_CNC} + \text{Is\_Pump} + \text{Is\_Turbine} = 1
+\end{equation}
+In linear regression models with a bias / intercept term $w_0$, this creates **perfect multicollinearity** ($\mathbf{X}^T \mathbf{X}$ is mathematically non-invertible). 
+
+\textbf{Solution}: For linear models, drop one category column (e.g., set \texttt{drop='first'}), using $K - 1$ columns. If all $K - 1$ columns are $0$, the model deduces that the dropped category is active.
+\end{keyidea}
+
+\paragraph{High Cardinality Bottlenecks}
+If an IoT dataset logs a sensor's hardware MAC address with $K = 5{,}000$ unique devices, One-Hot Encoding creates $5{,}000$ sparse columns. This triggers the **Curse of Dimensionality**, causing memory exhaustion and model overfitting.
+
+\paragraph{3. Target (Mean) Encoding}
+For high-cardinality nominal variables, **Target Encoding** replaces each category string with the historical mean of the target variable $y$ for that category:
+\begin{equation}
+\hat{x}_c = \bar{y}_c = \frac{1}{N_c} \sum_{i \in \text{Category } c} y_i\label{eq:target_encoding_raw}
+\end{equation}
+\textit{Advantage}: High cardinality is condensed into a single informative numerical column!
+
+\begin{warning}[The Target Leakage Trap]
+If category $c$ appears only once ($N_c = 1$) with target $y = 1$, its encoded value becomes exactly $1.0$. The model learns to simply copy this feature, causing catastrophic overfitting to the training set!
+
+To prevent target leakage, always apply **m-estimate smoothing**:
+\begin{equation}
+\tilde{x}_c = \frac{N_c \bar{y}_c + m \bar{y}_{\text{global}}}{N_c + m}\label{eq:target_encoding_smoothed}
+\end{equation}
+where $m$ is a smoothing weight (e.g., $m = 10$) and $\bar{y}_{\text{global}}$ is the overall dataset target mean. For rare categories ($N_c \to 0$), the encoding gracefully reverts to the global average.
+\end{warning}
+
+% ==============================================================================
+% 3. FEATURE ENGINEERING
+% ==============================================================================
+\subsection{Feature Engineering: Creating Signal from Domain Physics}\label{subsec:feature_engineering}
+
+Feature engineering is the process of using domain expertise to create new input variables that make machine learning algorithms work dramatically better. 
+
+\subsubsection{Physical Ratios and Interaction Terms}
+Raw sensor readings represent isolated physical states. Combining them according to governing physical laws exposes direct signals of operational distress:
+\begin{itemize}
+    \item \textbf{Electrical Power and Resistance}: In a smart solar inverter, measuring current $I$ and voltage $V$ is good. Creating explicit interaction features $P = V \times I$ (Watts) and dynamic impedance $R = \frac{V}{I}$ (Ohms) directly alerts the model to short circuits and grid drops.
+    \item \textbf{Thermal Dynamics}: Rather than feeding raw indoor temperature $T_{\text{in}}$ and outdoor temperature $T_{\text{out}}$, engineer the thermal gradient $\Delta T = T_{\text{in}} - T_{\text{out}}$. Heat loss rate is physically proportional to $\Delta T$.
+\end{itemize}
+
+\subsubsection{Cyclical Temporal Features: The Midnight Paradox}
+Human behavior and environmental weather follow 24-hour daily cycles. If we represent hour of the day as an integer $h \in [0, 23]$:
+\begin{equation*}
+h_{\text{late}} = 23 \quad (11\text{ PM}), \quad h_{\text{early}} = 0 \quad (12\text{ AM})
+\end{equation*}
+A decision tree or neural network treats $23$ and $0$ as being separated by $23$ numerical units! In reality, they are adjacent hours separated by only $60$ minutes.
+
+\paragraph{Trigonometric Cyclical Encoding}
+To preserve true physical continuity, project the linear time axis onto the unit circle using sine and cosine transformations:
+\begin{align}
+x_{\sin} &= \sin\left( \frac{2\pi \cdot t}{T} \right) \label{eq:cyclical_sin}\\
+x_{\cos} &= \cos\left( \frac{2\pi \cdot t}{T} \right) \label{eq:cyclical_cos}
+\end{align}
+where $T$ is the full cycle period ($T = 24$ for hours of the day, $T = 7$ for days of the week, $T = 365.25$ for seasonal days).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.92]
+    % Unit Circle
+    \draw[->, thick, gray!70] (-2.2, 0) -- (2.4, 0) node[right, font=\footnotesize\sffamily] {$\cos(\theta)$};
+    \draw[->, thick, gray!70] (0, -2.2) -- (0, 2.4) node[above, font=\footnotesize\sffamily] {$\sin(\theta)$};
+    \draw[thick, keyideablue!80] (0, 0) circle (1.8cm);
+
+    % Clock ticks and labels
+    \fill[analogygreen!70!black] (1.8, 0) circle (2.5pt) node[right=1.5mm, font=\scriptsize\sffamily\bfseries] {00:00 (1, 0)};
+    \fill[keyideablue] (0, 1.8) circle (2pt) node[above=1.5mm, font=\scriptsize\sffamily] {06:00 (0, 1)};
+    \fill[keyideablue] (-1.8, 0) circle (2pt) node[left=1.5mm, font=\scriptsize\sffamily] {12:00 (-1, 0)};
+    \fill[keyideablue] (0, -1.8) circle (2pt) node[below=1.5mm, font=\scriptsize\sffamily] {18:00 (0, -1)};
+    
+    % Hour 23
+    \coordinate (H23) at ({1.8*cos(345)}, {1.8*sin(345)});
+    \fill[warningred] (H23) circle (2.5pt) node[below right=1mm, font=\scriptsize\sffamily\bfseries] {23:00 (0.966, -0.259)};
+    
+    % Arc connecting 23 to 0
+    \draw[dashed, very thick, warningred!80] (1.8, 0) -- (H23);
+    \node[font=\scriptsize\sffamily, text=warningred!90!black] at (2.4, -0.6) {Distance $\approx 0.26$};
+\end{tikzpicture}
+\caption{Cyclical sine/cosine encoding maps periodic temporal features onto the continuous unit circle, ensuring that 23:00 and 00:00 are recognized as adjacent neighbors.}\label{fig:cyclical_clock}
+\end{figure}
+
+\subsubsection{Sensor Time-Series Window Aggregations}
+A raw accelerometer stream sampling at $100\text{ Hz}$ produces $100$ raw numerical floats every second. Raw acceleration values fluctuate rapidly between positive and negative values; feeding raw samples directly to a classifier yields terrible results.
+
+Instead, we segment the stream into sliding windows (e.g., $W = 128$ samples with $50\%$ overlap) and compute statistical summary features:
+\begin{itemize}
+    \item \textbf{Root Mean Square (RMS)}: Measures the total mechanical energy in the vibration:
+    \begin{equation}
+    x_{\text{RMS}} = \sqrt{\frac{1}{W} \sum_{i=1}^{W} x_i^2}\label{eq:window_rms}
+    \end{equation}
+    \item \textbf{Peak-to-Peak Amplitude}: $x_{\text{P2P}} = x_{\max} - x_{\min}$. Indicates the maximum physical deflection of the machine.
+    \item \textbf{Crest Factor}: $\text{CF} = \frac{x_{\text{peak}}}{x_{\text{RMS}}}$. Healthy bearings have a crest factor between $3$ and $5$; early spalling or cracks generate sharp transient spikes, pushing the crest factor above $8$.
+    \item \textbf{Kurtosis}: Measures the peakedness / outlier-proneness of the signal distribution:
+    \begin{equation}
+    \text{Kurtosis} = \frac{\frac{1}{W}\sum (x_i - \mu)^4}{\left( \frac{1}{W}\sum (x_i - \mu)^2 \right)^2}\label{eq:kurtosis_def}
+    \end{equation}
+    Normal Gaussian vibration noise has a kurtosis of $3.0$. A damaged roller bearing producing impact spikes exhibits kurtosis values exceeding $10.0$!
+\end{itemize}
+
+% ==============================================================================
+% 4. FEATURE SELECTION
+% ==============================================================================
+\subsection{Feature Selection: Trimming the Noise}\label{subsec:feature_selection}
+
+More features do not equal a better model. In reality, adding irrelevant, noisy, or redundant features triggers the **Curse of Dimensionality**:
+\begin{enumerate}
+    \item Data sparsity: As the number of dimensions $D$ increases, the volume of the feature space expands exponentially ($V \propto r^D$). Data points become isolated in empty space, making distance metrics meaningless.
+    \item Overfitting: With hundreds of features, models discover spurious statistical coincidences that exist only in the training set.
+    \item Latency & Energy: Computing $200$ features on an edge microcontroller drains battery and slows inference down.
+\end{enumerate}
+
+Feature selection algorithms fall into three distinct architectural families:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
+]
+    % Filter Methods
+    \node[box, minimum width=3.8cm] (f1) at (-4.8, 1.8) {\textbf{Filter Methods}\\Statistical screening\\(Variance, ANOVA, $\chi^2$)};
+    \node[box, minimum width=2.5cm] (f2) at (-0.5, 1.8) {Select Best\\Subsets};
+    \node[box, minimum width=2.5cm] (f3) at (3.5, 1.8) {Train\\Algorithm};
+    \draw[arrow] (f1) -- (f2);
+    \draw[arrow] (f2) -- (f3);
+
+    % Wrapper Methods
+    \node[box, minimum width=3.8cm] (w1) at (-4.8, 0) {\textbf{Wrapper Methods}\\Iterative search\\(Forward, Backward, RFE)};
+    \node[box, minimum width=2.5cm] (w2) at (-0.5, 0) {Model Feedback\\$\text{Score}_k$};
+    \node[box, minimum width=2.5cm] (w3) at (3.5, 0) {Optimal\\Subset};
+    \draw[arrow] (w1) -- (w2);
+    \draw[arrow] (w2) -- (w3);
+    \draw[arrow, dashed] (w2.south) -- ++(0, -0.4) -| (w1.south);
+
+    % Embedded Methods
+    \node[box, minimum width=3.8cm] (e1) at (-4.8, -1.8) {\textbf{Embedded Methods}\\Built into training\\(L1 Lasso, Tree Impurity)};
+    \node[box, minimum width=6.5cm] (e2) at (1.5, -1.8) {Loss Optimization + Feature Pruning\\$\min \left[ L(\mathbf{w}) + \lambda \|\mathbf{w}\|_1 \right]$};
+    \draw[arrow] (e1) -- (e2);
+\end{tikzpicture}
+\caption{The three architectural paradigms of feature selection: Filter methods screen statistics pre-training; Wrapper methods iteratively evaluate subsets; Embedded methods perform selection during optimization.}\label{fig:feature_selection_paradigms}
+\end{figure}
+
+\subsubsection{1. Filter Methods (Fast \& Model-Agnostic)}
+Filter methods evaluate the statistical properties of features independently of any machine learning model:
+\begin{itemize}
+    \item \textbf{Variance Threshold}: Removes features whose variance falls below a threshold ($\text{Var}(X) \le \tau$). If a sensor pin reads $3.30\text{ V}$ in $99.9\%$ of samples, it carries zero information and should be discarded immediately.
+    \item \textbf{Collinearity Filtering}: Computes the pairwise Pearson correlation matrix across all features. If two features correlate with $|r| > 0.90$ (e.g., Temperature in Celsius vs Fahrenheit), drop one.
+    \item \textbf{Hypothesis Testing & Mutual Information}: Evaluates statistical dependency between each feature $x_j$ and target $y$:
+    \begin{itemize}
+        \item Continuous feature, Categorical target: **ANOVA $F$-Test** (\texttt{f\_classif}).
+        \item Categorical feature, Categorical target: **Chi-Square ($\chi^2$) Test** (\texttt{chi2}).
+        \item Non-linear dependencies: **Mutual Information** (\texttt{mutual\_info\_classif}), which captures non-linear associations using Shannon entropy.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{2. Wrapper Methods (Iterative & Accurate)}
+Wrapper methods treat a machine learning model as a scoring engine to evaluate candidate feature subsets:
+\begin{itemize}
+    \item \textbf{Forward Selection}: Starts with an empty feature set. Tests every feature individually, adds the one that maximizes cross-validation accuracy, and repeats until accuracy stops improving.
+    \item \textbf{Backward Elimination}: Starts with all $D$ features. Iteratively trains the model and removes the feature whose absence hurts performance least.
+    \item \textbf{Recursive Feature Elimination (RFE)}: Trains a model, ranks features by weight magnitude ($|w_j|$) or tree importance, prunes the lowest $10\%$, and repeats until target dimension $k$ is reached.
+\end{itemize}
+
+\subsubsection{3. Embedded Methods (Integrated Optimization)}
+Embedded methods perform feature selection automatically during model training:
+\begin{itemize}
+    \item \textbf{$L_1$ Lasso Regularization}: Regularizes loss with the sum of absolute weight values:
+    \begin{equation}
+    L_{\text{Lasso}}(\mathbf{w}) = \text{MSE}(\mathbf{w}) + \lambda \sum_{j=1}^{D} |w_j|\label{eq:lasso_loss}
+    \end{equation}
+    The geometric corners of the $L_1$ diamond force the weights of irrelevant features to become **identically zero** ($w_j = 0$), performing automatic feature elimination!
+    \item \textbf{Tree-Based Feature Importance}: Random Forests track how much each feature decreases node impurity (Gini or Entropy) across thousands of split decisions.
+\end{itemize}
+
+% ==============================================================================
+% 5. DIMENSIONALITY REDUCTION AS PREPROCESSING
+% ==============================================================================
+\subsection{Dimensionality Reduction as Preprocessing: PCA}\label{subsec:feature_pca}
+
+Feature selection *discards* unselected features. In contrast, **Dimensionality Reduction** mathematically *combines* original features to construct a compact set of new, synthetic features that preserve maximum information.
+
+\subsubsection{Principal Component Analysis (PCA)}
+The most famous linear dimensionality reduction algorithm is **Principal Component Analysis (PCA)**. 
+
+\paragraph{How PCA Works}
+PCA finds orthogonal axes (called **Principal Components**) along which the variance of the data is maximized:
+\begin{enumerate}
+    \item Standardize all $D$ features to mean $\mu = 0$ and variance $\sigma = 1$.
+    \item Compute the $D \times D$ sample covariance matrix:
+    \begin{equation}
+    \mathbf{\Sigma} = \frac{1}{n - 1} \mathbf{X}^T \mathbf{X}\label{eq:pca_covariance}
+    \end{equation}
+    \item Perform **Eigendecomposition** on $\mathbf{\Sigma}$:
+    \begin{equation}
+    \mathbf{\Sigma} \mathbf{v}_i = \lambda_i \mathbf{v}_i\label{eq:pca_eigendecomposition}
+    \end{equation}
+    Each eigenvector $\mathbf{v}_i$ defines a principal axis direction; its corresponding eigenvalue $\lambda_i$ measures the amount of data variance along that axis.
+    \item Sort eigenvectors in descending order of their eigenvalues: $\lambda_1 \ge \lambda_2 \ge \dots \ge \lambda_D$.
+    \item Select the top $k$ eigenvectors to form projection matrix $\mathbf{V}_k = [\mathbf{v}_1, \dots, \mathbf{v}_k] \in \mathbb{R}^{D \times k}$.
+    \item Project original data matrix $\mathbf{X} \in \mathbb{R}^{n \times D}$ into low-dimensional space $\mathbf{Z} \in \mathbb{R}^{n \times k}$:
+    \begin{equation}
+    \mathbf{Z} = \mathbf{X} \mathbf{V}_k\label{eq:pca_projection}
+    \end{equation}
+\end{enumerate}
+
+\paragraph{Explained Variance Ratio}
+The fraction of total dataset information preserved by the $k$-th principal component is its **Explained Variance Ratio (EVR)**:
+\begin{equation}
+\text{EVR}_k = \frac{\lambda_k}{\sum_{j=1}^{D} \lambda_j}\label{eq:pca_evr}
+\end{equation}
+In machine learning preprocessing pipelines, engineers inspect the cumulative explained variance and choose $k$ such that the projection retains $95\%$ to $99\%$ of the original information, discarding the remaining dimensions as random sensor noise.
+
+% ==============================================================================
+% 6. PYTHON DEMONSTRATION
+% ==============================================================================
+\subsection{Hands-On Python: A Complete Preprocessing Pipeline}\label{subsec:feature_python}
+
+Let us build a complete, end-to-end feature preparation pipeline using Pandas and Scikit-Learn on a synthetic multi-sensor industrial dataset.
+
+\begin{lstlisting}[style=pythonstyle]
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder
+from sklearn.decomposition import PCA
+
+# 1. Deterministic seed for reproducible execution
+np.random.seed(42)
+
+# 2. Synthetic Multi-Sensor Industrial Dataset
+data = {
+    "temperature":   [22.4, 25.1, 21.8, 30.5, 23.2, 28.0, 22.0, 29.1],  # C
+    "pressure_pa":   [101325, 101800, 101100, 100900, 101500, 100850, 101400, 101050],  # Pa
+    "machine_type":  ["CNC", "Pump", "CNC", "Turbine", "Pump", "Turbine", "CNC", "Pump"],
+    "vibration_rms": [0.12, 0.45, 0.15, 0.88, 0.38, 0.92, 0.14, 0.52],  # g
+    "fault":         [0, 0, 0, 1, 0, 1, 0, 0]  # Binary fault label
+}
+df = pd.DataFrame(data)
+
+# 3. Scaling Demonstration: Standardization vs Min-Max
+scaler_std = StandardScaler()
+scaled_temp_std = scaler_std.fit_transform(df[["temperature"]])
+
+scaler_minmax = MinMaxScaler()
+scaled_temp_minmax = scaler_minmax.fit_transform(df[["temperature"]])
+
+# 4. Cyclical Hour Encoding Demonstration (Hours 0, 6, 12, 18, 23)
+hours = np.array([0, 6, 12, 18, 23])
+sin_hour = np.sin(2 * np.pi * hours / 24.0)
+cos_hour = np.cos(2 * np.pi * hours / 24.0)
+
+# 5. One-Hot Encoding of Nominal Machine Type
+ohe = OneHotEncoder(sparse_output=False)
+ohe_machines = ohe.fit_transform(df[["machine_type"]])
+ohe_cols = ohe.get_feature_names_out(["machine_type"])
+
+# 6. PCA Dimensionality Reduction on Continuous Sensor Features
+num_features = df[["temperature", "pressure_pa", "vibration_rms"]]
+scaled_num = scaler_std.fit_transform(num_features)
+pca = PCA(n_components=2)
+pca_transformed = pca.fit_transform(scaled_num)
+explained_var = pca.explained_variance_ratio_
+
+# Print Formatted Results
+print("--- 1. Raw vs Standardized vs MinMax (Temperature) ---")
+for i in range(4):
+    print(f"Raw: {df['temperature'][i]:.1f} C | Z-Score: {scaled_temp_std[i][0]:.3f} | MinMax: {scaled_temp_minmax[i][0]:.3f}")
+
+print("\n--- 2. Cyclical Hour Encoding (Sin/Cos) ---")
+for h, s, c in zip(hours, sin_hour, cos_hour):
+    print(f"Hour {h:02d}:00 -> sin={s:+.3f}, cos={c:+.3f}")
+
+print("\n--- 3. One-Hot Encoded Categories ---")
+print("Classes:", list(ohe_cols))
+print("First 3 rows:\n", ohe_machines[:3])
+
+print("\n--- 4. PCA Explained Variance Ratio ---")
+print(f"PC1: {explained_var[0]*100:.2f}%, PC2: {explained_var[1]*100:.2f}% (Total: {sum(explained_var)*100:.2f}%)")
+\end{lstlisting}
+
+Executing this script produces the exact output below:
+\begin{lstlisting}[style=outputstyle]
+--- 1. Raw vs Standardized vs MinMax (Temperature) ---
+Raw: 22.4 C | Z-Score: -0.879 | MinMax: 0.069
+Raw: 25.1 C | Z-Score: -0.050 | MinMax: 0.379
+Raw: 21.8 C | Z-Score: -1.064 | MinMax: 0.000
+Raw: 30.5 C | Z-Score: 1.609 | MinMax: 1.000
+
+--- 2. Cyclical Hour Encoding (Sin/Cos) ---
+Hour 00:00 -> sin=+0.000, cos=+1.000
+Hour 06:00 -> sin=+1.000, cos=+0.000
+Hour 12:00 -> sin=+0.000, cos=-1.000
+Hour 18:00 -> sin=-1.000, cos=-0.000
+Hour 23:00 -> sin=-0.259, cos=+0.966
+
+--- 3. One-Hot Encoded Categories ---
+Classes: ['machine_type_CNC', 'machine_type_Pump', 'machine_type_Turbine']
+First 3 rows:
+ [[1. 0. 0.]
+ [0. 1. 0.]
+ [1. 0. 0.]]
+
+--- 4. PCA Explained Variance Ratio ---
+PC1: 78.48%, PC2: 18.04% (Total: 96.52%)
+\end{lstlisting}
+
+\paragraph{Detailed Code Walkthrough:}
+\begin{itemize}
+    \item \textbf{Lines 18--22}: We scale temperature using both Z-score and Min-Max. In Min-Max scaling, the lowest reading ($21.8^\circ\text{C}$) maps to $0.000$ and the highest ($30.5^\circ\text{C}$) maps to $1.000$.
+    \item \textbf{Lines 25--28}: The cyclical transformation projects 23:00 ($\sin = -0.259, \cos = 0.966$) right next to 00:00 ($\sin = 0.000, \cos = 1.000$), completely resolving the midnight discontinuity.
+    \item \textbf{Lines 31--34}: The nominal string column \texttt{"machine\_type"} expands into three binary columns, preventing artificial numerical hierarchy.
+    \item \textbf{Lines 37--42}: PCA collapses the three correlated continuous sensor features down to two principal components, while retaining $96.52\%$ of total variance ($78.48\%$ in PC1 and $18.04\%$ in PC2).
+\end{itemize}
+
+% ==============================================================================
+% 7. IOT AND TINYML CONNECTION
+% ==============================================================================
+\subsection{IoT and TinyML: Feature Engineering on the Edge}\label{subsec:feature_iot}
+
+\begin{iotbox}[Why Feature Engineering is the Secret Weapon of TinyML]
+In high-performance cloud machine learning, practitioners often rely on massive deep neural networks to extract features automatically from raw pixels or raw audio (end-to-end learning). 
+
+On an edge microcontroller (e.g., an ARM Cortex-M0+ running at $48\text{ MHz}$ with $32\text{ KB}$ of SRAM), end-to-end deep learning is physically impossible. You cannot run a $20\text{-layer}$ convolutional network on streaming $10\text{ kHz}$ raw accelerometer data.
+
+\paragraph{1. The TinyML Paradigm: Physics-Driven Feature Extraction}
+Instead of feeding raw sensor arrays into a heavy neural network, the embedded engineer extracts $6$ to $10$ physically meaningful statistical features in C:
+\begin{center}
+$10\text{ kHz Raw Audio} \xrightarrow{\text{C Feature Extractor}} [\text{RMS}, \ \text{ZCR}, \ \text{Peak-to-Peak}, \ \text{Band Power}] \xrightarrow{\text{3-Neuron MLP}} \text{Prediction}$
+\end{center}
+A microscopic 2-layer neural network with only $500$ parameters trained on these engineered features achieves $98\%$ classification accuracy, executes in $1.5\text{ ms}$, and consumes under $2\text{ KB}$ of RAM!
+
+\paragraph{2. Fast Integer Bit-Shift Scaling on Microcontrollers}
+Microcontrollers without a hardware Floating Point Unit (FPU) spend dozens of clock cycles executing floating-point divisions ($x / 4095.0$). 
+
+To normalize a 12-bit ADC reading ($0$ to $4095$) into an 8-bit unsigned integer ($0$ to $255$), edge firmware executes a lightning-fast bit-shift operation in a single clock cycle:
+\begin{lstlisting}[style=pythonstyle]
+// Microcontroller Single-Cycle Integer Scaling: 12-bit to 8-bit
+uint16_t raw_adc = read_adc_pin();   // Value: 0 to 4095
+uint8_t scaled_input = (uint8_t)(raw_adc >> 4); // Fast division by 16: 0 to 255
+\end{lstlisting}
+
+\paragraph{3. Real-Time Sliding Window Feature Extractor in Embedded C}
+Below is a memory-efficient C routine that computes Mean, RMS, and Peak-to-Peak amplitude over a streaming sensor buffer without dynamic heap memory allocation:
+
+\begin{lstlisting}[style=pythonstyle]
+// Embedded C: Real-Time Window Feature Extractor
+#include <math.h>
+#include <stdint.h>
+
+typedef struct {
+    float mean;
+    float rms;
+    float peak_to_peak;
+} WindowFeatures;
+
+WindowFeatures extract_features(const float* buffer, uint16_t window_size) {
+    WindowFeatures feats = {0.0f, 0.0f, 0.0f};
+    if (window_size == 0) return feats;
+
+    float sum = 0.0f;
+    float sum_sq = 0.0f;
+    float min_val = buffer[0];
+    float max_val = buffer[0];
+
+    for (uint16_t i = 0; i < window_size; i++) {
+        float val = buffer[i];
+        sum += val;
+        sum_sq += val * val;
+        if (val < min_val) min_val = val;
+        if (val > max_val) max_val = val;
+    }
+
+    feats.mean = sum / window_size;
+    feats.rms = sqrtf(sum_sq / window_size);
+    feats.peak_to_peak = max_val - min_val;
+    return feats;
+}
+\end{lstlisting}
+This routine runs in under $10\text{ }\mu\text{s}$ on an ESP32 and provides rich physical features directly to TinyML inference engines like TensorFlow Lite for Microcontrollers.
+\end{iotbox}
+
+% ==============================================================================
+% 8. COMMON PITFALLS
+% ==============================================================================
+\subsection{Common Pitfalls in Feature Preparation}\label{subsec:feature_pitfalls}
+
+\begin{warning}[Four Critical Preprocessing Bugs That Destroy Models]
+\begin{enumerate}
+    \item \textbf{Data Leakage via Preprocessing on the Entire Dataset}:
+    The single most common bug committed by junior data scientists:
+    \begin{lstlisting}[style=pythonstyle]
+# CATASTROPHIC BUG: Fitting scaler on ALL data before splitting!
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X) # Data Leakage!
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y)
+    \end{lstlisting}
+    Fitting the scaler on the entire dataset leaks the mean and standard deviation of the test set into the training pipeline! The model achieves artificially inflated validation scores, and crashes when deployed to live production data.
+    
+    \textbf{The Golden Rule}: Always fit scalers, encoders, and PCA transformers **strictly on the training split**, and then call \texttt{transform()} on test data:
+    \begin{lstlisting}[style=pythonstyle]
+X_train, X_test, y_train, y_test = train_test_split(X, y)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train) # Fit ONLY on train!
+X_test_scaled  = scaler.transform(X_test)      # Transform test using train stats
+    \end{lstlisting}
+
+    \item \textbf{Min-Max Scaling on Outlier-Heavy Signals}:
+    Applying Min-Max scaling to raw vibration or acoustic signals with occasional high-amplitude spikes compresses all valid signal variations into a tiny fraction of the $[0, 1]$ interval. Use \texttt{RobustScaler} or log transforms when outliers are present.
+
+    \item \textbf{Linear Cyclical Encoding (The Midnight Flaw)}:
+    Feeding hour timestamps ($0$ to $23$) or month indices ($1$ to $12$) directly as linear integers prevents algorithms from learning that December and January are consecutive months. Always decompose cyclical features into sine and cosine pairs.
+
+    \item \textbf{Forgetting to Handle Unseen Categories in Production}:
+    If your One-Hot Encoder encounters a new machine type in production (e.g., \texttt{"Compressor"}) that was absent during training, default implementations throw a runtime exception and crash. 
+    Always configure encoders with \texttt{handle\_unknown='ignore'}.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 9. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:feature_takeaways}
+
+\begin{takeaways}[Core Principles of Feature Work]
+\begin{itemize}
+    \item \textbf{Feature Scaling is Model-Dependent}: Distance-based models ($k$-NN, SVM), gradient descent optimizers, and neural networks require scaled inputs to prevent large-magnitude features from dominating. Tree-based models are scale-invariant.
+    \item \textbf{Standardization vs.\ Min-Max}: Standardization ($z = \frac{x - \mu}{\sigma}$) handles outliers gracefully and centers data at zero. Min-Max normalization linearly compresses data into $[0, 1]$, but is extremely vulnerable to outlier spikes.
+    \item \textbf{Encode by Variable Nature}: Use Label Encoding for ordinal variables with inherent rank. Use One-Hot Encoding for nominal variables without rank, dropping one column for linear models to avoid the Dummy Variable Trap.
+    \item \textbf{Cyclical Sine/Cosine Transform}: Encode periodic variables (hours, days, angles) using $\sin\left(\frac{2\pi t}{T}\right)$ and $\cos\left(\frac{2\pi t}{T}\right)$ to eliminate artificial boundary discontinuities.
+    \item \textbf{Feature Selection Fights Dimensionality}: Filter methods screen statistical metrics fast; Wrapper methods iteratively search subsets; Embedded methods ($L_1$ Lasso) prune weights during optimization.
+    \item \textbf{PCA Extracts Maximal Variance}: Unsupervised orthogonal projection that collapses correlated features into principal components. Must be fit strictly on training data.
+    \item \textbf{Avoid Data Leakage}: Never call \texttt{fit\_transform()} on your entire dataset before splitting train and test sets. Always fit preprocessing tools solely on training data.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 10. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:feature_check_yourself}
+
+Test your mastery of scaling, categorical encoding, feature engineering, and selection with the following practice problems. Complete step-by-step solutions are provided at the end of this chapter.
+
+\begin{checkyourself}[Practice Problems]
+\begin{enumerate}
+    \item \textbf{Manual Feature Normalization}:
+    An IoT current sensor measures motor draw in milliamperes across four inspection cycles:
+    \begin{equation*}
+    I = [100\text{ mA}, \ 120\text{ mA}, \ 160\text{ mA}, \ 220\text{ mA}]
+    \end{equation*}
+    \begin{enumerate}[label=(\alph*)]
+        \item Compute the Min-Max normalized values in the interval $[0, 1]$.
+        \item Compute the Standardized ($Z$-score) values. (Sample mean $\mu = 150.0\text{ mA}$, population standard deviation $\sigma = 45.55\text{ mA}$).
+    \end{enumerate}
+
+    \item \textbf{Cyclical Time Encoding Arithmetic}:
+    Calculate the exact sine and cosine encoded feature values ($\sin\theta, \cos\theta$) for:
+    \begin{enumerate}[label=(\alph*)]
+        \item Hour 06:00 ($t = 6, T = 24$).
+        \item Hour 18:00 ($t = 18, T = 24$).
+    \end{enumerate}
+
+    \item \textbf{The Dummy Variable Trap}:
+    An agricultural sensor network operates in four distinct transmission modes: \texttt{"Sleep"}, \texttt{"Sensing"}, \texttt{"LoRa"}, and \texttt{"Cellular"}.
+    \begin{enumerate}[label=(\alph*)]
+        \item How many binary columns are created if you apply standard One-Hot Encoding?
+        \item If you are training an Ordinary Least Squares (OLS) linear regression model with an intercept, how many columns must you retain to avoid the dummy variable trap? Explain why.
+    \end{enumerate}
+
+    \item \textbf{Data Leakage Detection}:
+    A junior engineer writes the following preprocessing script:
+    \begin{lstlisting}[style=pythonstyle]
+scaler = MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled  = scaler.fit_transform(X_test)
+    \end{lstlisting}
+    Identify the subtle bug in line 3 and explain its catastrophic operational consequence during model deployment.
+
+    \item \textbf{PCA Explained Variance Interpretation}:
+    A sensor array logs 5 correlated gas concentration features. Eigendecomposition of the standardized covariance matrix produces the following eigenvalues:
+    \begin{equation*}
+    \lambda_1 = 3.20, \quad \lambda_2 = 1.10, \quad \lambda_3 = 0.45, \quad \lambda_4 = 0.15, \quad \lambda_5 = 0.10
+    \end{equation*}
+    \begin{enumerate}[label=(\alph*)]
+        \item What is the total variance across all 5 features?
+        \item Calculate the Explained Variance Ratio (EVR) of the first two principal components combined ($\text{PC}_1 + \text{PC}_2$).
+        \item If your engineering threshold requires retaining at least $85\%$ of total variance, can you compress this 5-dimensional feature space down to 2 dimensions?
+    \end{enumerate}
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 11. ANSWERS TO CHECK YOURSELF
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Manual Feature Normalization}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Min-Max Normalization}:
+        $x_{\min} = 100\text{ mA}$, $x_{\max} = 220\text{ mA}$, Range $= 220 - 100 = 120\text{ mA}$.
+        Formula: $x' = \frac{x - 100}{120}$:
+        \begin{align*}
+        x_1' &= \frac{100 - 100}{120} = \mathbf{0.0000} \\
+        x_2' &= \frac{120 - 100}{120} = \frac{20}{120} \approx \mathbf{0.1667} \\
+        x_3' &= \frac{160 - 100}{120} = \frac{60}{120} = \mathbf{0.5000} \\
+        x_4' &= \frac{220 - 100}{120} = \frac{120}{120} = \mathbf{1.0000}
+        \end{align*}
+        \item \textbf{Standardization ($Z$-Score)}:
+        $\mu = 150.0$, $\sigma = 45.5522$.
+        Formula: $z = \frac{x - 150.0}{45.5522}$:
+        \begin{align*}
+        z_1 &= \frac{100 - 150}{45.5522} = \frac{-50}{45.5522} \approx \mathbf{-1.0976} \\
+        z_2 &= \frac{120 - 150}{45.5522} = \frac{-30}{45.5522} \approx \mathbf{-0.6586} \\
+        z_3 &= \frac{160 - 150}{45.5522} = \frac{+10}{45.5522} \approx \mathbf{+0.2195} \\
+        z_4 &= \frac{220 - 150}{45.5522} = \frac{+70}{45.5522} \approx \mathbf{+1.5367}
+        \end{align*}
+    \end{enumerate}
+
+    \item \textbf{Cyclical Time Encoding Arithmetic}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Hour 06:00}:
+        $\theta = \frac{2\pi \cdot 6}{24} = \frac{12\pi}{24} = \frac{\pi}{2} \text{ radians } (90^\circ)$.
+        \begin{align*}
+        \sin\left(\frac{\pi}{2}\right) &= \mathbf{+1.0000} \\
+        \cos\left(\frac{\pi}{2}\right) &= \mathbf{0.0000}
+        \end{align*}
+        \item \textbf{Hour 18:00}:
+        $\theta = \frac{2\pi \cdot 18}{24} = \frac{36\pi}{24} = \frac{3\pi}{2} \text{ radians } (270^\circ)$.
+        \begin{align*}
+        \sin\left(\frac{3\pi}{2}\right) &= \mathbf{-1.0000} \\
+        \cos\left(\frac{3\pi}{2}\right) &= \mathbf{0.0000}
+        \end{align*}
+    \end{enumerate}
+
+    \item \textbf{The Dummy Variable Trap}:
+    \begin{enumerate}[label=(\alph*)]
+        \item Standard One-Hot Encoding creates exactly $K = \mathbf{4}$ binary columns (\texttt{Is\_Sleep}, \texttt{Is\_Sensing}, \texttt{Is\_LoRa}, \texttt{Is\_Cellular}).
+        \item For an OLS linear model with an intercept, you must retain $K - 1 = \mathbf{3}$ columns.
+        
+        \textit{Explanation}: Because every row belongs to exactly one mode, the sum of all 4 one-hot columns is identically equal to $1.0$ for every observation:
+        \begin{equation*}
+        x_{\text{Sleep}} + x_{\text{Sensing}} + x_{\text{LoRa}} + x_{\text{Cellular}} = 1.0
+        \end{equation*}
+        This column sum is collinear with the model's constant intercept vector $\mathbf{1}$. The design matrix $\mathbf{X}$ loses full column rank, making $\mathbf{X}^T \mathbf{X}$ singular and impossible to invert. Dropping one baseline column restores full rank.
+    \end{enumerate}
+
+    \item \textbf{Data Leakage Detection}:
+    \begin{itemize}
+        \item \textbf{The Bug}: Line 3 calls \texttt{scaler.fit\_transform(X\_test)} instead of \texttt{scaler.transform(X\_test)}.
+        \item \textbf{Operational Consequence}: The test set is being scaled using its *own* local minimum and maximum, rather than the scale parameters learned from the training data. 
+        
+        For example, if the training set had temperatures $20^\circ\text{C}$ to $30^\circ\text{C}$, but the test set happens to range from $25^\circ\text{C}$ to $35^\circ\text{C}$, calling \texttt{fit\_transform} on test data maps $25^\circ\text{C}$ to $0.0$, whereas in training $25^\circ\text{C}$ was mapped to $0.5$! The model receives inputs shifted by completely inconsistent coordinate transformations, producing disastrously wrong predictions.
+    \end{itemize}
+
+    \item \textbf{PCA Explained Variance Interpretation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Total Variance}:
+        Since features were standardized, each original feature has variance $1.0$. The total variance equals the sum of the eigenvalues:
+        \begin{equation*}
+        \sum_{j=1}^{5} \lambda_j = 3.20 + 1.10 + 0.45 + 0.15 + 0.10 = \mathbf{5.00}
+        \end{equation*}
+        \item \textbf{Explained Variance Ratio ($\text{PC}_1 + \text{PC}_2$)}:
+        \begin{equation*}
+        \text{EVR}_1 = \frac{3.20}{5.00} = 0.64 \quad (64.0\%)
+        \end{equation*}
+        \begin{equation*}
+        \text{EVR}_2 = \frac{1.10}{5.00} = 0.22 \quad (22.0\%)
+        \end{equation*}
+        Combined Explained Variance:
+        \begin{equation*}
+        \text{EVR}_{1+2} = 0.64 + 0.22 = \mathbf{0.8600} \quad (\mathbf{86.0\%})
+        \end{equation*}
+        \item \textbf{Decision}:
+        \textbf{Yes}. The first two principal components capture $86.0\%$ of total variance, which exceeds the required $85\%$ threshold. Compressing from 5 features to 2 reduces memory and compute by $60\%$ while discarding only $14\%$ of mostly noisy variance.
+    \end{enumerate}
+\end{enumerate}

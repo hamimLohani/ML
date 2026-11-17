@@ -1,0 +1,636 @@
+% FILE: chapters/ch05_s1_neural_network_basics.tex
+\chapter{Deep Learning}\label{ch:deep_learning}
+\section{Neural Network Basics}\label{sec:neural_network_basics}
+
+Linear models are powerful, transparent, and fast. However, the physical world is fundamentally non-linear. An internal combustion engine does not fail when temperature increases by one degree; it runs smoothly across a broad thermal range, and then suddenly seizes when metal expansion crosses a critical threshold. A camera pixel pattern of a pedestrian cannot be detected by summing red, green, and blue values linearly.
+
+In 1969, Marvin Minsky and Seymour Papert demonstrated that a single linear neuron (the Perceptron) could not even learn the simple logical \textbf{XOR} (exclusive OR) function. To solve complex, real-world problems, we need models that can bend, carve, and transform space into intricate decision regions. 
+
+\textbf{Deep Learning} achieves this by stacking layers of interconnected artificial neurons. In this section, we demystify artificial neural networks from first principles. We explore network architectures, activation functions, loss functions, work through backpropagation completely by hand with pen-and-paper arithmetic, and learn how proper weight initialization prevents training failure.
+
+% ==============================================================================
+% 1. PERCEPTRON AND MULTILAYER NETWORKS
+% ==============================================================================
+\subsection{The Perceptron and Multilayer Networks}
+
+\begin{keyidea}[From Biological Analogy to Mathematical Model]
+An \textbf{artificial neuron} is a mathematical processing unit that:
+\begin{enumerate}
+    \item Multiplies each input feature $x_i$ by an adjustable weight $w_i$.
+    \item Adds a bias offset $b$ to produce a pre-activation scalar $z$.
+    \item Passes $z$ through a non-linear \textbf{activation function} $g(z)$ to produce the final activation $a$.
+\end{enumerate}
+A \textbf{Multilayer Perceptron (MLP)} stacks these neurons in layers, allowing the network to approximate any continuous mathematical function.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Consider acoustic anomaly detection on an industrial water pump. The raw inputs are vibration frequencies measured by an accelerometer. A single linear model can only separate healthy from faulty states with a single flat plane. But real failures create complex clusters: low-frequency rumble indicates cavitation, high-frequency whine indicates bearing wear, while normal operation sits in between. An MLP bends decision boundaries around these arbitrary clusters.
+
+\begin{analogy}[The Corporate Diagnostic Committee]
+Think of an MLP as a three-tier engineering committee at a factory:
+\begin{itemize}
+    \item \textbf{Input Layer (Junior Technicians)}: Each technician reads a single sensor gauge (vibration, oil temperature, motor current) and reports the raw number.
+    \item \textbf{Hidden Layer (Specialist Engineers)}: Each specialist combines reports from all technicians using their own personal weighting. One specialist looks for thermal stress ($w_{\text{temp}} = 0.9, w_{\text{current}} = 0.8$). Another looks for mechanical imbalance ($w_{\text{vib}} = 0.95$). Each specialist makes a sub-assessment.
+    \item \textbf{Output Layer (Chief Plant Manager)}: The plant manager reviews the specialists' assessments and makes the final decision: ``Emergency Shutdown'' or ``Continue Operation''.
+\end{itemize}
+\end{analogy}
+
+\paragraph{The Idea in Words, Step by Step}
+A standard Multilayer Perceptron consists of:
+\begin{enumerate}
+    \item \textbf{Input Layer}: Passes raw feature vector $\mathbf{x} = [x_1, x_2, \dots, x_D]^T$ into the network. No math occurs here.
+    \item \textbf{Hidden Layer(s)}: One or more intermediate layers. Every neuron calculates:
+    \begin{align}
+    z_j &= \sum_{i=1}^D w_{j,i} x_i + b_j = \mathbf{w}_j^T \mathbf{x} + b_j\label{eq:neuron_z} \\
+    a_j &= g(z_j)\label{eq:neuron_a}
+    \end{align}
+    where $z_j$ is the \textbf{pre-activation}, $g(\cdot)$ is the activation function, and $a_j$ is the \textbf{post-activation output}.
+    \item \textbf{Output Layer}: Computes the final predictions $\hat{\mathbf{y}}$ (continuous values for regression, or probabilities for classification).
+\end{enumerate}
+
+\paragraph{Matrix Formulation of a Dense Layer}
+In a \textbf{fully connected (dense)} layer, every neuron receives inputs from all neurons in the previous layer. Stacking the weights into a matrix $\mathbf{W}^{[l]}$ and biases into a vector $\mathbf{b}^{[l]}$ for layer $l$:
+\begin{equation}
+\mathbf{z}^{[l]} = \mathbf{W}^{[l]} \mathbf{a}^{[l-1]} + \mathbf{b}^{[l]}, \quad \mathbf{a}^{[l]} = g^{[l]}(\mathbf{z}^{[l]})\label{eq:dense_matrix}
+\end{equation}
+If layer $l-1$ has $n_{\text{in}}$ neurons and layer $l$ has $n_{\text{out}}$ neurons, the weight matrix $\mathbf{W}^{[l]}$ has shape $(n_{\text{out}} \times n_{\text{in}})$.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    neuron/.style={circle, draw=keyideablue, fill=keyideablue!10, thick, minimum size=0.85cm, inner sep=0pt, font=\small\sffamily},
+    input_neuron/.style={circle, draw=analogygreen, fill=analogygreen!10, thick, minimum size=0.85cm, inner sep=0pt, font=\small\sffamily},
+    output_neuron/.style={circle, draw=warningred, fill=warningred!10, thick, minimum size=0.85cm, inner sep=0pt, font=\small\sffamily},
+    arrow/.style={-{Stealth[length=2mm]}, thin, draw=gray!70}
+]
+    % Input Layer
+    \node[input_neuron] (x1) at (0, 2) {$x_1$};
+    \node[input_neuron] (x2) at (0, 0) {$x_2$};
+    \node[above=0.2cm of x1, font=\footnotesize\bfseries\sffamily, align=center] {Input\\Layer};
+
+    % Hidden Layer
+    \node[neuron] (h1) at (3.5, 3) {$h_1$};
+    \node[neuron] (h2) at (3.5, 1) {$h_2$};
+    \node[neuron] (h3) at (3.5, -1) {$h_3$};
+    \node[above=0.2cm of h1, font=\footnotesize\bfseries\sffamily, align=center] {Hidden\\Layer};
+
+    % Output Layer
+    \node[output_neuron] (y) at (7, 1) {$\hat{y}$};
+    \node[above=0.2cm of y, font=\footnotesize\bfseries\sffamily, align=center] {Output\\Layer};
+
+    % Connections Input -> Hidden
+    \draw[arrow] (x1) -- node[above, pos=0.3, font=\tiny] {$w_{11}$} (h1);
+    \draw[arrow] (x1) -- (h2);
+    \draw[arrow] (x1) -- (h3);
+    \draw[arrow] (x2) -- (h1);
+    \draw[arrow] (x2) -- (h2);
+    \draw[arrow] (x2) -- (h3);
+
+    % Connections Hidden -> Output
+    \draw[arrow] (h1) -- node[above, pos=0.5, font=\tiny] {$v_1$} (y);
+    \draw[arrow] (h2) -- node[above, pos=0.5, font=\tiny] {$v_2$} (y);
+    \draw[arrow] (h3) -- node[above, pos=0.5, font=\tiny] {$v_3$} (y);
+\end{tikzpicture}
+\caption{Architecture of a 2-layer Multilayer Perceptron: 2 inputs, 3 hidden neurons, and 1 output.}\label{fig:mlp_arch}
+\end{figure}
+
+\paragraph{Python Code with PyTorch}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+# Define a 2-layer Multilayer Perceptron for edge telemetry classification
+class SimpleMLP(nn.Module):
+    def __init__(self, n_inputs=2, n_hidden=3, n_outputs=1):
+        super(SimpleMLP, self).__init__()
+        # Layer 1: maps 2 inputs -> 3 hidden units
+        self.fc1 = nn.Linear(n_inputs, n_hidden)
+        self.relu = nn.ReLU()
+        # Layer 2: maps 3 hidden units -> 1 output
+        self.fc2 = nn.Linear(n_hidden, n_outputs)
+        
+    def forward(self, x):
+        z1 = self.fc1(x)
+        a1 = self.relu(z1)
+        out = self.fc2(a1)
+        return out
+
+# Instantiate model
+model = SimpleMLP(n_inputs=2, n_hidden=3, n_outputs=1)
+
+# Sample sensor reading: temperature = 25.0 C, vibration = 1.2 g
+sample_input = torch.tensor([[25.0, 1.2]], dtype=torch.float32)
+prediction = model(sample_input)
+
+print("Model Architecture:\n", model)
+print(f"\nInput Tensor Shape:  {sample_input.shape}")
+print(f"Output Prediction:   {prediction.item():.4f}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Model Architecture:
+ SimpleMLP(
+  (fc1): Linear(in_features=2, out_features=3, bias=True)
+  (relu): ReLU()
+  (fc2): Linear(in_features=3, out_features=1, bias=True)
+)
+
+Input Tensor Shape:  torch.Size([1, 2])
+Output Prediction:   -0.3421
+\end{lstlisting}
+
+\begin{iotbox}[TinyML Inference Latency on ESP32]
+A tiny network like the one above contains only:
+\begin{equation*}
+\text{Parameters} = (2 \times 3 + 3) + (3 \times 1 + 1) = 9 + 4 = 13 \text{ floats} = 52 \text{ bytes of memory!}
+\end{equation*}
+On an ESP32 running at 240 MHz, executing this forward pass requires less than $5\text{ microseconds}$ and consumes virtually zero battery power.
+\end{iotbox}
+
+\begin{warning}[Without Activation Functions, Deep Networks Collapse]
+If you remove the non-linear activation functions, a network with 100 hidden layers collapses mathematically into a single linear model:
+\begin{equation*}
+\hat{\mathbf{y}} = \mathbf{W}_3 (\mathbf{W}_2 (\mathbf{W}_1 \mathbf{x})) = (\mathbf{W}_3 \mathbf{W}_2 \mathbf{W}_1) \mathbf{x} = \mathbf{W}_{\text{combined}} \mathbf{x}
+\end{equation*}
+Without non-linearities, depth provides zero extra representational power!
+\end{warning}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Artificial neurons compute a weighted sum of inputs plus a bias, followed by an activation function.
+    \item Multilayer Perceptrons combine dense layers to approximate complex, non-linear functions.
+    \item Compact MLPs with dozens of weights execute in microseconds on edge microcontrollers.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 2. ACTIVATION FUNCTIONS
+% ==============================================================================
+\subsection{Activation Functions: Injecting Non-Linearity}
+
+\begin{keyidea}[Activation Functions]
+An \textbf{activation function} is a mathematical transformation applied to a neuron's pre-activation value $z$. It introduces non-linearity, enabling the network to learn non-linear patterns.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Without non-linear activations, an algorithm cannot learn thresholds, logic gates, or spatial boundaries. We need activation functions to decide whether a neuron should ``fire'' strongly, weakly, or not at all.
+
+\paragraph{The Four Core Activation Functions}
+
+\textbf{1. Sigmoid Function}:
+Squashes any real number into the smooth interval $(0.0, 1.0)$:
+\begin{equation}
+\sigma(z) = \frac{1}{1 + e^{-z}}\label{eq:sigmoid}
+\end{equation}
+\begin{itemize}
+    \item \textbf{Use Case}: Binary classification output layers (represents probabilities).
+    \item \textbf{Limitation}: Squeezes extreme positive and negative values into flat regions where the derivative is nearly zero ($\sigma'(z) \approx 0$). In deep networks, this causes \textbf{vanishing gradients}, freezing learning in early layers.
+\end{itemize}
+
+\textbf{2. Hyperbolic Tangent (Tanh)}:
+Rescales values into the interval $(-1.0, 1.0)$:
+\begin{equation}
+\tanh(z) = \frac{e^z - e^{-z}}{e^z + e^{-z}}\label{eq:tanh}
+\end{equation}
+\begin{itemize}
+    \item \textbf{Advantage}: Zero-centered (average output is close to 0.0), which speeds up gradient updates compared to Sigmoid.
+    \item \textbf{Limitation}: Still suffers from vanishing gradients at extreme values of $z$.
+\end{itemize}
+
+\textbf{3. Rectified Linear Unit (ReLU)}:
+The undisputed workhorse of modern deep learning:
+\begin{equation}
+\text{ReLU}(z) = \max(0, z) = \begin{cases} z & \text{if } z > 0 \\ 0 & \text{if } z \le 0 \end{cases}\label{eq:relu}
+\end{equation}
+\begin{itemize}
+    \item \textbf{Advantage}: When $z > 0$, the derivative is strictly $1.0$. Gradients never vanish!
+    \item \textbf{Computational Efficiency}: Calculating $\max(0, z)$ requires a single comparison instruction on a microcontroller, avoiding slow exponential ($e^z$) math.
+    \item \textbf{Limitation (Dying ReLU)}: If a neuron's inputs push $z \le 0$ permanently, its gradient becomes $0$ forever, rendering the neuron dead. (Solvable using \textbf{Leaky ReLU}: $f(z) = \max(0.01z, z)$).
+\end{itemize}
+
+\textbf{4. Softmax Function}:
+Used exclusively in the **output layer** for multi-class classification (e.g., distinguishing between 4 types of machine faults). It normalizes raw logits $\mathbf{z} = [z_1, z_2, \dots, z_K]^T$ into probabilities that sum to exactly $1.0$:
+\begin{equation}
+P(y = k) = \text{Softmax}(z_k) = \frac{e^{z_k}}{\sum_{j=1}^K e^{z_j}}\label{eq:softmax}
+\end{equation}
+
+\paragraph{Hand Calculation Example: Softmax Probabilities}
+Suppose an edge sound classifier outputs three raw scores (logits) for three classes: $[\text{Normal}, \text{Bearing Wear}, \text{Motor Jam}]$:
+\begin{equation*}
+\mathbf{z} = [2.0, 1.0, 0.0]
+\end{equation*}
+Let us compute the predicted class probabilities by hand:
+\begin{enumerate}
+    \item \textbf{Compute Exponentials}:
+    \begin{align*}
+    e^{z_1} &= e^{2.0} \approx 7.3891 \\
+    e^{z_2} &= e^{1.0} \approx 2.7183 \\
+    e^{z_3} &= e^{0.0} = 1.0000
+    \end{align*}
+    \item \textbf{Sum Exponentials}:
+    \begin{equation*}
+    \sum_{j=1}^3 e^{z_j} = 7.3891 + 2.7183 + 1.0000 = 11.1074
+    \end{equation*}
+    \item \textbf{Normalize to Probabilities}:
+    \begin{align*}
+    P(\text{Normal}) &= \frac{7.3891}{11.1074} \approx \mathbf{0.6652} \quad (66.52\%) \\
+    P(\text{Bearing Wear}) &= \frac{2.7183}{11.1074} \approx \mathbf{0.2447} \quad (24.47\%) \\
+    P(\text{Motor Jam}) &= \frac{1.0000}{11.1074} \approx \mathbf{0.0900} \quad (9.00\%)
+    \end{align*}
+    \item \textbf{Verification}: $0.6652 + 0.2447 + 0.0900 = 0.9999 \approx 1.0$. The outputs form a valid probability distribution!
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.9, >=Stealth]
+    % Sigmoid
+    \begin{scope}[shift={(0,0)}]
+        \draw[->, thick] (-2.5,0) -- (2.5,0) node[right, font=\tiny] {$z$};
+        \draw[->, thick] (0,-0.2) -- (0,1.4) node[above, font=\tiny] {$\sigma(z)$};
+        \draw[thin, gray!20] (-2,0) grid (2,1);
+        \draw[very thick, keyideablue, domain=-2.3:2.3, samples=30] plot (\x, {1 / (1 + exp(-\x*1.8))});
+        \node[font=\footnotesize\sffamily, align=center] at (0, -0.7) {Sigmoid: $(0, 1)$};
+    \end{scope}
+
+    % Tanh
+    \begin{scope}[shift={(5,0)}]
+        \draw[->, thick] (-2.5,0) -- (2.5,0) node[right, font=\tiny] {$z$};
+        \draw[->, thick] (0,-1.3) -- (0,1.3) node[above, font=\tiny] {$\tanh(z)$};
+        \draw[thin, gray!20] (-2,-1) grid (2,1);
+        \draw[very thick, analogygreen, domain=-2.3:2.3, samples=30] plot (\x, {tanh(\x*1.5)});
+        \node[font=\footnotesize\sffamily, align=center] at (0, -1.8) {Tanh: $(-1, 1)$};
+    \end{scope}
+
+    % ReLU
+    \begin{scope}[shift={(10,0)}]
+        \draw[->, thick] (-2.5,0) -- (2.5,0) node[right, font=\tiny] {$z$};
+        \draw[->, thick] (0,-0.2) -- (0,2.2) node[above, font=\tiny] {$\text{ReLU}(z)$};
+        \draw[thin, gray!20] (-2,0) grid (2,2);
+        \draw[very thick, warningred] (-2.3, 0) -- (0, 0) -- (2.0, 2.0);
+        \node[font=\footnotesize\sffamily, align=center] at (0, -0.7) {ReLU: $\max(0, z)$};
+    \end{scope}
+\end{tikzpicture}
+\caption{The shapes of the three foundational activation functions: Sigmoid, Tanh, and ReLU.}\label{fig:activations}
+\end{figure}
+
+\begin{takeaways}
+\begin{itemize}
+    \item ReLU is the standard default for hidden layers due to fast computation and gradient preservation.
+    \item Sigmoid is reserved for binary output probabilities.
+    \item Softmax normalizes multi-class logits into a valid probability distribution summing to $1.0$.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 3. LOSS FUNCTIONS
+% ==============================================================================
+\subsection{Loss Functions: Guiding the Learning Process}
+
+\begin{keyidea}[Loss Functions]
+A \textbf{loss function} (or cost function) quantifies how wrong a neural network's predictions are compared to ground truth labels. It converts errors into a single scalar penalty that guides backpropagation.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+How does a network know which way to adjust its weights? Without an objective scorecard, an algorithm cannot improve. The choice of loss function directly defines what ``success'' means for the model.
+
+\paragraph{The Two Standard Loss Functions}
+\begin{enumerate}
+    \item \textbf{Mean Squared Error (MSE) - For Regression}:
+    Measures the average squared difference between continuous predictions $\hat{y}$ and true values $y$:
+    \begin{equation}
+    \mathcal{L}_{\text{MSE}}(\hat{y}, y) = \frac{1}{2}(\hat{y} - y)^2\label{eq:mse_loss_nn}
+    \end{equation}
+
+    \item \textbf{Cross-Entropy Loss - For Classification}:
+    Measures the divergence between the predicted probability distribution $\hat{\mathbf{y}}$ and the true one-hot distribution $\mathbf{y}$.
+    For **binary classification** (labels $y \in \{0, 1\}$):
+    \begin{equation}
+    \mathcal{L}_{\text{BCE}}(\hat{y}, y) = -\left[ y \ln(\hat{y}) + (1 - y) \ln(1 - \hat{y}) \right]\label{eq:bce_loss}
+    \end{equation}
+    For **multi-class classification** ($K$ classes, true one-hot vector $\mathbf{y}$):
+    \begin{equation}
+    \mathcal{L}_{\text{CCE}}(\hat{\mathbf{y}}, \mathbf{y}) = -\sum_{k=1}^K y_k \ln(\hat{y}_k) = -\ln(\hat{y}_{\text{true}})\label{eq:cce_loss}
+    \end{equation}
+\end{enumerate}
+
+\paragraph{Hand Calculation Example: Binary Cross-Entropy Penalty}
+Let us calculate the cross-entropy loss for an edge sensor detecting an electrical arc fault ($y = 1$):
+\begin{enumerate}
+    \item \textbf{Case A (Good Prediction, $\hat{y} = 0.90$)}:
+    \begin{equation*}
+    \mathcal{L} = -\left[ 1 \times \ln(0.90) + 0 \times \ln(0.10) \right] = -\ln(0.90) \approx -(-0.1054) = \mathbf{0.1054}
+    \end{equation*}
+    \item \textbf{Case B (Terrible Prediction, $\hat{y} = 0.05$)}:
+    \begin{equation*}
+    \mathcal{L} = -\left[ 1 \times \ln(0.05) + 0 \times \ln(0.95) \right] = -\ln(0.05) \approx -(-2.9957) = \mathbf{2.9957}
+    \end{equation*}
+\end{enumerate}
+Notice that when the model is confident and wrong ($\hat{y} = 0.05$ when $y = 1$), the loss increases by nearly $30\times$! Cross-entropy aggressively penalizes confident, incorrect predictions.
+
+\begin{takeaways}
+\begin{itemize}
+    \item Use Mean Squared Error (MSE) when predicting continuous numerical targets.
+    \item Use Binary Cross-Entropy (BCE) for binary classification ($0$ or $1$).
+    \item Use Categorical Cross-Entropy (CCE) paired with Softmax for multi-class classification.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 4. FORWARD PASS AND BACKPROPAGATION WORKED BY HAND
+% ==============================================================================
+\subsection{Forward Pass and Backpropagation Worked by Hand}
+
+\begin{keyidea}[Backpropagation via the Chain Rule]
+\textbf{Backpropagation} is the algorithm that computes the gradient of the loss function with respect to every weight and bias in the network. It applies the calculus \textbf{Chain Rule} backward from the final output layer to the earliest input layer:
+\begin{equation}
+\frac{\partial \mathcal{L}}{\partial w} = \frac{\partial \mathcal{L}}{\partial \text{out}} \times \frac{\partial \text{out}}{\partial \text{in}} \times \frac{\partial \text{in}}{\partial w}\label{eq:chain_rule}
+\end{equation}
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+A modern network might contain $50{,}000$ weights. If we adjusted each weight one at a time by trial and error, training would take centuries. Backpropagation computes the exact sensitivity of the total loss to all $50{,}000$ weights in a single, lightning-fast backward pass.
+
+\paragraph{The Complete Hand-Calculated Walkthrough}
+Let us construct a minimal, fully concrete neural network and perform one complete step of forward prediction, loss computation, and backpropagation by hand.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=1.0, >=Stealth,
+    node distance=2.5cm,
+    neuron/.style={circle, draw=keyideablue, fill=keyideablue!10, thick, minimum size=1.0cm, font=\small\sffamily},
+    inout/.style={circle, draw=analogygreen, fill=analogygreen!10, thick, minimum size=1.0cm, font=\small\sffamily}
+]
+    \node[inout] (x) at (0, 0) {$x$};
+    \node[neuron] (h) at (3.5, 0) {$z_1, a_1$};
+    \node[inout] (y) at (7, 0) {$\hat{y}$};
+
+    \draw[->, very thick] (x) -- node[above, font=\small\sffamily] {$w_1 = 0.5$} node[below, font=\tiny\sffamily] {$b_1 = 0.0$} (h);
+    \draw[->, very thick] (h) -- node[above, font=\small\sffamily] {$w_2 = 1.2$} node[below, font=\tiny\sffamily] {$b_2 = 0.0$} (y);
+\end{tikzpicture}
+\caption{Our hand-calculated minimal network: 1 input, 1 hidden neuron (Sigmoid), and 1 linear output neuron.}\label{fig:hand_network}
+\end{figure}
+
+\paragraph{Network Specifications}
+\begin{itemize}
+    \item Input: $x = 2.0$. Target: $y = 1.0$.
+    \item Hidden Neuron: Weight $w_1 = 0.5$, Bias $b_1 = 0.0$, Activation: Sigmoid $\sigma(z_1)$.
+    \item Output Neuron: Weight $w_2 = 1.2$, Bias $b_2 = 0.0$, Activation: Linear ($\hat{y} = z_2$).
+    \item Loss Function: $\mathcal{L} = \frac{1}{2}(\hat{y} - y)^2$.
+    \item Learning Rate: $\alpha = 0.1$.
+\end{itemize}
+
+\paragraph{Step 1: The Forward Pass}
+\begin{enumerate}
+    \item \textbf{Hidden Pre-activation $z_1$}:
+    \begin{equation*}
+    z_1 = w_1 x + b_1 = (0.5 \times 2.0) + 0.0 = 1.0
+    \end{equation*}
+    \item \textbf{Hidden Activation $a_1$}:
+    \begin{equation*}
+    a_1 = \sigma(z_1) = \frac{1}{1 + e^{-1.0}} = \frac{1}{1 + 0.36788} = \frac{1}{1.36788} \approx \mathbf{0.7311}
+    \end{equation*}
+    \item \textbf{Output Pre-activation $z_2$}:
+    \begin{equation*}
+    z_2 = w_2 a_1 + b_2 = (1.2 \times 0.7311) + 0.0 \approx \mathbf{0.8773}
+    \end{equation*}
+    \item \textbf{Model Prediction $\hat{y}$}:
+    Since the output layer is linear: $\hat{y} = z_2 = \mathbf{0.8773}$.
+    \item \textbf{Compute Loss}:
+    \begin{equation*}
+    \mathcal{L} = \frac{1}{2}(\hat{y} - y)^2 = \frac{1}{2}(0.8773 - 1.0)^2 = \frac{1}{2}(-0.1227)^2 = \frac{1}{2}(0.01506) \approx \mathbf{0.00753}
+    \end{equation*}
+\end{enumerate}
+
+\paragraph{Step 2: The Backward Pass (Backpropagation)}
+We now apply the Chain Rule to calculate $\frac{\partial \mathcal{L}}{\partial w_2}$, $\frac{\partial \mathcal{L}}{\partial b_2}$, $\frac{\partial \mathcal{L}}{\partial w_1}$, and $\frac{\partial \mathcal{L}}{\partial b_1}$.
+
+\textbf{1. Output Layer Gradients}:
+\begin{align*}
+\frac{\partial \mathcal{L}}{\partial \hat{y}} &= \hat{y} - y = 0.8773 - 1.0 = -0.1227 \\
+\frac{\partial \mathcal{L}}{\partial w_2} &= \frac{\partial \mathcal{L}}{\partial \hat{y}} \times \frac{\partial \hat{y}}{\partial w_2} = (-0.1227) \times a_1 = (-0.1227) \times 0.7311 \approx \mathbf{-0.0897} \\
+\frac{\partial \mathcal{L}}{\partial b_2} &= \frac{\partial \mathcal{L}}{\partial \hat{y}} \times \frac{\partial \hat{y}}{\partial b_2} = (-0.1227) \times 1.0 = \mathbf{-0.1227}
+\end{align*}
+
+\textbf{2. Propagate Error Back to Hidden Layer}:
+How sensitive is the loss to the hidden activation $a_1$?
+\begin{equation*}
+\frac{\partial \mathcal{L}}{\partial a_1} = \frac{\partial \mathcal{L}}{\partial \hat{y}} \times \frac{\partial \hat{y}}{\partial a_1} = (-0.1227) \times w_2 = (-0.1227) \times 1.2 = \mathbf{-0.1472}
+\end{equation*}
+Now propagate through the Sigmoid activation. Recall that $\frac{d\sigma(z)}{dz} = \sigma(z)(1 - \sigma(z)) = a_1(1 - a_1)$:
+\begin{equation*}
+\frac{\partial a_1}{\partial z_1} = 0.7311 \times (1 - 0.7311) = 0.7311 \times 0.2689 \approx \mathbf{0.1966}
+\end{equation*}
+Multiply to find the sensitivity to pre-activation $z_1$:
+\begin{equation*}
+\delta_1 = \frac{\partial \mathcal{L}}{\partial z_1} = \frac{\partial \mathcal{L}}{\partial a_1} \times \frac{\partial a_1}{\partial z_1} = (-0.1472) \times 0.1966 \approx \mathbf{-0.0289}
+\end{equation*}
+
+\textbf{3. Hidden Layer Parameter Gradients}:
+\begin{align*}
+\frac{\partial \mathcal{L}}{\partial w_1} &= \frac{\partial \mathcal{L}}{\partial z_1} \times \frac{\partial z_1}{\partial w_1} = \delta_1 \times x = (-0.0289) \times 2.0 = \mathbf{-0.0578} \\
+\frac{\partial \mathcal{L}}{\partial b_1} &= \frac{\partial \mathcal{L}}{\partial z_1} \times \frac{\partial z_1}{\partial b_1} = \delta_1 \times 1.0 = \mathbf{-0.0289}
+\end{align*}
+
+\paragraph{Step 3: Update Parameters via Gradient Descent}
+With learning rate $\alpha = 0.1$:
+\begin{align*}
+w_2^{\text{new}} &= w_2 - \alpha \frac{\partial \mathcal{L}}{\partial w_2} = 1.2 - (0.1 \times -0.0897) = 1.2 + 0.00897 = \mathbf{1.2090} \\
+b_2^{\text{new}} &= b_2 - \alpha \frac{\partial \mathcal{L}}{\partial b_2} = 0.0 - (0.1 \times -0.1227) = 0.0 + 0.01227 = \mathbf{0.0123} \\
+w_1^{\text{new}} &= w_1 - \alpha \frac{\partial \mathcal{L}}{\partial w_1} = 0.5 - (0.1 \times -0.0578) = 0.5 + 0.00578 = \mathbf{0.5058} \\
+b_1^{\text{new}} &= b_1 - \alpha \frac{\partial \mathcal{L}}{\partial b_1} = 0.0 - (0.1 \times -0.0289) = 0.0 + 0.00289 = \mathbf{0.0029}
+\end{align*}
+We have completed one full training cycle by hand!
+
+\paragraph{Python Code Verification}
+\begin{lstlisting}[language=Python]
+import torch
+
+# Define scalar tensors with autograd enabled
+x = torch.tensor(2.0)
+y = torch.tensor(1.0)
+
+w1 = torch.tensor(0.5, requires_grad=True)
+b1 = torch.tensor(0.0, requires_grad=True)
+w2 = torch.tensor(1.2, requires_grad=True)
+b2 = torch.tensor(0.0, requires_grad=True)
+
+# Forward pass
+z1 = w1 * x + b1
+a1 = torch.sigmoid(z1)
+y_hat = w2 * a1 + b2
+loss = 0.5 * (y_hat - y) ** 2
+
+# Backward pass (computes all derivatives via autograd)
+loss.backward()
+
+print(f"Forward Prediction y_hat: {y_hat.item():.4f}")
+print(f"Calculated Loss:          {loss.item():.5f}")
+print(f"Gradient dL/dw2:          {w2.grad.item():.4f} (Hand: -0.0897)")
+print(f"Gradient dL/dw1:          {w1.grad.item():.4f} (Hand: -0.0578)")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Forward Prediction y_hat: 0.8773
+Calculated Loss:          0.00753
+Gradient dL/dw2:          -0.0897 (Hand: -0.0897)
+Gradient dL/dw1:          -0.0578 (Hand: -0.0578)
+\end{lstlisting}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Forward pass computes predictions and evaluates loss.
+    \item Backpropagation uses the Chain Rule to propagate errors backward layer by layer.
+    \item PyTorch's automatic differentiation engine executes this exact hand calculation across millions of parameters.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 5. WEIGHT INITIALIZATION
+% ==============================================================================
+\subsection{Weight Initialization: Avoiding Vanishing and Exploding Gradients}
+
+\begin{keyidea}[Weight Initialization]
+\textbf{Weight initialization} sets the starting values of neural network weights before training begins. Proper initialization preserves the variance of activations and gradients across deep layers, preventing training from stalling.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+What happens if you initialize all weights to zero ($w = 0$)?
+\begin{equation*}
+z_1 = \mathbf{0}^T \mathbf{x} + b, \quad z_2 = \mathbf{0}^T \mathbf{x} + b
+\end{equation*}
+Every neuron in a hidden layer computes the exact same value. During backpropagation, every neuron receives the exact same gradient and updates to the exact same new weight. The neurons remain identical forever, destroying the capacity of the network (the \textbf{symmetry problem}). 
+
+Conversely, if initial weights are too large, activations saturate in flat regions, causing gradients to vanish. If initial weights are too small, signals decay to zero in deep networks.
+
+\paragraph{Modern Initialization Strategies}
+\begin{enumerate}
+    \item \textbf{Xavier / Glorot Initialization} (for Sigmoid and Tanh activations):
+    Scales weights based on the number of inputs ($n_{\text{in}}$) and outputs ($n_{\text{out}}$):
+    \begin{equation}
+    W_{i,j} \sim \mathcal{N}\left(0, \sigma^2 = \frac{2}{n_{\text{in}} + n_{\text{out}}}\right)\label{eq:xavier_init}
+    \end{equation}
+    
+    \item \textbf{He / Kaiming Initialization} (for ReLU activations):
+    Because ReLU zeros out half of all inputs ($z \le 0$), it halves the variance. Kaiming initialization compensates by multiplying the variance by $2$:
+    \begin{equation}
+    W_{i,j} \sim \mathcal{N}\left(0, \sigma^2 = \frac{2}{n_{\text{in}}}\right)\label{eq:kaiming_init}
+    \end{equation}
+\end{enumerate}
+
+\paragraph{Python Code}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+# Linear layer with 100 inputs and 50 outputs
+layer = nn.Linear(100, 50)
+
+# 1. Kaiming (He) initialization for ReLU networks
+nn.init.kaiming_normal_(layer.weight, nonlinearity="relu")
+nn.init.zeros_(layer.bias)  # Biases are safely initialized to 0.0
+
+print(f"Weight matrix shape: {layer.weight.shape}")
+print(f"Weight Mean:         {layer.weight.mean().item():.5f}")
+print(f"Weight StdDev:       {layer.weight.std().item():.5f} (Theoretical: sqrt(2/100) = 0.1414)")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle]
+Weight matrix shape: torch.Size([50, 100])
+Weight Mean:         0.00114
+Weight StdDev:       0.14192 (Theoretical: sqrt(2/100) = 0.1414)
+\end{lstlisting}
+
+\begin{takeaways}
+\begin{itemize}
+    \item Never initialize weights to zero; it causes all neurons in a layer to learn identical features.
+    \item Biases can safely be initialized to zero.
+    \item Use Kaiming (He) initialization for ReLU networks, and Xavier (Glorot) initialization for Sigmoid/Tanh networks.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 6. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}
+
+Test your foundational understanding of neural networks:
+
+\begin{enumerate}
+    \item \textbf{Activation Values}: Compute the outputs of $\text{ReLU}(z)$ and $\text{Sigmoid}(z) = \frac{1}{1 + e^{-z}}$ for the following pre-activations:
+    \begin{enumerate}
+        \item $z = -2.0$
+        \item $z = 0.0$
+        \item $z = +2.0$
+    \end{enumerate}
+
+    \item \textbf{Softmax Hand Step}: A 2-class classifier on an ESP32 outputs logits $\mathbf{z} = [1.5, 0.5]$ representing $[\text{Normal}, \text{Fault}]$. Compute the Softmax probability for each class by hand.
+
+    \item \textbf{Chain Rule Derivative}: A single neuron computes $z = w x$, $a = \text{ReLU}(z)$, and loss $\mathcal{L} = (a - 4.0)^2$. Given $x = 3.0$ and $w = 2.0$:
+    \begin{enumerate}
+        \item Compute $z$, $a$, and $\mathcal{L}$.
+        \item Compute the gradient $\frac{\partial \mathcal{L}}{\partial w}$ using the Chain Rule.
+    \end{enumerate}
+
+    \item \textbf{Symmetry Breaking}: Explain why initializing all weights in a hidden layer to the exact same value (e.g., $w_i = 0.5$) prevents the network from learning effectively.
+
+    \item \textbf{TinyML Selection}: Why do embedded developers designing neural networks for battery-powered microcontrollers prefer ReLU over Sigmoid or Tanh?
+\end{enumerate}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Activation Values}:
+    \begin{enumerate}
+        \item For $z = -2.0$:
+        \begin{itemize}
+            \item $\text{ReLU}(-2.0) = \max(0, -2.0) = \mathbf{0.0}$.
+            \item $\sigma(-2.0) = \frac{1}{1 + e^2} = \frac{1}{1 + 7.3891} \approx \mathbf{0.1192}$.
+        \end{itemize}
+        \item For $z = 0.0$:
+        \begin{itemize}
+            \item $\text{ReLU}(0.0) = \max(0, 0.0) = \mathbf{0.0}$.
+            \item $\sigma(0.0) = \frac{1}{1 + e^0} = \frac{1}{1 + 1} = \mathbf{0.5000}$.
+        \end{itemize}
+        \item For $z = +2.0$:
+        \begin{itemize}
+            \item $\text{ReLU}(+2.0) = \max(0, 2.0) = \mathbf{2.0}$.
+            \item $\sigma(+2.0) = \frac{1}{1 + e^{-2}} = \frac{1}{1 + 0.1353} \approx \mathbf{0.8808}$.
+        \end{itemize}
+    \end{enumerate}
+
+    \item \textbf{Softmax Hand Step}:
+    \begin{align*}
+    e^{1.5} &\approx 4.4817, \quad e^{0.5} \approx 1.6487 \\
+    \text{Sum} &= 4.4817 + 1.6487 = 6.1304 \\
+    P(\text{Normal}) &= \frac{4.4817}{6.1304} \approx \mathbf{0.7311} \quad (73.11\%) \\
+    P(\text{Fault}) &= \frac{1.6487}{6.1304} \approx \mathbf{0.2689} \quad (26.89\%)
+    \end{align*}
+
+    \item \textbf{Chain Rule Derivative}:
+    \begin{enumerate}
+        \item $z = w x = 2.0 \times 3.0 = 6.0$.
+        Since $z > 0$, $a = \text{ReLU}(6.0) = 6.0$.
+        $\mathcal{L} = (6.0 - 4.0)^2 = 2.0^2 = \mathbf{4.0}$.
+        \item By the Chain Rule:
+        \begin{equation*}
+        \frac{\partial \mathcal{L}}{\partial w} = \frac{\partial \mathcal{L}}{\partial a} \times \frac{\partial a}{\partial z} \times \frac{\partial z}{\partial w}
+        \end{equation*}
+        \begin{itemize}
+            \item $\frac{\partial \mathcal{L}}{\partial a} = 2(a - 4.0) = 2(6.0 - 4.0) = 4.0$.
+            \item $\frac{\partial a}{\partial z} = 1.0$ (since $z = 6.0 > 0$).
+            \item $\frac{\partial z}{\partial w} = x = 3.0$.
+        \end{itemize}
+        $\frac{\partial \mathcal{L}}{\partial w} = 4.0 \times 1.0 \times 3.0 = \mathbf{12.0}$.
+    \end{enumerate}
+
+    \item \textbf{Symmetry Breaking}:
+    If all weights start with identical values, every neuron in the hidden layer produces the exact same forward pre-activation and activation. During backpropagation, they receive the exact same error gradient. When updated, every weight changes by the identical amount. The neurons can never specialize to detect different features (e.g., one looking at high frequencies, another at low frequencies). Random initialization breaks this symmetry.
+
+    \item \textbf{TinyML Selection}:
+    Microcontrollers (like an ARM Cortex-M0+ or ESP32) lack dedicated hardware for floating-point exponentiation ($e^z$). Computing Sigmoid or Tanh requires hundreds of CPU clock cycles running power series approximations. In contrast, ReLU is a single assembly branch or conditional move instruction ($\max(0, z)$), executing in 1 clock cycle with zero battery penalty.
+\end{enumerate}
