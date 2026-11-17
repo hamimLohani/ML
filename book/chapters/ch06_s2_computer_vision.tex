@@ -1,0 +1,581 @@
+% FILE: chapters/ch06_s2_computer_vision.tex
+\section{Computer Vision}\label{sec:computer_vision}
+
+In Chapter~\ref{ch:deep_learning}, we studied the mathematical mechanics of Convolutional Neural Networks (CNNs) and Vision Transformers: sliding kernels, pooling, spatial feature hierarchies, and attention maps. In those early foundational examples, our task was primarily \textbf{image classification}: assigning a single categorical label to an entire image (for example, determining whether an inspection photo contains a ``defective'' or ``healthy'' machine component).
+
+However, in real-world Internet of Things (IoT) systems, autonomous mobile robots (AMRs), automated optical inspection (AOI), and edge video analytics, a single global label is rarely sufficient:
+\begin{itemize}
+    \item A robotic fruit-harvesting arm cannot pick an apple simply by knowing that an apple exists somewhere in its camera's field of view. It needs to know the exact spatial coordinates $[x, y, z]$ of the fruit's center, its width, and its boundary to guide its pneumatic gripper without bruising the branch.
+    \item An automated industrial sorting line inspecting printed circuit boards (PCBs) must identify, count, and pinpoint every missing resistor, bridge solder joint, and misaligned capacitor on a board simultaneously.
+    \item An autonomous warehouse drone navigating between aisles must distinguish between the floor (drivable space), inventory pallets (obstacles), and human workers (dynamic hazards) on a continuous, pixel-by-pixel basis.
+\end{itemize}
+
+These advanced visual requirements give rise to the three core disciplines of modern \textbf{Computer Vision}: \textbf{Image Classification}, \textbf{Object Detection}, and \textbf{Semantic Segmentation}. In this section, we study how these tasks are formulated, explore real-time single-stage detectors (focusing on the architecture and mechanics of YOLO), examine pixel-level segmentation with U-Net, and learn how to optimize visual perception pipelines for microcontrollers and edge neural accelerators.
+
+% ==============================================================================
+% 1. THE COMPUTER VISION SPECTRUM
+% ==============================================================================
+\subsection{The Vision Spectrum: Classification, Detection, and Segmentation}\label{subsec:vision_spectrum}
+
+Computer vision tasks exist on a spectrum of increasing spatial granularity:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    box/.style={rectangle, draw=gray!70, fill=gray!5, rounded corners=2mm, thick, minimum width=3.4cm, minimum height=2.2cm, align=center},
+    bbox/.style={rectangle, draw=warningred, thick, dashed, minimum width=1.6cm, minimum height=1.1cm},
+    seg/.style={ellipse, draw=analogygreen!80, fill=analogygreen!20, thick, minimum width=1.4cm, minimum height=0.9cm}
+]
+    % 1. Classification
+    \node[box] (c1) at (0, 0) {};
+    \node[draw=keyideablue, fill=keyideablue!20, circle, minimum size=0.9cm] at (0, 0.2) {};
+    \node[font=\footnotesize\bfseries\sffamily, text=keyideablue] at (0, -0.6) {Class: Motor};
+    \node[above=0.15cm of c1, font=\small\bfseries\sffamily] {1. Classification};
+
+    % 2. Object Detection
+    \node[box] (c2) at (4.5, 0) {};
+    \node[draw=keyideablue, fill=keyideablue!20, circle, minimum size=0.7cm] at (4.0, 0.2) {};
+    \node[draw=iotpurple, fill=iotpurple!20, rectangle, minimum size=0.6cm] at (5.0, -0.1) {};
+    \node[bbox, minimum width=1.1cm, minimum height=1.1cm] at (4.0, 0.2) {};
+    \node[bbox, draw=iotpurple, minimum width=0.9cm, minimum height=0.9cm] at (5.0, -0.1) {};
+    \node[font=\tiny\sffamily, text=warningred] at (4.0, 0.9) {Motor: 0.95};
+    \node[font=\tiny\sffamily, text=iotpurple] at (5.0, -0.7) {Valve: 0.88};
+    \node[above=0.15cm of c2, font=\small\bfseries\sffamily] {2. Object Detection};
+
+    % 3. Semantic Segmentation
+    \node[box] (c3) at (9.0, 0) {};
+    \node[seg] at (8.7, 0.2) {};
+    \node[ellipse, draw=iotpurple!80, fill=iotpurple!20, thick, minimum width=1.1cm, minimum height=0.8cm] at (9.4, -0.2) {};
+    \node[font=\footnotesize\bfseries\sffamily, text=analogygreen!80!black] at (9.0, -0.8) {Pixel-Level Masks};
+    \node[above=0.15cm of c3, font=\small\bfseries\sffamily] {3. Segmentation};
+\end{tikzpicture}
+\caption{The three primary tiers of computer vision: single-label classification (left), multi-object bounding box detection (center), and fine pixel-level mask segmentation (right).}\label{fig:cv_spectrum}
+\end{figure}
+
+\begin{keyidea}[Granularity of Visual Predictions]
+\begin{enumerate}
+    \item \textbf{Image Classification}: Predicts \emph{what} is in the image (one categorical class label for the whole image).
+    \item \textbf{Object Detection}: Predicts \emph{what} and \emph{where} (multiple bounding boxes, each with a class label and confidence score).
+    \item \textbf{Semantic Segmentation}: Predicts the category of \emph{every individual pixel} (dense pixel classification, creating boundary masks).
+\end{enumerate}
+\end{keyidea}
+
+\paragraph{Classification on Edge Devices}
+Standard deep CNNs (like ResNet-50) have over 25 million parameters and require billions of floating-point operations (FLOPs) per image, making them unviable for sub-watt microcontrollers. 
+
+For edge classification, engineers rely on \textbf{MobileNet} architectures (Howard et al., Google). MobileNet replaces standard $3 \times 3$ convolutions with \textbf{Depthwise Separable Convolutions}:
+\begin{enumerate}
+    \item \textbf{Depthwise Convolution}: A single $3 \times 3$ filter is applied to each input channel separately (capturing spatial features without mixing channels).
+    \item \textbf{Pointwise Convolution}: A $1 \times 1$ convolution is applied across all channels (mixing channel information).
+\end{enumerate}
+This factorization slashes computational cost and parameters by \textbf{$8\times$ to $9\times$} with only a minor $1\%$ drop in top-1 accuracy!
+
+% ==============================================================================
+% 2. OBJECT DETECTION: FROM TWO-STAGE TO ONE-STAGE
+% ==============================================================================
+\subsection{Object Detection: Two-Stage vs One-Stage Detectors}\label{subsec:detection_paradigms}
+
+\paragraph{Why Object Detection is Hard}
+In classification, the output is a fixed-size vector of class probabilities (e.g., 10 classes). In object detection:
+\begin{itemize}
+    \item An image may contain \textbf{zero, one, or thirty} objects. The output size is dynamic.
+    \item Objects appear at \textbf{unpredictable aspect ratios and scales} (a bolt can be close to the lens or far away).
+    \item The model must simultaneously solve two distinct mathematical tasks: \textbf{classification} (what is the object?) and \textbf{regression} (where are the box corners?).
+\end{itemize}
+
+\paragraph{Two-Stage Detectors (R-CNN Family)}
+Early deep object detectors (Faster R-CNN, Mask R-CNN) decoupled the problem into two sequential steps:
+\begin{enumerate}
+    \item \textbf{Stage 1: Region Proposal}: A Region Proposal Network (RPN) scans feature maps and identifies roughly 300 to 2,000 candidate bounding boxes that likely contain objects.
+    \item \textbf{Stage 2: Classification and Refinement}: Each proposed crop is cropped, resized, and passed through a classification and bounding-box regression network.
+\end{enumerate}
+While two-stage detectors achieve high accuracy, running hundreds of sub-crops through neural networks is computationally heavy: they operate at 5 to 15 frames per second (FPS) on expensive desktop GPUs and cannot run on edge microcontrollers.
+
+\paragraph{One-Stage Detectors (YOLO and SSD)}
+To achieve true real-time performance on constrained hardware, Joseph Redmon, Santosh Divvala, Ross Girshick, and Ali Farhadi introduced \textbf{YOLO (You Only Look Once)} in 2016. 
+
+Instead of generating candidate proposals and evaluating each one separately, one-stage detectors frame object detection as a \textbf{single regression problem}. A single neural network takes the full input image, passes it through convolutional layers once, and predicts bounding boxes and class probabilities across all spatial locations simultaneously.
+
+% ==============================================================================
+% 3. THE YOLO ARCHITECTURE IN DEPTH
+% ==============================================================================
+\subsection{The YOLO (You Only Look Once) Architecture}\label{subsec:yolo}
+
+\begin{analogy}[The Panoramic Factory Inspector]
+Imagine two quality-control inspectors inspecting an electronics assembly line:
+\begin{itemize}
+    \item \textbf{The Two-Stage Inspector}: Uses a magnifying glass to search for suspected areas. They mark 50 candidate spots with post-it notes. Then they walk up to each post-it note, examine the component, and write down an assessment. It takes 2 minutes per board.
+    \item \textbf{The YOLO Inspector}: Stands back and views the entire board in a single glance. They mentally overlay an invisible $7 \times 7$ grid across the board. In one fast visual sweep, they immediately mark every defective component, its location, and its category. The inspection takes 30 milliseconds.
+\end{itemize}
+\end{analogy}
+
+\paragraph{The Grid Cell Formulation}
+YOLO divides the input image into an $S \times S$ grid (e.g., $S = 7, 13$, or $19$).
+\begin{itemize}
+    \item If the physical center of an object falls inside a specific grid cell, \textbf{that specific grid cell is responsible for detecting that object}.
+    \item Each grid cell predicts $B$ bounding boxes (typically $B = 2$ or $3$ anchor shapes).
+    \item For each bounding box, the network outputs five scalar predictions:
+    \begin{equation}
+    \mathbf{b} = [t_x, t_y, t_w, t_h, c]\label{eq:yolo_box_tuple}
+    \end{equation}
+    where:
+    \begin{itemize}
+        \item $(t_x, t_y)$ are the coordinates of the center of the box, relative to the bounds of the grid cell (normalized to $[0, 1]$ via the sigmoid function $\sigma$).
+        \item $(t_w, t_h)$ are the width and height of the box, relative to the full image dimensions (or exponential offsets relative to pre-defined anchor boxes).
+        \item $c \in [0, 1]$ is the \textbf{Objectness Confidence Score}. It reflects how confident the model is that an object exists in that box, multiplied by the predicted overlap with the ground truth:
+        \begin{equation}
+        c = P(\text{Object}) \times \operatorname{IoU}_{\text{pred}}^{\text{truth}}\label{eq:objectness}
+        \end{equation}
+    \end{itemize}
+    \item In addition, each cell predicts $C$ conditional class probabilities $P(\text{Class}_k \mid \text{Object})$.
+\end{itemize}
+
+The final output tensor of the network has shape:
+\begin{equation}
+\mathbf{Y} \in \mathbb{R}^{S \times S \times (B \times 5 + C)}\label{eq:yolo_tensor_shape}
+\end{equation}
+For a $7 \times 7$ grid, $B = 2$ boxes, and $C = 20$ classes (PASCAL VOC), the output tensor is $7 \times 7 \times (2 \times 5 + 20) = 7 \times 7 \times 30 = 1{,}470$ numbers. The entire image is evaluated in one single forward pass!
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.85,
+    grid_cell/.style={rectangle, draw=gray!50, minimum size=0.9cm},
+    active_cell/.style={rectangle, draw=keyideablue, fill=keyideablue!20, thick, minimum size=0.9cm},
+    bbox_pred/.style={rectangle, draw=warningred, thick, rounded corners=1mm}
+]
+    % 7x7 Grid
+    \node[font=\bfseries\sffamily] at (3.15, 3.8) {Input Image with $S \times S$ Grid ($7 \times 7$)};
+    \foreach \r in {0,1,2,3,4,5,6} {
+        \foreach \c in {0,1,2,3,4,5,6} {
+            \node[grid_cell] (g\r\c) at (\c*0.9, 3.15 - \r*0.9) {};
+        }
+    }
+    
+    % Highlight active cell containing object center
+    \node[active_cell] at (g23) {};
+    \fill[warningred] (g23.center) circle (2pt) node[above right, font=\tiny\bfseries, text=warningred] {Center $(x, y)$};
+
+    % Draw object outline (e.g. industrial motor)
+    \draw[thick, draw=analogygreen!80, fill=analogygreen!10] (1.6, 1.8) rectangle (4.2, 0.4);
+    \node[font=\scriptsize\bfseries\sffamily, text=analogygreen!80!black] at (2.9, 1.5) {Ground Truth Object};
+
+    % Draw predicted bounding box
+    \draw[thick, draw=warningred, dashed] (1.4, 2.0) rectangle (4.4, 0.2);
+    \node[font=\tiny\bfseries\sffamily, text=warningred] at (2.9, 0.0) {Predicted Box: $[x, y, w, h, c]$};
+
+    % Arrow pointing to output vector
+    \draw[-{Stealth[length=2.5mm]}, thick, keyideablue] (6.5, 0.45) -- (8.2, 0.45);
+
+    % Output vector representation
+    \node[font=\bfseries\sffamily] at (9.8, 2.2) {Cell Output Vector};
+    \draw[thick, draw=gray!70, fill=gray!5] (8.8, -1.8) rectangle (10.8, 1.8);
+    \node[font=\scriptsize\sffamily] at (9.8, 1.4) {$t_x$ (Center X)};
+    \node[font=\scriptsize\sffamily] at (9.8, 0.9) {$t_y$ (Center Y)};
+    \node[font=\scriptsize\sffamily] at (9.8, 0.4) {$t_w$ (Width)};
+    \node[font=\scriptsize\sffamily] at (9.8, -0.1) {$t_h$ (Height)};
+    \node[font=\scriptsize\sffamily, text=warningred] at (9.8, -0.6) {$c$ (Confidence)};
+    \node[font=\scriptsize\sffamily] at (9.8, -1.2) {$P(\text{Class}_1)$};
+    \node[font=\scriptsize\sffamily] at (9.8, -1.5) {$\dots$};
+\end{tikzpicture}
+\caption{The YOLO Grid Formulation. The grid cell containing the object center predicts bounding box offsets, confidence, and class probabilities.}\label{fig:yolo_grid}
+\end{figure}
+
+\paragraph{Intersection over Union (IoU)}
+To measure how accurately a predicted bounding box $\mathbf{B}_{\text{pred}}$ matches a ground-truth box $\mathbf{B}_{\text{truth}}$, we use \textbf{Intersection over Union (IoU)} (also known as the Jaccard Index):
+\begin{equation}
+\operatorname{IoU}(\mathbf{B}_{\text{pred}}, \mathbf{B}_{\text{truth}}) = \frac{\operatorname{Area}(\mathbf{B}_{\text{pred}} \cap \mathbf{B}_{\text{truth}})}{\operatorname{Area}(\mathbf{B}_{\text{pred}} \cup \mathbf{B}_{\text{truth}})}\label{eq:iou_formula}
+\end{equation}
+where $\operatorname{Area}(\mathbf{B}_{\text{pred}} \cup \mathbf{B}_{\text{truth}}) = \operatorname{Area}(\mathbf{B}_{\text{pred}}) + \operatorname{Area}(\mathbf{B}_{\text{truth}}) - \operatorname{Area}(\mathbf{B}_{\text{pred}} \cap \mathbf{B}_{\text{truth}})$.
+\begin{itemize}
+    \item $\operatorname{IoU} = 1.0$: Perfect, exact overlap.
+    \item $\operatorname{IoU} \ge 0.50$: Standard historical benchmark for a ``correct'' detection.
+    \item $\operatorname{IoU} \ge 0.75$: Strict benchmark for high-precision robotic manipulation.
+\end{itemize}
+
+\begin{example}[Hand-Calculating Intersection over Union (IoU)]
+Let two bounding boxes be defined by their corner coordinates $[x_{\min}, y_{\min}, x_{\max}, y_{\max}]$ on a $100 \times 100$ image:
+\begin{align*}
+\mathbf{B}_{\text{truth}} &= [20, 20, 60, 60] \quad (\text{Width} = 40, \text{Height} = 40) \\
+\mathbf{B}_{\text{pred}} &= [30, 20, 70, 60] \quad (\text{Width} = 40, \text{Height} = 40)
+\end{align*}
+
+\textbf{Step 1: Compute Individual Box Areas}
+\begin{align*}
+\operatorname{Area}(\mathbf{B}_{\text{truth}}) &= (60 - 20) \times (60 - 20) = 40 \times 40 = \mathbf{1{,}600} \\
+\operatorname{Area}(\mathbf{B}_{\text{pred}}) &= (70 - 30) \times (60 - 20) = 40 \times 40 = \mathbf{1{,}600}
+\end{align*}
+
+\textbf{Step 2: Find the Intersection Rectangle}
+The intersection boundaries are defined by:
+\begin{align*}
+x_{\min}^{\text{inter}} &= \max(x_{\min}^{\text{truth}}, x_{\min}^{\text{pred}}) = \max(20, 30) = 30 \\
+y_{\min}^{\text{inter}} &= \max(y_{\min}^{\text{truth}}, y_{\min}^{\text{pred}}) = \max(20, 20) = 20 \\
+x_{\max}^{\text{inter}} &= \min(x_{\max}^{\text{truth}}, x_{\max}^{\text{pred}}) = \min(60, 70) = 60 \\
+y_{\max}^{\text{inter}} &= \min(y_{\max}^{\text{truth}}, y_{\max}^{\text{pred}}) = \min(60, 60) = 60
+\end{align*}
+Compute intersection dimensions and area:
+\begin{align*}
+\text{Width}_{\text{inter}} &= \max(0, 60 - 30) = 30 \\
+\text{Height}_{\text{inter}} &= \max(0, 60 - 20) = 40 \\
+\operatorname{Area}(\text{Intersection}) &= 30 \times 40 = \mathbf{1{,}200}
+\end{align*}
+
+\textbf{Step 3: Compute Union Area}
+\begin{align*}
+\operatorname{Area}(\text{Union}) &= \operatorname{Area}(\mathbf{B}_{\text{truth}}) + \operatorname{Area}(\mathbf{B}_{\text{pred}}) - \operatorname{Area}(\text{Intersection}) \\
+                                  &= 1{,}600 + 1{,}600 - 1{,}200 = 3{,}200 - 1{,}200 = \mathbf{2{,}000}
+\end{align*}
+
+\textbf{Step 4: Compute IoU}
+\begin{equation*}
+\operatorname{IoU} = \frac{1{,}200}{2{,}000} = \frac{12}{20} = \mathbf{0.60} \quad (60\%)
+\end{equation*}
+Since $\operatorname{IoU} = 0.60 \ge 0.50$, this detection satisfies the standard PASCAL VOC criterion for a successful true positive.
+\end{example}
+
+\paragraph{Post-Processing: Non-Maximum Suppression (NMS)}
+Because multiple adjacent grid cells often detect the same physical object with slight offsets, a raw YOLO forward pass produces multiple overlapping bounding boxes around each object. To prune duplicates, we run \textbf{Non-Maximum Suppression (NMS)}:
+\begin{enumerate}
+    \item Discard all boxes with confidence score below a detection threshold (e.g., $c < 0.25$).
+    \item Select the remaining box with the highest confidence score and save it to the final detection list.
+    \item Calculate the IoU between this selected box and all remaining candidate boxes.
+    \item Discard any candidate box that has an $\operatorname{IoU} > \text{threshold}_{\text{NMS}}$ (typically $0.45$).
+    \item Repeat steps 2--4 until no candidate boxes remain.
+\end{enumerate}
+
+% ==============================================================================
+% 4. SEGMENTATION BASICS: U-NET AND PIXEL MASKS
+% ==============================================================================
+\subsection{Segmentation Basics: U-Net and Pixel-Level Classification}\label{subsec:segmentation}
+
+While object detection draws rectangular bounding boxes, many edge applications require knowing the \textbf{exact physical boundary} of an object. For instance, a drone inspecting a concrete wind-turbine tower must measure the exact square millimeters of surface crack erosion, not just draw a loose box around it.
+
+\paragraph{Semantic vs Instance Segmentation}
+\begin{itemize}
+    \item \textbf{Semantic Segmentation}: Assigns every pixel a category label (e.g., ``crack'', ``rust'', ``background''). It does not differentiate between separate instances of the same object.
+    \item \textbf{Instance Segmentation}: Distinguishes between separate instances (e.g., labeling Crack \#1 and Crack \#2 as distinct entities).
+\end{itemize}
+
+\paragraph{The U-Net Architecture}
+Introduced in 2015 by Olaf Ronneberger, Philipp Fischer, and Thomas Brox for biomedical image segmentation, the \textbf{U-Net} is the premier architecture for dense pixel-level prediction.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.82,
+    enc_block/.style={rectangle, draw=keyideablue, fill=keyideablue!20, thick, minimum width=1.4cm, minimum height=0.7cm, font=\scriptsize\sffamily\bfseries},
+    dec_block/.style={rectangle, draw=analogygreen, fill=analogygreen!20, thick, minimum width=1.4cm, minimum height=0.7cm, font=\scriptsize\sffamily\bfseries},
+    pool/.style={-{Stealth[length=2.5mm]}, draw=warningred, thick},
+    up/.style={-{Stealth[length=2.5mm]}, draw=analogygreen!80!black, thick},
+    skip/.style={-{Stealth[length=2mm]}, draw=keyideablue!80, dashed, thick}
+]
+    % Contracting Path (Encoder - Left side)
+    \node[enc_block] (e1) at (0, 3) {Conv $3 \times 3$\\($H \times W$)};
+    \node[enc_block] (e2) at (1.8, 1.8) {Conv $3 \times 3$\\($\frac{H}{2} \times \frac{W}{2}$)};
+    \node[enc_block] (e3) at (3.6, 0.6) {Conv $3 \times 3$\\($\frac{H}{4} \times \frac{W}{4}$)};
+    \node[enc_block, fill=iotpurple!20, draw=iotpurple] (b) at (5.4, -0.6) {Bottleneck\\($\frac{H}{8} \times \frac{W}{8}$)};
+
+    % Expanding Path (Decoder - Right side)
+    \node[dec_block] (d3) at (7.2, 0.6) {UpConv\\($\frac{H}{4} \times \frac{W}{4}$)};
+    \node[dec_block] (d2) at (9.0, 1.8) {UpConv\\($\frac{H}{2} \times \frac{W}{2}$)};
+    \node[dec_block] (d1) at (10.8, 3) {UpConv\\($H \times W$)};
+
+    % Downsampling connections (MaxPool)
+    \draw[pool] (e1.south) |- (e2.west) node[near start, left, font=\tiny\text=warningred] {MaxPool};
+    \draw[pool] (e2.south) |- (e3.west) node[near start, left, font=\tiny\text=warningred] {MaxPool};
+    \draw[pool] (e3.south) |- (b.west) node[near start, left, font=\tiny\text=warningred] {MaxPool};
+
+    % Upsampling connections
+    \draw[up] (b.east) -| (d3.south) node[near start, right, font=\tiny\text=analogygreen] {UpSample};
+    \draw[up] (d3.east) -| (d2.south) node[near start, right, font=\tiny\text=analogygreen] {UpSample};
+    \draw[up] (d2.east) -| (d1.south) node[near start, right, font=\tiny\text=analogygreen] {UpSample};
+
+    % Skip Connections
+    \draw[skip] (e1) -- node[above, font=\tiny\bfseries] {Skip Connection (Copy \& Concat)} (d1);
+    \draw[skip] (e2) -- (d2);
+    \draw[skip] (e3) -- (d3);
+
+    % Input and Output
+    \node[left=0.6cm of e1, font=\footnotesize\bfseries\sffamily, align=center] {Input\\Image};
+    \node[right=0.6cm of d1, font=\footnotesize\bfseries\sffamily, align=center] {Pixel Mask\\Prediction};
+\end{tikzpicture}
+\caption{The U-Net Architecture. The encoder extracts semantic context; the decoder restores spatial resolution; skip connections pass high-resolution spatial details directly across.}\label{fig:unet}
+\end{figure}
+
+\begin{keyidea}[The Magic of Skip Connections in U-Net]
+In a standard encoder-decoder network, repeated pooling operations downsample the image, destroying fine spatial details (such as thin hairline cracks or exact object boundaries). 
+
+U-Net solves this by adding \textbf{long skip connections} that copy high-resolution feature maps directly from each encoder level across to the corresponding decoder level. The decoder combines high-level semantic context (``this is a crack'') with sharp low-level spatial geometry (``the boundary sits exactly at pixel row 42'').
+\end{keyidea}
+
+\paragraph{Loss Functions for Segmentation: The Class Imbalance Problem}
+In surface defect detection, a crack may occupy only $100$ pixels on a $1{,}000 \times 1{,}000$ image ($0.01\%$ of the total pixels). If we train with standard Binary Cross-Entropy (BCE), a model that predicts ``healthy background'' for every single pixel achieves \textbf{$99.99\%$ accuracy} while being completely useless!
+
+To solve this extreme imbalance, segmentation models use the \textbf{Dice Loss}:
+\begin{equation}
+\mathcal{L}_{\text{Dice}} = 1 - \frac{2 \sum_{i=1}^N p_i y_i + \epsilon}{\sum_{i=1}^N p_i + \sum_{i=1}^N y_i + \epsilon}\label{eq:dice_loss}
+\end{equation}
+where $p_i \in [0, 1]$ is the predicted probability for pixel $i$, $y_i \in \{0, 1\}$ is the ground-truth mask, and $\epsilon$ prevents division by zero. Dice Loss directly optimizes the overlap (F1-score) of the target mask, ignoring the overwhelming sea of background pixels.
+
+% ==============================================================================
+% 5. CODE WALKTHROUGH: IOU AND NMS IN PYTORCH
+% ==============================================================================
+\subsection{PyTorch Implementation: IoU and Non-Maximum Suppression}\label{subsec:pytorch_nms}
+
+Let us build a complete, self-contained PyTorch script implementing the core algorithms that power every real-time object detector: \textbf{Vectorized Intersection over Union (IoU)} and \textbf{Non-Maximum Suppression (NMS)}.
+
+\paragraph{The PyTorch Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+
+def compute_iou(boxes1, boxes2):
+    """
+    Computes pairwise Intersection over Union (IoU) between two sets of boxes.
+    Boxes format: [x1, y1, x2, y2]
+    """
+    # 1. Determine intersection coordinates
+    x1 = torch.max(boxes1[:, 0].unsqueeze(1), boxes2[:, 0].unsqueeze(0))
+    y1 = torch.max(boxes1[:, 1].unsqueeze(1), boxes2[:, 1].unsqueeze(0))
+    x2 = torch.min(boxes1[:, 2].unsqueeze(1), boxes2[:, 2].unsqueeze(0))
+    y2 = torch.min(boxes1[:, 3].unsqueeze(1), boxes2[:, 3].unsqueeze(0))
+    
+    # 2. Calculate intersection area
+    intersection = torch.clamp(x2 - x1, min=0) * torch.clamp(y2 - y1, min=0)
+    
+    # 3. Calculate individual box areas
+    area1 = (boxes1[:, 2] - boxes1[:, 0]) * (boxes1[:, 3] - boxes1[:, 1])
+    area2 = (boxes2[:, 2] - boxes2[:, 0]) * (boxes2[:, 3] - boxes2[:, 1])
+    
+    # 4. Compute union and IoU
+    union = area1.unsqueeze(1) + area2.unsqueeze(0) - intersection
+    iou = intersection / torch.clamp(union, min=1e-6)
+    return iou
+
+def non_max_suppression(boxes, scores, iou_threshold=0.5):
+    """
+    Applies Non-Maximum Suppression (NMS) to eliminate overlapping redundant boxes.
+    """
+    # Sort boxes in descending order of confidence score
+    sorted_indices = torch.argsort(scores, descending=True)
+    keep_boxes = []
+    
+    while sorted_indices.numel() > 0:
+        # Pick the box with the highest remaining score
+        current = sorted_indices[0].item()
+        keep_boxes.append(current)
+        
+        if sorted_indices.numel() == 1:
+            break
+            
+        # Compute IoU between current highest box and all other remaining boxes
+        current_box = boxes[current].unsqueeze(0)
+        remaining_boxes = boxes[sorted_indices[1:]]
+        ious = compute_iou(current_box, remaining_boxes).squeeze(0)
+        
+        # Keep only candidate boxes whose IoU is BELOW the threshold
+        below_thresh_mask = ious < iou_threshold
+        # Offset indices by 1 because we sliced sorted_indices[1:]
+        sorted_indices = sorted_indices[1:][below_thresh_mask]
+        
+    return keep_boxes
+
+# Verification Test: Simulated detections on a conveyor belt
+# Three bounding boxes: Box 0 and Box 1 overlap heavily (same part); Box 2 is separate
+boxes = torch.tensor([
+    [20.0, 20.0, 60.0, 60.0],  # Box 0: Confidence 0.92
+    [22.0, 21.0, 61.0, 59.0],  # Box 1: Confidence 0.85 (duplicate of Box 0)
+    [75.0, 70.0, 95.0, 90.0]   # Box 2: Confidence 0.88 (distinct component)
+])
+scores = torch.tensor([0.92, 0.85, 0.88])
+
+# Pairwise IoU between Box 0 and Box 1
+pair_iou = compute_iou(boxes[0:1], boxes[1:2]).item()
+print(f"Pairwise IoU between Box 0 and Box 1: {pair_iou:.4f}")
+
+# Execute NMS
+kept_indices = non_max_suppression(boxes, scores, iou_threshold=0.5)
+print(f"Indices kept after NMS: {kept_indices}")
+for idx in kept_indices:
+    print(f"  Kept Box {idx}: {boxes[idx].tolist()} with Score {scores[idx]:.2f}")
+\end{lstlisting}
+
+\paragraph{Expected Output}
+\begin{lstlisting}[style=outputstyle]
+Pairwise IoU between Box 0 and Box 1: 0.8647
+Indices kept after NMS: [0, 2]
+  Kept Box 0: [20.0, 20.0, 60.0, 60.0] with Score 0.92
+  Kept Box 2: [75.0, 70.0, 95.0, 90.0] with Score 0.88
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Breakdown}
+\begin{itemize}
+    \item \textbf{Lines 8--11}: \code{x1 = torch.max(boxes1[:, 0].unsqueeze(1), boxes2[:, 0].unsqueeze(0))}. Uses PyTorch broadcasting to compute the pairwise intersection corners for all pairs of boxes simultaneously without Python \code{for} loops.
+    \item \textbf{Line 14}: \code{torch.clamp(x2 - x1, min=0)} ensures that if two boxes do not overlap, their intersection length evaluates to $0.0$ rather than a negative number.
+    \item \textbf{Line 30}: \code{sorted_indices = torch.argsort(scores, descending=True)}. Orders the candidate boxes from most confident to least confident.
+    \item \textbf{Lines 43--45}: \code{ious < iou_threshold}. Discards Box 1 because its overlap with Box 0 is $86.5\%$ (exceeding the $0.50$ threshold). Box 2 is preserved because its overlap is $0.0\%$.
+\end{itemize}
+
+% ==============================================================================
+% 6. IOT & TINYML CONNECTION
+% ==============================================================================
+\subsection{ML for IoT and Edge: Embedded Vision on Microcontrollers}\label{subsec:iot_vision}
+
+\begin{iotbox}[The Edge Vision Reality: Hardware vs Frame Rate]
+Running real-time computer vision on embedded hardware involves choosing the right compute tier:
+\begin{itemize}
+    \item \textbf{Tier 1: Microcontrollers (ESP32-CAM, STM32H7, Raspberry Pi Pico)}:
+    \begin{itemize}
+        \item 256 KB to 8 MB RAM, 160 to 480 MHz CPU, no GPU.
+        \item Can run \textbf{FOMO} or compact MobileNet classifiers at $5\text{--}15\text{ FPS}$ on $96 \times 96$ grayscale images.
+        \item Cannot run full YOLO architectures due to SRAM memory limits.
+    \end{itemize}
+    \item \textbf{Tier 2: Edge Neural Accelerators (Kendryte K210, Coral Edge TPU, Arm Ethos)}:
+    \begin{itemize}
+        \item Dedicated hardware NPU ($0.5$ to $4\text{ TOPS}$, $<2\text{ Watts}$).
+        \item Runs \textbf{Tiny-YOLO} or \textbf{MobileNet-SSD} at $30\text{--}60\text{ FPS}$ on $320 \times 240$ color video.
+    \end{itemize}
+\end{itemize}
+\end{iotbox}
+
+\paragraph{FOMO: Faster Objects, More Objects on Microcontrollers}
+Developed by Edge Impulse for microcontrollers like the ESP32, \textbf{FOMO} bridges the gap between image classification and object detection:
+\begin{itemize}
+    \item \textbf{The Insight}: On a microcontroller, estimating bounding box width and height $(w, h)$ consumes excessive compute and RAM. But for counting items on a conveyor belt or detecting bee entries at a beehive, \textbf{you only need the $(x, y)$ centroid coordinates}!
+    \item FOMO takes a MobileNet backbone, removes the dense classification head, and outputs a coarse grid of class probabilities.
+    \item Instead of drawing boxes, FOMO marks centroids. It uses \textbf{$30\times$ less memory} than MobileNet-SSD, fitting into under 150 KB of RAM and running at 30 FPS on an ESP32!
+\end{itemize}
+
+% ==============================================================================
+% 7. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\subsection{Common Mistakes and Misconceptions}\label{subsec:mistakes}
+
+\begin{warning}[Five Pitfalls in Edge Computer Vision]
+\begin{enumerate}
+    \item \textbf{Confusing Box Coordinate Formats}: Mixing up the two standard bounding-box formats:
+    \begin{itemize}
+        \item \textbf{Corner format}: $[x_{\min}, y_{\min}, x_{\max}, y_{\max}]$ (used by torchvision and IoU calculation).
+        \item \textbf{Center-Dimension format}: $[x_{\text{center}}, y_{\text{center}}, \text{width}, \text{height}]$ (used by YOLO).
+    \end{itemize}
+    Feeding center coordinates into an algorithm expecting corner coordinates produces nonsensical negative areas and inverted boxes.
+    \item \textbf{Deploying Full YOLO to Raw Microcontrollers}: Attempting to flash full YOLOv5 or YOLOv8 onto an ESP32. Even the smallest YOLOv8n model has 3.2 million parameters ($\approx 12.8\text{ MB}$ in Float32) and requires over 20 MB of intermediate activation memory during inference, immediately crashing the microcontroller. Microcontrollers require dedicated TinyML architectures like FOMO or INT8 MobileNet.
+    \item \textbf{Tuning NMS Thresholds Incorrectly}: Setting the NMS IoU threshold too low (e.g., $0.10$). If two distinct physical objects overlap slightly (like two apples resting side by side in a crate), an aggressive NMS threshold suppresses the second apple, leading to under-counting.
+    \item \textbf{Evaluating Segmentation with Pixel Accuracy on Imbalanced Data}: Reporting $99\%$ pixel accuracy on a dataset where the defect occupies $1\%$ of the surface area. Always evaluate segmentation models using \textbf{Mean IoU (mIoU)} or the \textbf{Dice Coefficient}.
+    \item \textbf{Overlooking Camera Motion Blur on Moving Conveyors}: Training a high-accuracy vision model on sharp, static photos, and then deploying it to an edge camera mounted over a vibrating, high-speed conveyor belt. Shutter speed and motion blur degrade features. Always train with motion-blur and exposure data augmentations.
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 8. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:takeaways}
+
+\begin{takeaways}[Core Principles of Computer Vision]
+\begin{itemize}
+    \item \textbf{The Computer Vision Spectrum}: Classification assigns a single global label; Object Detection identifies bounding boxes $[x, y, w, h, c]$; Segmentation classifies every individual pixel.
+    \item \textbf{One-Stage Speed Advantage}: YOLO evaluates an image in a single forward pass by dividing it into an $S \times S$ grid, enabling real-time detection at 30+ FPS.
+    \item \textbf{IoU and NMS}: Intersection over Union (IoU) measures spatial overlap accuracy; Non-Maximum Suppression (NMS) prunes redundant overlapping detections.
+    \item \textbf{U-Net Skip Connections}: U-Net passes high-resolution spatial feature maps directly from encoder stages to decoder stages, preserving precise pixel boundaries.
+    \item \textbf{TinyML Edge Vision}: On resource-constrained microcontrollers (ESP32), centroid tracking (FOMO) and depthwise separable convolutions (MobileNet) replace full bounding-box regression to satisfy strict SRAM limits.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 9. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:check_yourself}
+
+\begin{checkyourself}[Practice Questions and Calculations]
+\begin{enumerate}
+    \item \textbf{Intersection over Union (IoU) Calculation}: Two bounding boxes are given in corner coordinates $[x_1, y_1, x_2, y_2]$:
+    \begin{equation*}
+    \mathbf{B}_A = [10, 10, 50, 50], \quad \mathbf{B}_B = [30, 10, 70, 50]
+    \end{equation*}
+    Calculate the exact Intersection over Union (IoU) between Box A and Box B.
+    \item \textbf{YOLO Output Tensor Dimensioning}: An edge detector divides an image into a $13 \times 13$ grid. Each grid cell predicts $B = 3$ bounding boxes. The system must detect 5 distinct industrial component classes. Exactly how many scalar values are contained in the final output tensor of this network?
+    \item \textbf{Non-Maximum Suppression Logic}: Three bounding boxes predict the same object class with confidences $c_1 = 0.90, c_2 = 0.80, c_3 = 0.70$. The pairwise IoUs are $\operatorname{IoU}(1, 2) = 0.65$ and $\operatorname{IoU}(1, 3) = 0.20$. If the NMS threshold is set to $\tau_{\text{NMS}} = 0.50$, which boxes are kept and which are suppressed?
+    \item \textbf{Dice Coefficient Calculation}: In a $10 \times 10$ binary segmentation mask, the ground-truth crack occupies 8 pixels. The model predicts 10 positive pixels, of which 6 overlap with the ground truth. Calculate the Dice coefficient.
+    \item \textbf{Depthwise Separable Convolution Efficiency}: A standard $3 \times 3$ convolution takes an input tensor with 64 channels and produces 64 output channels. A depthwise separable convolution performs a $3 \times 3$ depthwise convolution followed by a $1 \times 1$ pointwise convolution. Exactly how many weights does each method require (ignoring biases), and what is the percentage parameter reduction?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 10. ANSWERS
+% ==============================================================================
+\subsection*{Answers}\label{subsec:answers}
+
+\begin{enumerate}
+    \item \textbf{Intersection over Union (IoU) Calculation}:
+    \begin{itemize}
+        \item Individual Box Areas:
+        \begin{align*}
+        \operatorname{Area}(\mathbf{B}_A) &= (50 - 10) \times (50 - 10) = 40 \times 40 = 1{,}600 \\
+        \operatorname{Area}(\mathbf{B}_B) &= (70 - 30) \times (50 - 10) = 40 \times 40 = 1{,}600
+        \end{align*}
+        \item Intersection Coordinates:
+        \begin{align*}
+        x_1^{\text{inter}} &= \max(10, 30) = 30, \quad y_1^{\text{inter}} = \max(10, 10) = 10 \\
+        x_2^{\text{inter}} &= \min(50, 70) = 50, \quad y_2^{\text{inter}} = \min(50, 50) = 50 \\
+        \text{Width} &= 50 - 30 = 20, \quad \text{Height} = 50 - 10 = 40 \\
+        \operatorname{Area}(\text{Intersection}) &= 20 \times 40 = \mathbf{800}
+        \end{align*}
+        \item Union Area:
+        \begin{equation*}
+        \operatorname{Area}(\text{Union}) = 1{,}600 + 1{,}600 - 800 = \mathbf{2{,}400}
+        \end{equation*}
+        \item IoU:
+        \begin{equation*}
+        \operatorname{IoU} = \frac{800}{2{,}400} = \frac{1}{3} \approx \mathbf{0.3333} \quad (33.3\%)
+        \end{equation*}
+    \end{itemize}
+
+    \item \textbf{YOLO Output Tensor Dimensioning}:
+    For each cell, the output contains:
+    \begin{equation*}
+    B \times 5 + C = (3 \times 5) + 5 = 15 + 5 = 20 \text{ values per cell}
+    \end{equation*}
+    Across the $13 \times 13$ spatial grid:
+    \begin{equation*}
+    \text{Total Tensor Size} = 13 \times 13 \times 20 = 169 \times 20 = \mathbf{3{,}380 \text{ scalar values}}
+    \end{equation*}
+
+    \item \textbf{Non-Maximum Suppression Logic}:
+    \begin{enumerate}
+        \item Step 1: Box 1 has the highest confidence ($0.90$). Box 1 is **kept**.
+        \item Step 2: Compare remaining boxes to Box 1:
+        \begin{itemize}
+            \item $\operatorname{IoU}(1, 2) = 0.65 > 0.50 \implies$ Box 2 is **suppressed (discarded)**.
+            \item $\operatorname{IoU}(1, 3) = 0.20 \le 0.50 \implies$ Box 3 is **retained**.
+        \end{itemize}
+        \item Step 3: Box 3 is the highest remaining box ($0.70$). Box 3 is **kept**.
+        \item Final result: Boxes **1 and 3 are kept**; Box 2 is eliminated.
+    \end{enumerate}
+
+    \item \textbf{Dice Coefficient Calculation}:
+    Using Equation~\eqref{eq:dice_loss}:
+    \begin{equation*}
+    \text{Dice} = \frac{2 |\mathbf{X} \cap \mathbf{Y}|}{|\mathbf{X}| + |\mathbf{Y}|} = \frac{2 \times 6}{8 + 10} = \frac{12}{18} = \frac{2}{3} \approx \mathbf{0.6667}
+    \end{equation*}
+
+    \item \textbf{Depthwise Separable Convolution Efficiency}:
+    Let $C_{\text{in}} = 64, C_{\text{out}} = 64, K = 3$.
+    \begin{itemize}
+        \item \textbf{Standard Convolution}:
+        \begin{equation*}
+        \text{Weights} = K \times K \times C_{\text{in}} \times C_{\text{out}} = 3 \times 3 \times 64 \times 64 = 9 \times 4{,}096 = \mathbf{36{,}864 \text{ weights}}
+        \end{equation*}
+        \item \textbf{Depthwise Separable Convolution}:
+        \begin{align*}
+        \text{Depthwise Weights} &= 3 \times 3 \times C_{\text{in}} = 9 \times 64 = 576 \\
+        \text{Pointwise Weights} &= 1 \times 1 \times C_{\text{in}} \times C_{\text{out}} = 1 \times 64 \times 64 = 4{,}096 \\
+        \text{Total Weights} &= 576 + 4{,}096 = \mathbf{4{,}672 \text{ weights}}
+        \end{align*}
+        \item \textbf{Percentage Reduction}:
+        \begin{equation*}
+        \text{Reduction} = \frac{36{,}864 - 4{,}672}{36{,}864} = \frac{32{,}192}{36{,}864} \approx \mathbf{87.3\%}
+        \end{equation*}
+        Depthwise separable convolution reduces parameters and compute by over $87\%$.
+    \end{itemize}
+\end{enumerate}

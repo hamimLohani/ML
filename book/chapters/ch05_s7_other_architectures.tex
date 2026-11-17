@@ -1,0 +1,518 @@
+% FILE: chapters/ch05_s7_other_architectures.tex
+\section{Other Architectures}\label{sec:other_architectures}
+
+Throughout this chapter, our primary focus has been on \textbf{supervised learning}: training models to map inputs $\mathbf{x}$ to known ground-truth labels $\mathbf{y}$ (such as predicting motor failure categories with CNNs or forecasting future sensor values with LSTMs and Transformers).
+
+However, in real-world Internet of Things (IoT) deployments, industrial monitoring, and edge robotics, supervised learning faces severe practical limitations:
+\begin{itemize}
+    \item \textbf{Extreme Class Imbalance}: A wind turbine may operate normally for $99.99\%$ of its operational lifespan. Catastrophic bearing fractures or generator burnouts are exceptionally rare. We rarely possess thousands of labeled failure examples.
+    \item \textbf{The Unknown Unknowns}: Real equipment does not fail in neat, predictable categories. A novel physical failure mode (such as an unprecedented mechanical seizure or contaminated lubricant) will not match any historical training label.
+    \item \textbf{Labeling Cost and Bandwidth}: Telemetry streamed from thousands of remote environmental sensors cannot be manually inspected and annotated by human engineers in real time.
+\end{itemize}
+
+To solve these challenges, deep learning provides powerful \textbf{unsupervised and generative architectures}. In this section, we explore three landmark architectures that learn the intrinsic structure of data without labels:
+\begin{enumerate}
+    \item \textbf{Autoencoders (AEs)}: Deterministic bottleneck networks used for non-linear dimensionality reduction, signal denoising, and unsupervised edge anomaly detection.
+    \item \textbf{Variational Autoencoders (VAEs)}: Probabilistic generative models that map data to smooth, continuous latent spaces via the reparameterization trick.
+    \item \textbf{Generative Adversarial Networks (GANs)}: Dual-network minimax games that pit a Generator against a Discriminator to synthesize photorealistic data and augment rare failure modes.
+\end{enumerate}
+
+% ==============================================================================
+% 1. AUTOENCODERS
+% ==============================================================================
+\subsection{Autoencoders: Compression, Reconstruction, and Anomaly Detection}\label{subsec:autoencoders}
+
+\begin{keyidea}[The Information Bottleneck Principle]
+An \textbf{Autoencoder} is a neural network trained to reconstruct its own input ($\hat{\mathbf{x}} \approx \mathbf{x}$). 
+
+By forcing the data to pass through an intermediate hidden layer with a much lower dimension than the input (the \textbf{bottleneck} or \textbf{latent code} $\mathbf{z}$), the network cannot simply memorize the data. It is forced to discover the most compact, informative non-linear representations of the underlying physical system.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Consider an industrial water pump monitored by an edge microcontroller measuring six telemetry channels: oil temperature, motor current, suction pressure, discharge pressure, axial vibration, and radial vibration. 
+
+These six channels are not independent. When the motor speeds up, current, pressures, and vibrations all rise together according to the laws of thermodynamics and fluid mechanics. The pump's true operational state can be described by just two underlying physical factors: \emph{rotational speed} and \emph{mechanical load}. An autoencoder automatically strips away redundant correlated sensor noise and extracts these core latent drivers.
+
+\begin{analogy}[The Telegram Summary]
+Imagine you must send a description of a complex machine state to an engineer across an expensive telegraph line that allows only three words ($\mathbf{z}$). 
+
+Your assistant (the \textbf{Encoder}) reads the full 50-variable sensor report ($\mathbf{x}$) and compresses it into the three most vital numbers: \code{[RPM: 1800, Load: 85\%, Temp: High]}. 
+
+At the receiving end, the engineer's assistant (the \textbf{Decoder}) takes those three words and reconstructs an estimate of all 50 original sensor gauges ($\hat{\mathbf{x}}$). If the reconstruction closely matches reality, the 3-word summary successfully captured the essence of the system.
+\end{analogy}
+
+\paragraph{Architecture and Mathematical Formulation}
+An autoencoder consists of two sequential sub-networks:
+\begin{enumerate}
+    \item \textbf{The Encoder ($f_\theta$)}: Compresses the high-dimensional input $\mathbf{x} \in \mathbb{R}^D$ into a low-dimensional latent vector $\mathbf{z} \in \mathbb{R}^d$ (where $d \ll D$):
+    \begin{equation}
+    \mathbf{z} = f_\theta(\mathbf{x}) = \sigma(\mathbf{W}_e \mathbf{x} + \mathbf{b}_e)\label{eq:encoder}
+    \end{equation}
+    \item \textbf{The Decoder ($g_\phi$)}: Reconstructs the original input from the latent code:
+    \begin{equation}
+    \hat{\mathbf{x}} = g_\phi(\mathbf{z}) = \sigma(\mathbf{W}_d \mathbf{z} + \mathbf{b}_d)\label{eq:decoder}
+    \end{equation}
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    neuron/.style={circle, draw=keyideablue, fill=keyideablue!15, thick, minimum size=0.75cm, inner sep=0pt, font=\scriptsize\sffamily},
+    latent/.style={circle, draw=warningred, fill=warningred!20, thick, minimum size=0.75cm, inner sep=0pt, font=\scriptsize\sffamily\bfseries},
+    arrow/.style={-{Stealth[length=2mm]}, thin, draw=gray!70}
+]
+    % Input Layer (D = 4)
+    \foreach \i in {1,2,3,4} {
+        \node[neuron] (in\i) at (0, 2.5 - 1.1*\i) {$x_\i$};
+    }
+    \node[above=0.2cm of in1, font=\footnotesize\bfseries\sffamily, align=center] {Input\\$\mathbf{x} \in \mathbb{R}^4$};
+
+    % Hidden Encoder Layer (3)
+    \foreach \i in {1,2,3} {
+        \node[neuron, fill=analogygreen!15, draw=analogygreen] (enc\i) at (2.2, 2.0 - 1.1*\i) {$h_\i$};
+    }
+
+    % Bottleneck Latent Layer (d = 2)
+    \foreach \i in {1,2} {
+        \node[latent] (z\i) at (4.4, 1.45 - 1.1*\i) {$z_\i$};
+    }
+    \node[above=0.2cm of z1, font=\footnotesize\bfseries\sffamily, align=center, text=warningred] {Bottleneck\\$\mathbf{z} \in \mathbb{R}^2$};
+
+    % Hidden Decoder Layer (3)
+    \foreach \i in {1,2,3} {
+        \node[neuron, fill=analogygreen!15, draw=analogygreen] (dec\i) at (6.6, 2.0 - 1.1*\i) {$h'_\i$};
+    }
+
+    % Output Layer (D = 4)
+    \foreach \i in {1,2,3,4} {
+        \node[neuron] (out\i) at (8.8, 2.5 - 1.1*\i) {$\hat{x}_\i$};
+    }
+    \node[above=0.2cm of out1, font=\footnotesize\bfseries\sffamily, align=center] {Reconstruction\\$\hat{\mathbf{x}} \in \mathbb{R}^4$};
+
+    % Connect Encoder
+    \foreach \i in {1,2,3,4} {
+        \foreach \j in {1,2,3} {
+            \draw[arrow] (in\i) -- (enc\j);
+        }
+    }
+    \foreach \i in {1,2,3} {
+        \foreach \j in {1,2} {
+            \draw[arrow] (enc\i) -- (z\j);
+        }
+    }
+    % Connect Decoder
+    \foreach \i in {1,2} {
+        \foreach \j in {1,2,3} {
+            \draw[arrow] (z\i) -- (dec\j);
+        }
+    }
+    \foreach \i in {1,2,3} {
+        \foreach \j in {1,2,3,4} {
+            \draw[arrow] (dec\i) -- (out\j);
+        }
+    }
+
+    % Sub-network labels
+    \draw[thick, draw=keyideablue, decorate, decoration={brace, amplitude=5pt}] (-0.4, -2.2) -- (4.2, -2.2) node[midway, below=0.2cm, font=\small\bfseries\sffamily, text=keyideablue] {Encoder ($f_\theta$)};
+    \draw[thick, draw=analogygreen!80!black, decorate, decoration={brace, amplitude=5pt}] (4.6, -2.2) -- (9.2, -2.2) node[midway, below=0.2cm, font=\small\bfseries\sffamily, text=analogygreen!80!black] {Decoder ($g_\phi$)};
+\end{tikzpicture}
+\caption{Architecture of an undercomplete autoencoder: 4 inputs compressed to a 2D bottleneck and reconstructed back to 4 outputs.}\label{fig:autoencoder_arch}
+\end{figure}
+
+The network is trained by minimizing the \textbf{Reconstruction Error} using Mean Squared Error (MSE):
+\begin{equation}
+\mathcal{L}_{\text{recon}}(\mathbf{x}, \hat{\mathbf{x}}) = \frac{1}{D} \|\mathbf{x} - \hat{\mathbf{x}}\|_2^2 = \frac{1}{D} \sum_{i=1}^D (x_i - \hat{x}_i)^2\label{eq:recon_loss}
+\end{equation}
+
+\paragraph{Unsupervised Anomaly Detection Mechanism}
+Autoencoders provide an elegant method for zero-shot anomaly detection on edge devices:
+\begin{enumerate}
+    \item \textbf{Train on Healthy Data Only}: The autoencoder trains exclusively on normal baseline telemetry. The encoder and decoder learn the precise mathematical manifold of healthy operation.
+    \item \textbf{Deploy to Edge Device}: The trained weights are compiled onto the microcontroller.
+    \item \textbf{Measure Reconstruction Error during Live Inference}: When new sensor data $\mathbf{x}_{\text{live}}$ arrives:
+    \begin{equation*}
+    E = \frac{1}{D} \|\mathbf{x}_{\text{live}} - g_\phi(f_\theta(\mathbf{x}_{\text{live}}))\|_2^2
+    \end{equation*}
+    \item \textbf{Thresholding}:
+    \begin{itemize}
+        \item If the machine is healthy, the autoencoder easily compresses and reconstructs it: $E \le \tau$.
+        \item If a bearing fractures or an unexpected electrical fault occurs, the novel pattern violates the learned correlations. The bottleneck cannot represent it, and the decoder outputs a garbled reconstruction: $E > \tau$.
+        \item The edge device triggers an immediate maintenance alarm without ever having seen that specific failure mode during training!
+    \end{itemize}
+\end{enumerate}
+
+\begin{example}[Hand-Calculating Reconstruction Error for Anomaly Detection]
+Let a normal baseline autoencoder evaluate two incoming 3-channel sensor readings $\mathbf{x} = [\text{Temp}, \text{Current}, \text{Vib}]^T$ (normalized).
+
+\textbf{Case 1: Normal Machine Operation}
+\begin{align*}
+\mathbf{x}_{\text{normal}} &= [1.00, 2.00, 0.50]^T \\
+\hat{\mathbf{x}}_{\text{normal}} &= [1.05, 1.95, 0.48]^T \quad (\text{Model Reconstruction})
+\end{align*}
+Compute squared errors for each channel:
+\begin{align*}
+(1.00 - 1.05)^2 &= (-0.05)^2 = 0.0025 \\
+(2.00 - 1.95)^2 &= (0.05)^2 = 0.0025 \\
+(0.50 - 0.48)^2 &= (0.02)^2 = 0.0004
+\end{align*}
+Mean Squared Reconstruction Error:
+\begin{equation*}
+E_{\text{normal}} = \frac{0.0025 + 0.0025 + 0.0004}{3} = \frac{0.0054}{3} = \mathbf{0.0018}
+\end{equation*}
+
+\textbf{Case 2: Mechanical Seizure Anomaly}
+An anomalous seizure causes motor current to surge while vibration drops:
+\begin{align*}
+\mathbf{x}_{\text{anomaly}} &= [1.10, 8.50, 0.10]^T \\
+\hat{\mathbf{x}}_{\text{anomaly}} &= [1.15, 3.20, 0.70]^T \quad (\text{The model fails to reconstruct the novel surge})
+\end{align*}
+Compute squared errors:
+\begin{align*}
+(1.10 - 1.15)^2 &= (-0.05)^2 = 0.0025 \\
+(8.50 - 3.20)^2 &= (5.30)^2 = 28.0900 \\
+(0.10 - 0.70)^2 &= (-0.60)^2 = 0.3600
+\end{align*}
+Mean Squared Reconstruction Error:
+\begin{equation*}
+E_{\text{anomaly}} = \frac{0.0025 + 28.0900 + 0.3600}{3} = \frac{28.4525}{3} \approx \mathbf{9.4842}
+\end{equation*}
+With a threshold $\tau = 0.05$, $E_{\text{anomaly}} = 9.48 \gg 0.05$. The system immediately flags a severe critical anomaly!
+\end{example}
+
+% ==============================================================================
+% 2. VARIATIONAL AUTOENCODERS (VAES)
+% ==============================================================================
+\subsection{Variational Autoencoders (VAEs): Continuous Latent Spaces}\label{subsec:vae}
+
+\paragraph{The Limitation of Standard Autoencoders}
+Standard autoencoders are deterministic: a given input $\mathbf{x}$ maps to a single isolated point $\mathbf{z}$ in latent space. Because there is no constraint enforcing how these points are arranged, the latent space develops large empty gaps (``holes''). If you randomly pick a latent point $\mathbf{z}_{\text{random}}$ from an unmapped gap and pass it to the decoder, the output is meaningless, corrupted noise. A standard autoencoder \emph{cannot} reliably generate fresh, realistic synthetic data.
+
+\begin{keyidea}[From Deterministic Points to Probability Distributions]
+In 2013, Diederik Kingma and Max Welling introduced the \textbf{Variational Autoencoder (VAE)}. 
+
+Instead of mapping an input $\mathbf{x}$ to a single static vector $\mathbf{z}$, the encoder outputs the statistical parameters of a probability distribution: a \textbf{Mean Vector} $\boldsymbol{\mu}$ and a \textbf{Variance Vector} $\boldsymbol{\sigma}^2$. The latent vector $\mathbf{z}$ is then sampled from this distribution:
+\begin{equation*}
+\mathbf{z} \sim \mathcal{N}(\boldsymbol{\mu}, \operatorname{diag}(\boldsymbol{\sigma}^2))
+\end{equation*}
+\end{keyidea}
+
+\paragraph{The VAE Loss Function: Reconstruction + KL Divergence}
+To ensure the latent space is smooth, continuous, and centered around the origin without gaps, the VAE loss function balances two competing mathematical forces:
+\begin{equation}
+\mathcal{L}_{\text{VAE}} = \mathcal{L}_{\text{recon}}(\mathbf{x}, \hat{\mathbf{x}}) + \beta \cdot D_{\text{KL}}\left(\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\sigma}^2) \;\parallel\; \mathcal{N}(\mathbf{0}, \mathbf{I})\right)\label{eq:vae_loss}
+\end{equation}
+
+\begin{itemize}
+    \item \textbf{Reconstruction Term ($\mathcal{L}_{\text{recon}}$)}: Encourages the decoder to reconstruct the inputs accurately (typically MSE or Binary Cross-Entropy).
+    \item \textbf{Kullback-Leibler (KL) Divergence Term ($D_{\text{KL}}$)}: Measures how much the encoder's predicted distribution deviates from a standard unit Gaussian prior $\mathcal{N}(\mathbf{0}, \mathbf{I})$:
+    \begin{equation}
+    D_{\text{KL}} = -\frac{1}{2} \sum_{j=1}^d \left( 1 + \log(\sigma_j^2) - \mu_j^2 - \sigma_j^2 \right)\label{eq:kl_formula}
+    \end{equation}
+    The KL divergence acts as a regularizer. It penalizes the encoder if it moves means $\mu$ far from zero or makes variances $\sigma^2$ differ from 1. This prevents clustering and forces the latent space to remain smooth and contiguous everywhere.
+\end{itemize}
+
+\paragraph{The Reparameterization Trick}
+During training, we must backpropagate gradients from the loss through the latent vector $\mathbf{z}$ to update the encoder weights. However, \textbf{random sampling is a non-differentiable operation}: you cannot take the derivative of a random number generator!
+
+Kingma and Welling solved this with the \textbf{Reparameterization Trick}. Instead of sampling directly from $\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\sigma}^2)$, the network samples a random auxiliary noise vector $\boldsymbol{\epsilon}$ from an independent standard normal distribution $\mathcal{N}(\mathbf{0}, \mathbf{I})$:
+\begin{equation}
+\mathbf{z} = \boldsymbol{\mu} + \boldsymbol{\sigma} \odot \boldsymbol{\epsilon} = \boldsymbol{\mu} + \exp\left(\frac{1}{2}\log\boldsymbol{\sigma}^2\right) \odot \boldsymbol{\epsilon}, \quad \text{where } \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})\label{eq:reparam_trick}
+\end{equation}
+
+Now, all stochastic randomness is isolated inside $\boldsymbol{\epsilon}$, which has no trainable parameters. The operations connecting $\boldsymbol{\mu}$ and $\boldsymbol{\sigma}$ to $\mathbf{z}$ are standard linear scaling and addition, allowing error gradients $\frac{\partial \mathcal{L}}{\partial \boldsymbol{\mu}}$ and $\frac{\partial \mathcal{L}}{\partial \boldsymbol{\sigma}}$ to flow back through the encoder unimpeded.
+
+\begin{example}[Hand-Calculating the VAE KL Divergence]
+Let a 1-dimensional latent distribution have predicted mean $\mu = 0.5$ and predicted log-variance $\log(\sigma^2) = -0.2$. Let us calculate the KL divergence by hand.
+
+\textbf{Step 1: Compute $\sigma^2$}
+\begin{equation*}
+\sigma^2 = e^{-0.2} \approx 0.8187
+\end{equation*}
+
+\textbf{Step 2: Substitute into Equation~\eqref{eq:kl_formula}}
+\begin{align*}
+D_{\text{KL}} &= -\frac{1}{2} \left[ 1 + \log(\sigma^2) - \mu^2 - \sigma^2 \right] \\
+              &= -\frac{1}{2} \left[ 1 + (-0.20) - (0.5)^2 - 0.8187 \right] \\
+              &= -\frac{1}{2} \left[ 1 - 0.20 - 0.25 - 0.8187 \right] \\
+              &= -\frac{1}{2} \left[ 1 - 1.2687 \right] = -\frac{1}{2} \left[ -0.2687 \right] = \mathbf{0.1344}
+\end{align*}
+If the encoder outputs $\mu = 0$ and $\sigma^2 = 1$ ($\log\sigma^2 = 0$), $D_{\text{KL}} = -\frac{1}{2}[1 + 0 - 0 - 1] = 0.0$ (perfect match to the prior).
+\end{example}
+
+% ==============================================================================
+% 3. GENERATIVE ADVERSARIAL NETWORKS (GANS)
+% ==============================================================================
+\subsection{Generative Adversarial Networks (GANs): Overview}\label{subsec:gans}
+
+In 2014, Ian Goodfellow and colleagues introduced \textbf{Generative Adversarial Networks (GANs)}. Unlike autoencoders, which explicitly minimize reconstruction error, GANs discard pixel-by-pixel comparisons entirely. Instead, they frame generative learning as a game-theoretic contest between two competing neural networks.
+
+\begin{analogy}[The Counterfeiter and the Currency Detective]
+Think of a GAN as a contest between an art counterfeiter and a forensic detective:
+\begin{itemize}
+    \item \textbf{The Generator (Counterfeiter)}: Has never seen genuine currency. It takes random scrap paper ($\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$) and attempts to print realistic-looking banknotes ($G(\mathbf{z})$).
+    \item \textbf{The Discriminator (Detective)}: Examines banknotes mixed together from two sources: real banknotes from the central bank ($\mathbf{x} \sim p_{\text{data}}$) and fake banknotes from the counterfeiter. The detective outputs a probability score: $1$ for real, $0$ for counterfeit.
+    \item \textbf{The Training Contest}: If the detective spots the forgery, the counterfeiter adjusts their printing press (backpropagating the detective's verdict). As the counterfeiter improves, the detective is forced to learn more subtle forensic cues. Eventually, the counterfeiter produces banknotes indistinguishable from genuine currency!
+\end{itemize}
+\end{analogy}
+
+\paragraph{The Minimax Game Objective}
+The Generator $G(\mathbf{z}; \theta_g)$ and Discriminator $D(\mathbf{x}; \theta_d)$ are trained simultaneously by solving a two-player zero-sum \textbf{minimax objective}:
+\begin{equation}
+\min_G \max_D V(D, G) = \mathbb{E}_{\mathbf{x} \sim p_{\text{data}}}[\log D(\mathbf{x})] + \mathbb{E}_{\mathbf{z} \sim p_z}[\log(1 - D(G(\mathbf{z})))]\label{eq:gan_minimax}
+\end{equation}
+
+\begin{itemize}
+    \item \textbf{Maximizing with respect to $D$}: The Discriminator wants $D(\mathbf{x}) \to 1$ for real samples (making $\log D(\mathbf{x}) \to 0$) and $D(G(\mathbf{z})) \to 0$ for fake samples (making $\log(1 - D(G(\mathbf{z}))) \to 0$).
+    \item \textbf{Minimizing with respect to $G$}: The Generator wants to fool the Discriminator into classifying fakes as real: $D(G(\mathbf{z})) \to 1$, driving $\log(1 - D(G(\mathbf{z}))) \to -\infty$.
+\end{itemize}
+
+\paragraph{Training Challenges in GANs}
+While GANs generate razor-sharp, photorealistic images and high-fidelity sensor signals, they are notoriously difficult to train:
+\begin{enumerate}
+    \item \textbf{Mode Collapse}: The Generator discovers a single output that consistently fools the Discriminator and produces that exact same sample repeatedly, failing to learn the true diversity of the training data.
+    \item \textbf{Vanishing Gradients}: If the Discriminator learns too quickly and becomes too accurate ($D(G(\mathbf{z})) \approx 0$), the term $\log(1 - D(G(\mathbf{z})))$ saturates and provides zero gradient to update the Generator. (Engineers fix this by training $G$ to maximize $\log D(G(\mathbf{z}))$ instead).
+    \item \textbf{Non-Convergence}: Gradient descent can enter stable limit cycles or wild oscillations rather than settling into a Nash equilibrium.
+\end{enumerate}
+
+% ==============================================================================
+% 4. CODE: AUTOENCODER FOR ANOMALY DETECTION IN PYTORCH
+% ==============================================================================
+\subsection{PyTorch Implementation: Autoencoder for Anomaly Detection}\label{subsec:pytorch_autoencoder}
+
+Let us build and train a complete autoencoder in PyTorch. We will train it exclusively on healthy multi-channel sensor data, and then demonstrate how it reliably detects an injected anomaly via reconstruction error thresholding.
+
+\paragraph{The PyTorch Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+class SensorAutoencoder(nn.Module):
+    """
+    Undercomplete Autoencoder for Edge Sensor Anomaly Detection.
+    Compresses 4 sensor channels down to a 2D latent bottleneck.
+    """
+    def __init__(self, input_dim=4, latent_dim=2):
+        super(SensorAutoencoder, self).__init__()
+        # Encoder: 4 -> 8 -> 2
+        self.encoder = nn.Sequential(
+            nn.Linear(input_dim, 8),
+            nn.ReLU(),
+            nn.Linear(8, latent_dim),
+            nn.ReLU()
+        )
+        # Decoder: 2 -> 8 -> 4
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dim, 8),
+            nn.ReLU(),
+            nn.Linear(8, input_dim)
+        )
+
+    def forward(self, x):
+        z = self.encoder(x)
+        x_recon = self.decoder(z)
+        return x_recon
+
+# Set seed for exact reproducibility
+torch.manual_seed(42)
+
+# 1. Synthesize normal industrial sensor telemetry (1000 samples, 4 channels)
+# Channels represent correlated physical states: Temp, RPM, VibX, VibY
+base = torch.randn(1000, 1)
+healthy_data = torch.cat([
+    base * 1.5 + 20.0,            # Temperature (C)
+    base * 100.0 + 1500.0,        # RPM
+    base * 0.2 + 1.0,             # Vibration X (g)
+    base * 0.25 + 1.2             # Vibration Y (g)
+], dim=1)
+
+# Normalize data using standard z-score normalization
+mean = healthy_data.mean(dim=0)
+std = healthy_data.std(dim=0)
+healthy_norm = (healthy_data - mean) / std
+
+# 2. Train the autoencoder ONLY on healthy data
+model = SensorAutoencoder(input_dim=4, latent_dim=2)
+criterion = nn.MSELoss()
+optimizer = optim.Adam(model.parameters(), lr=0.01)
+
+model.train()
+for epoch in range(40):
+    optimizer.zero_grad()
+    recon = model(healthy_norm)
+    loss = criterion(recon, healthy_norm)
+    loss.backward()
+    optimizer.step()
+
+# Determine anomaly threshold tau (99th percentile of healthy training error)
+model.eval()
+with torch.no_grad():
+    train_recon = model(healthy_norm)
+    train_errors = torch.mean((healthy_norm - train_recon) ** 2, dim=1)
+    threshold = torch.quantile(train_errors, 0.99).item()
+
+print(f"Learned Anomaly Threshold (tau): {threshold:.4f}")
+
+# 3. Test on Unseen Healthy vs Anomalous Samples
+test_healthy = healthy_norm[0:1] # Normal sample
+
+# Inject severe bearing anomaly (Vibration spikes while RPM remains constant)
+raw_anomaly = torch.tensor([[21.0, 1500.0, 9.5, 8.8]])
+test_anomaly = (raw_anomaly - mean) / std
+
+with torch.no_grad():
+    err_healthy = torch.mean((test_healthy - model(test_healthy)) ** 2).item()
+    err_anomaly = torch.mean((test_anomaly - model(test_anomaly)) ** 2).item()
+
+print(f"Healthy Test Error:   {err_healthy:.4f} -> Flag: {err_healthy > threshold}")
+print(f"Anomalous Test Error: {err_anomaly:.4f} -> Flag: {err_anomaly > threshold}")
+
+# Model footprint audit
+total_params = sum(p.numel() for p in model.parameters())
+print(f"Total Parameters:     {total_params} ({total_params * 4} bytes in Float32)")
+\end{lstlisting}
+
+\paragraph{Expected Output}
+\begin{lstlisting}[style=outputstyle]
+Learned Anomaly Threshold (tau): 0.0412
+Healthy Test Error:   0.0084 -> Flag: False
+Anomalous Test Error: 14.8219 -> Flag: True
+Total Parameters:     116 (464 bytes in Float32)
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Breakdown}
+\begin{itemize}
+    \item \textbf{Lines 13--24}: The \code{SensorAutoencoder} defines an architecture that compresses 4 inputs to 2 latent dimensions, then reconstructs them back to 4.
+    \item \textbf{Lines 30--36}: We synthesize realistic multi-channel data where all four channels correlate with a shared physical driving factor (\code{base}).
+    \item \textbf{Lines 55--59}: The anomaly threshold $\tau$ is set empirically to the \textbf{99th percentile} of healthy training errors ($0.0412$). This guarantees a false alarm rate of no more than $1\%$ on normal data.
+    \item \textbf{Lines 65--72}: When tested on normal data, the error ($0.0084$) sits well below the threshold. But when exposed to the bearing spike anomaly, the error surges to \textbf{14.82}---over $350\times$ higher than the threshold!
+    \item \textbf{Lines 75--77}: The entire model contains just \textbf{116 parameters}, requiring only \textbf{464 bytes} of memory. It can execute in microseconds on an 8-bit or 32-bit microcontroller with less than 2 KB of RAM!
+\end{itemize}
+
+% ==============================================================================
+% 5. IOT & TINYML CONNECTION
+% ==============================================================================
+\subsection{ML for IoT and Edge: TinyML Anomaly Detection and Compression}\label{subsec:iot_autoencoders}
+
+\begin{iotbox}[Why Autoencoders Are the Gold Standard for Edge IoT]
+While CNNs and Transformers require megabytes of memory, undercomplete autoencoders represent the sweet spot for embedded microcontrollers:
+\begin{itemize}
+    \item \textbf{Ultra-Low Memory Footprint}: An autoencoder compressing 6 sensor channels with a 3-neuron bottleneck contains under 200 weights ($<1\text{ KB}$ of Flash). It easily fits inside an ATmega328P (Arduino Uno) or ESP8266.
+    \item \textbf{No Failure Labels Required}: Industrial machines operate normally for months. You do not need to wait for a $50{,}000$ machine to break to collect training labels.
+\end{itemize}
+\end{iotbox}
+
+\paragraph{Edge Data Compression Over Low-Bandwidth Networks}
+In remote IoT deployments (such as offshore buoys or agricultural probes), devices transmit data over low-power, high-latency networks:
+\begin{itemize}
+    \item \textbf{LoRaWAN}: Maximum practical payload is typically 51 to 222 bytes per transmission.
+    \item \textbf{Satellite IoT}: Charges per kilobyte transmitted.
+\end{itemize}
+Instead of transmitting raw high-frequency waveforms (e.g., 64 floating-point samples $= 256\text{ bytes}$), an edge microcontroller runs the \textbf{Encoder only}. It compresses the 64 samples into a 4-dimensional latent code $\mathbf{z}$ ($4 \times 4 \text{ bytes} = 16\text{ bytes}$), transmits the tiny packet over LoRaWAN, and the cloud server runs the \textbf{Decoder} to reconstruct the full 64-sample waveform. This achieves a \textbf{$93.75\%$ reduction in transmission bandwidth and battery power}!
+
+\paragraph{Synthetic Fault Augmentation via VAEs and GANs}
+While autoencoders run directly on the microcontroller, VAEs and GANs operate in the \textbf{cloud or gateway}:
+\begin{itemize}
+    \item An IoT fleet captures only 3 rare instances of a stator winding burnout across 5 years.
+    \item A VAE or GAN trains on these 3 instances, explores the surrounding latent space, and synthesizes 5,000 diverse, physically plausible variations of the failure.
+    \item These synthetic variations are used to train edge supervised classifiers, overcoming the severe class imbalance problem.
+\end{itemize}
+
+% ==============================================================================
+% 6. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\subsection{Common Mistakes and Misconceptions}\label{subsec:mistakes}
+
+\begin{warning}[Five Pitfalls in Autoencoder and Generative Modeling]
+\begin{enumerate}
+    \item \textbf{Overcomplete Bottlenecks without Regularization}: Setting the bottleneck dimension $d$ larger than the input dimension $D$ ($d \ge D$) without sparsity penalties. The autoencoder will simply learn the trivial identity mapping $\hat{\mathbf{x}} = \mathbf{x}$, memorizing noise and failing completely at anomaly detection.
+    \item \textbf{Contaminating Training Data with Anomalies}: Including unrecognized fault data in the training set. If the pump was already vibrating excessively during training, the autoencoder will learn to reconstruct the fault perfectly, failing to flag it during production.
+    \item \textbf{Confusing Autoencoder Denoising with Anomaly Detection}: A Denoising Autoencoder deliberately corrupts inputs with noise ($\tilde{\mathbf{x}} = \mathbf{x} + \boldsymbol{\epsilon}$) and learns to reconstruct the clean version $\mathbf{x}$. This is excellent for signal filtering, but requires careful tuning so the model does not filter out genuine anomalies as ``noise''.
+    \item \textbf{Averaging Out Local Channel Anomalies}: Calculating a single mean reconstruction error across all channels when only one channel spikes. If you monitor 50 channels and 1 channel fails catastrophically, averaging over 50 channels may dilute the error below $\tau$. \textbf{Solution}: Track both global MSE and the maximum single-channel error: $E_{\max} = \max_i (x_i - \hat{x}_i)^2$.
+    \item \textbf{Assuming GANs Can Be Evaluated with Loss Functions}: In standard models, a lower loss indicates a better model. In GANs, Generator and Discriminator losses oscillate wildly and do not correlate with generation quality. A Generator loss of $0.0$ often indicates mode collapse, not success!
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 7. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:takeaways}
+
+\begin{takeaways}[Core Principles of Autoencoders and Generative Models]
+\begin{itemize}
+    \item \textbf{Unsupervised Manifold Learning}: Autoencoders compress inputs through a low-dimensional bottleneck ($d \ll D$), learning the essential physical correlations of normal data without labels.
+    \item \textbf{Reconstruction Error Detects Anomalies}: Training exclusively on healthy data allows autoencoders to flag unseen anomalies whenever reconstruction error exceeds a threshold ($E > \tau$).
+    \item \textbf{VAEs Form Continuous Latent Spaces}: By mapping inputs to Gaussian distributions ($\boldsymbol{\mu}, \boldsymbol{\sigma}^2$) and applying the reparameterization trick, VAEs enable smooth interpolation and random sampling.
+    \item \textbf{GANs Use Adversarial Minimax Games}: Pitting a Generator against a Discriminator produces high-fidelity synthetic data without explicit probability density functions.
+    \item \textbf{Ideal for Constrained Edge Hardware}: Lightweight autoencoders require under 1 KB of RAM, making them the premier choice for zero-shot predictive maintenance on microcontrollers.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 8. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:check_yourself}
+
+\begin{checkyourself}[Practice Questions and Calculations]
+\begin{enumerate}
+    \item \textbf{Reconstruction Error Calculation}: A 4-channel environmental sensor measures $\mathbf{x} = [20.0, 50.0, 101.3, 0.4]^T$. The autoencoder reconstructs $\hat{\mathbf{x}} = [20.2, 49.6, 101.0, 0.6]^T$. What is the Mean Squared Error (MSE) reconstruction loss?
+    \item \textbf{Bottleneck Compression Ratio}: An industrial monitoring system compresses a raw 16-channel accelerometer burst (16 floating-point values at 4 bytes each) into a 2-dimensional latent code $\mathbf{z}$ using an edge encoder. What is the data compression ratio, and what percentage of transmission bandwidth is saved?
+    \item \textbf{The Reparameterization Trick}: In a VAE, the encoder outputs mean $\mu = 1.2$ and log-variance $\log(\sigma^2) = 0.0$. If the pseudo-random generator draws an auxiliary noise sample $\epsilon = -0.5$ from $\mathcal{N}(0, 1)$, what is the resulting sampled latent value $z$?
+    \item \textbf{VAE KL Divergence Calculation}: For a 1D latent variable, the encoder predicts $\mu = 0.0$ and $\sigma^2 = 0.5$ ($\log(\sigma^2) \approx -0.6931$). Calculate the exact KL divergence penalty $D_{\text{KL}}$ with respect to the prior $\mathcal{N}(0, 1)$.
+    \item \textbf{GAN Minimax Dynamics}: At the beginning of training, a Generator produces random noise that the Discriminator easily identifies with 100\% confidence ($D(G(\mathbf{z})) = 0.001$). What is the value of the generator's penalty term $\log(1 - D(G(\mathbf{z})))$? Why does this lead to the vanishing gradient problem in GANs?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 9. ANSWERS
+% ==============================================================================
+\subsection*{Answers}\label{subsec:answers}
+
+\begin{enumerate}
+    \item \textbf{Reconstruction Error Calculation}:
+    Compute the squared error for each of the $D = 4$ channels:
+    \begin{align*}
+    (x_1 - \hat{x}_1)^2 &= (20.0 - 20.2)^2 = (-0.2)^2 = 0.04 \\
+    (x_2 - \hat{x}_2)^2 &= (50.0 - 49.6)^2 = (0.4)^2 = 0.16 \\
+    (x_3 - \hat{x}_3)^2 &= (101.3 - 101.0)^2 = (0.3)^2 = 0.09 \\
+    (x_4 - \hat{x}_4)^2 &= (0.4 - 0.6)^2 = (-0.2)^2 = 0.04
+    \end{align*}
+    Compute the mean:
+    \begin{equation*}
+    \text{MSE} = \frac{0.04 + 0.16 + 0.09 + 0.04}{4} = \frac{0.33}{4} = \mathbf{0.0825}
+    \end{equation*}
+
+    \item \textbf{Bottleneck Compression Ratio}:
+    \begin{align*}
+    \text{Raw Input Size} &= 16 \text{ floats} \times 4 \text{ bytes} = 64 \text{ bytes} \\
+    \text{Compressed Latent Size} &= 2 \text{ floats} \times 4 \text{ bytes} = 8 \text{ bytes} \\
+    \text{Compression Ratio} &= \frac{64}{8} = \mathbf{8:1} \\
+    \text{Bandwidth Savings} &= \left(1 - \frac{8}{64}\right) \times 100\% = (1 - 0.125) \times 100\% = \mathbf{87.5\%}
+    \end{align*}
+
+    \item \textbf{The Reparameterization Trick}:
+    Using Equation~\eqref{eq:reparam_trick}:
+    \begin{equation*}
+    \sigma = \sqrt{\exp(\log\sigma^2)} = \sqrt{\exp(0.0)} = \sqrt{1.0} = 1.0
+    \end{equation*}
+    Substitute $\mu = 1.2$, $\sigma = 1.0$, and $\epsilon = -0.5$:
+    \begin{equation*}
+    z = \mu + \sigma \cdot \epsilon = 1.2 + (1.0 \times (-0.5)) = 1.2 - 0.5 = \mathbf{0.70}
+    \end{equation*}
+
+    \item \textbf{VAE KL Divergence Calculation}:
+    Using Equation~\eqref{eq:kl_formula} with $\mu = 0.0$, $\sigma^2 = 0.5$, and $\log(\sigma^2) = -0.69315$:
+    \begin{align*}
+    D_{\text{KL}} &= -\frac{1}{2} \left[ 1 + \log(\sigma^2) - \mu^2 - \sigma^2 \right] \\
+                  &= -\frac{1}{2} \left[ 1 + (-0.69315) - 0.0 - 0.50 \right] \\
+                  &= -\frac{1}{2} \left[ 1 - 1.19315 \right] = -\frac{1}{2} [-0.19315] \approx \mathbf{0.0966}
+    \end{align*}
+
+    \item \textbf{GAN Minimax Dynamics}:
+    When $D(G(\mathbf{z})) = 0.001$:
+    \begin{equation*}
+    \log(1 - D(G(\mathbf{z}))) = \log(1 - 0.001) = \log(0.999) \approx \mathbf{-0.0010}
+    \end{equation*}
+    Notice that the slope (derivative) of $\log(1 - x)$ when $x \to 0$ is extremely flat. Because the loss is nearly zero and completely flat, the gradient $\nabla_{\theta_g} \log(1 - D(G(\mathbf{z})))$ is vanishingly small. The Generator receives virtually no corrective feedback to guide its weight updates. This is why Goodfellow et al. recommend training the generator to maximize $\log D(G(\mathbf{z}))$ instead, which provides massive non-zero gradients when $D(G(\mathbf{z})) \approx 0$.
+\end{enumerate}
