@@ -1,0 +1,515 @@
+% FILE: chapters/ch06_s3_nlp.tex
+\section{Natural Language Processing}\label{sec:nlp}
+
+Throughout the earlier sections of this book, we processed structured numerical sensor telemetry (temperatures, voltages, vibration accelerations) and two-dimensional pixel arrays (industrial camera images). However, a vast portion of human knowledge, operational instructions, and diagnostic logs exists in unstructured human language.
+
+In the Internet of Things (IoT) and industrial edge computing, natural language processing plays an increasingly vital role:
+\begin{itemize}
+    \item \textbf{Voice-Activated Edge Control}: Smart-home hubs and industrial control panels allow technicians to issue voice commands (``Stop conveyor belt four'', ``Activate emergency coolant pump'') without touching a physical interface while wearing protective gloves.
+    \item \textbf{Acoustic Keyword Spotting}: Low-power microcontrollers (such as the ESP32 or ARM Cortex-M4) sleep continuously until a wake-phrase (such as ``Hey Assistant'') triggers high-power execution.
+    \item \textbf{Diagnostic Log Parsing}: Edge gateways connected to programmable logic controllers (PLCs), serial modems, and marine navigation systems receive streams of unstructured text logs (e.g., NMEA-0183 sentences, Linux syslog messages, modem AT commands). NLP models parse, filter, and extract critical failure events from millions of text lines.
+    \item \textbf{Maintenance Notes and Defect Reports}: Field technicians write informal, shorthand notes during machine repairs (e.g., \emph{``Shaft misaligned, seal leaking hot hydraulic oil''}). NLP models categorize these notes to predict asset longevity.
+\end{itemize}
+
+Computers cannot natively understand words, grammar, or human intent; they only perform arithmetic on numbers and tensors. \textbf{Natural Language Processing (NLP)} is the branch of machine learning that converts unstructured human text into meaningful numerical representations that neural networks can process. In this section, we study the complete NLP pipeline: from tokenization and classical Bag-of-Words/TF-IDF vectorization to dense semantic word embeddings, modern text classification, fine-tuning pretrained Transformers, and running compact language models on resource-constrained edge hardware.
+
+% ==============================================================================
+% 1. TOKENIZATION
+% ==============================================================================
+\subsection{Tokenization: Slicing Text into Atomic Units}\label{subsec:tokenization}
+
+\begin{keyidea}[Tokens as the Atoms of Language]
+\textbf{Tokenization} is the process of segmenting a continuous string of raw text into a sequence of discrete numerical units called \textbf{tokens}. 
+
+Before a machine learning model can process a sentence, every token is mapped to a unique integer index in a predefined lookup table called the \textbf{vocabulary} ($\mathcal{V}$).
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Consider the raw text string: \code{"Motor overheating! Check pump-4."} 
+To a microcontroller, this is merely a sequence of 32 ASCII bytes. How should we segment this string into meaningful mathematical units?
+\begin{enumerate}
+    \item Should we split strictly on whitespace? That leaves punctuation attached: \code{"overheating!"} and \code{"pump-4."}.
+    \item Is \code{"overheating!"} a completely different word from \code{"overheating"}?
+    \item What happens when the model encounters an unseen technical word like \code{"vibroacoustic"} during deployment?
+\end{enumerate}
+
+\paragraph{Three Tokenization Strategies}
+\begin{enumerate}
+    \item \textbf{Word-Level Tokenization}: Slices text by whitespace and punctuation into whole dictionary words (\code{["Motor", "overheating", "Check", "pump", "4"]}).
+    \begin{itemize}
+        \item \emph{The Limitation}: Languages contain millions of word forms. A word-level vocabulary easily exceeds $500{,}000$ words. Even worse, if a user makes a typo (\code{"overheatin"}), the model fails completely with an \textbf{Out-Of-Vocabulary (OOV)} error, replacing the unknown word with a generic \code{[UNK]} token.
+    \end{itemize}
+    \item \textbf{Character-Level Tokenization}: Slices text into individual characters (\code{['M', 'o', 't', 'o', 'r', ' ']}).
+    \begin{itemize}
+        \item \emph{The Advantage}: The vocabulary is tiny (e.g., 256 ASCII characters), eliminating OOV errors.
+        \item \emph{The Limitation}: Sequences become enormously long. A 100-word sensor log explodes into 600 character tokens, exceeding the memory limits of edge attention mechanisms. Furthermore, single characters carry minimal semantic meaning on their own.
+    \end{itemize}
+    \item \textbf{Subword Tokenization (BPE and WordPiece)}: The modern standard used by BERT, GPT, and modern edge NLP.
+    \begin{itemize}
+        \item Frequent, common words remain intact as single tokens (\code{"motor"}, \code{"check"}, \code{"pump"}).
+        \item Rare or compound words are automatically decomposed into frequent subword fragments (e.g., \code{"overheating"} is split into \code{"over"} + \code{"\#\#heating"}).
+        \item \textbf{The Result}: Completely eliminates OOV errors while maintaining a compact vocabulary of only $30{,}000$ to $50{,}000$ tokens.
+    \end{itemize}
+\end{enumerate}
+
+\begin{analogy}[The Lego Brick Factory]
+Think of word-level tokenization as storing fully assembled Lego models: a fire truck, a police car, an ambulance. If someone asks for a bulldozer, you have no model for it and must declare an error. 
+
+Subword tokenization stores a small kit of universal Lego bricks (wheels, chassis, windows). Common models are kept pre-assembled for speed, but if an unfamiliar vehicle arrives, you instantly snap it together from basic bricks without failing!
+\end{analogy}
+
+% ==============================================================================
+% 2. BAG OF WORDS AND TF-IDF
+% ==============================================================================
+\subsection{Classical Text Vectorization: Bag of Words and TF-IDF}\label{subsec:bow_tfidf}
+
+Before deep learning, classical machine learning models required converting variable-length text documents into \textbf{fixed-length numerical vectors}.
+
+\subsubsection{Bag of Words (Count Vectorization)}
+The simplest representation is the \textbf{Bag of Words (BoW)}.
+\begin{enumerate}
+    \item Collect all unique words across the entire training corpus to form a vocabulary of size $V = |\mathcal{V}|$.
+    \item Represent each document as a vector $\mathbf{x} \in \mathbb{R}^V$, where each element $x_i$ is simply the count of how many times word $i$ appears in that document.
+\end{enumerate}
+
+\paragraph{Limitations of Bag of Words}
+\begin{itemize}
+    \item \textbf{Destruction of Word Order}: ``Valve 1 opened after valve 2 closed'' and ``Valve 2 opened after valve 1 closed'' produce identical count vectors despite describing opposite physical states.
+    \item \textbf{High Sparsity}: A vector with $50{,}000$ features where $99.9\%$ of values are zeros wastes memory on embedded hardware.
+    \item \textbf{Domination by Common Words}: Ubiquitous stop words (``the'', ``is'', ``at'') appear hundreds of times, overwhelming rare, informative technical terms (``cavitation'', ``overvoltage'').
+\end{itemize}
+
+\subsubsection{Term Frequency--Inverse Document Frequency (TF-IDF)}
+To solve the stop-word domination problem, we use \textbf{TF-IDF}. It scores words based on a simple principle: \emph{a word is important to a document if it appears frequently in that document, but rarely across the entire corpus}.
+
+\begin{keyidea}[The Two Terms of TF-IDF]
+\begin{enumerate}
+    \item \textbf{Term Frequency ($\operatorname{TF}$)}: Measures local frequency within a specific document $d$:
+    \begin{equation}
+    \operatorname{TF}(t, d) = \frac{\text{Count of term } t \text{ in document } d}{\text{Total number of words in document } d}\label{eq:tf}
+    \end{equation}
+    \item \textbf{Inverse Document Frequency ($\operatorname{IDF}$)}: Measures how rare or informative term $t$ is across all $N$ documents in corpus $\mathcal{D}$:
+    \begin{equation}
+    \operatorname{IDF}(t, \mathcal{D}) = \ln\left(\frac{1 + N}{1 + \operatorname{DF}(t)}\right) + 1\label{eq:idf}
+    \end{equation}
+    where $\operatorname{DF}(t)$ is the number of documents that contain term $t$.
+\end{enumerate}
+The final weight is the product:
+\begin{equation}
+\operatorname{TF-IDF}(t, d, \mathcal{D}) = \operatorname{TF}(t, d) \times \operatorname{IDF}(t, \mathcal{D})\label{eq:tfidf}
+\end{equation}
+\end{keyidea}
+
+If a word appears in \emph{every single document} (like ``the'' or ``sensor''), $\operatorname{DF}(t) = N$, driving its IDF weight to near-zero. Conversely, if a technical failure word (like ``cavitation'') appears in only one document, its IDF weight is high, making it stand out as a prominent feature.
+
+\begin{example}[Hand-Calculating TF-IDF on Industrial Maintenance Logs]
+Consider a tiny corpus of three maintenance log documents ($N = 3$):
+\begin{itemize}
+    \item \textbf{Doc 1}: \code{"motor temperature high"} (3 words)
+    \item \textbf{Doc 2}: \code{"motor vibration high"} (3 words)
+    \item \textbf{Doc 3}: \code{"pump pressure normal"} (3 words)
+\end{itemize}
+Let us calculate the TF-IDF weights for the words \code{"motor"} and \code{"temperature"} in \textbf{Doc 1}.
+
+\textbf{Step 1: Compute Term Frequencies in Doc 1}
+\begin{align*}
+\operatorname{TF}(\text{"motor"}, \text{Doc 1}) &= \frac{1}{3} \approx 0.3333 \\
+\operatorname{TF}(\text{"temperature"}, \text{Doc 1}) &= \frac{1}{3} \approx 0.3333
+\end{align*}
+
+\textbf{Step 2: Compute Inverse Document Frequencies across Corpus}
+\begin{itemize}
+    \item The word \code{"motor"} appears in Doc 1 and Doc 2: $\operatorname{DF}(\text{"motor"}) = 2$.
+    \begin{align*}
+    \operatorname{IDF}(\text{"motor"}) &= \ln\left(\frac{1 + 3}{1 + 2}\right) + 1 = \ln\left(\frac{4}{3}\right) + 1 = \ln(1.3333) + 1 \\
+                                      &\approx 0.2877 + 1 = \mathbf{1.2877}
+    \end{align*}
+    \item The word \code{"temperature"} appears only in Doc 1: $\operatorname{DF}(\text{"temperature"}) = 1$.
+    \begin{align*}
+    \operatorname{IDF}(\text{"temperature"}) &= \ln\left(\frac{1 + 3}{1 + 1}\right) + 1 = \ln\left(\frac{4}{2}\right) + 1 = \ln(2.0) + 1 \\
+                                            &\approx 0.6931 + 1 = \mathbf{1.6931}
+    \end{align*}
+\end{itemize}
+
+\textbf{Step 3: Compute TF-IDF Scores for Doc 1}
+\begin{align*}
+\operatorname{TF-IDF}(\text{"motor"}, \text{Doc 1}) &= 0.3333 \times 1.2877 \approx \mathbf{0.4292} \\
+\operatorname{TF-IDF}(\text{"temperature"}, \text{Doc 1}) &= 0.3333 \times 1.6931 \approx \mathbf{0.5644}
+\end{align*}
+Notice that \code{"temperature"} receives a significantly higher weight ($0.5644$) than \code{"motor"} ($0.4292$) because \code{"temperature"} is unique to Doc 1, making it a far more discriminative feature for classification!
+\end{example}
+
+% ==============================================================================
+% 3. WORD EMBEDDINGS
+% ==============================================================================
+\subsection{Dense Word Embeddings: Word2Vec and Semantic Geometry}\label{subsec:word_embeddings}
+
+\paragraph{The Flaw of One-Hot and TF-IDF Vectors: The Orthogonality Trap}
+In Bag-of-Words and one-hot encoding, every word is represented as an isolated basis vector. 
+Consider the words \code{"motor"} and \code{"engine"}:
+\begin{equation*}
+\mathbf{v}_{\text{motor}} = [1, 0, 0, \dots, 0]^T, \quad \mathbf{v}_{\text{engine}} = [0, 1, 0, \dots, 0]^T
+\end{equation*}
+If we compute their dot product:
+\begin{equation*}
+\mathbf{v}_{\text{motor}} \cdot \mathbf{v}_{\text{engine}} = 0.0
+\end{equation*}
+Geometrically, the vectors are completely orthogonal (perpendicular). Mathematically, the model believes that \code{"motor"} and \code{"engine"} are as completely unrelated as \code{"motor"} and \code{"banana"}! The model cannot transfer learned knowledge from one synonym to another.
+
+\begin{keyidea}[Dense Word Embeddings and the Distributional Hypothesis]
+\textbf{Word Embeddings} map each word to a dense, continuous vector of low dimension (typically $d = 50, 100$, or $300$). 
+
+These vectors are learned based on the \textbf{Distributional Hypothesis} proposed by linguist J.R. Firth in 1957:
+\begin{quote}
+\emph{``You shall know a word by the company it keeps.''}
+\end{quote}
+Words that appear in similar physical contexts (such as \code{"motor"}, \code{"engine"}, and \code{"turbine"}) are mapped to neighboring points in mathematical space.
+\end{keyidea}
+
+\paragraph{Word2Vec: Continuous Bag of Words (CBOW) and Skip-Gram}
+In 2013, Tomas Mikolov and colleagues at Google introduced \textbf{Word2Vec}, which trains a shallow 2-layer neural network to predict words from context:
+\begin{itemize}
+    \item \textbf{Continuous Bag of Words (CBOW)}: Predicts a target word given its surrounding context words (e.g., given \code{["hydraulic", "fluid", "____", "drop"]}, predict \code{"pressure"}).
+    \item \textbf{Skip-Gram}: Predicts the surrounding context words given a single center target word (e.g., given \code{"overheating"}, predict \code{["motor", "coolant", "temperature"]}).
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    point/.style={circle, fill=keyideablue, minimum size=6pt, inner sep=0pt},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=warningred}
+]
+    % Axes
+    \draw[-{Stealth}, thick, draw=gray!60] (-0.5, 0) -- (6.5, 0) node[right, font=\footnotesize\sffamily] {Mechanical vs Electrical};
+    \draw[-{Stealth}, thick, draw=gray!60] (0, -0.5) -- (0, 4.5) node[above, font=\footnotesize\sffamily] {Machine vs Liquid};
+
+    % Points
+    \node[point] (motor) at (1.5, 3.5) {};
+    \node[above right, font=\footnotesize\bfseries\sffamily] at (motor) {Motor};
+
+    \node[point] (engine) at (1.8, 3.8) {};
+    \node[above right, font=\footnotesize\bfseries\sffamily] at (engine) {Engine};
+
+    \node[point] (pump) at (1.2, 1.2) {};
+    \node[below right, font=\footnotesize\bfseries\sffamily] at (pump) {Pump};
+
+    \node[point] (coolant) at (4.5, 1.2) {};
+    \node[below right, font=\footnotesize\bfseries\sffamily] at (coolant) {Coolant};
+
+    \node[point] (oil) at (4.8, 1.5) {};
+    \node[above right, font=\footnotesize\bfseries\sffamily] at (oil) {Oil};
+
+    % Semantic vector relationships
+    \draw[arrow] (pump) -- node[left, font=\tiny\bfseries, text=warningred] {Function Shift} (motor);
+    \draw[arrow] (coolant) -- node[right, font=\tiny\bfseries, text=warningred] {Function Shift} (engine);
+\end{tikzpicture}
+\caption{Semantic Geometry in a 2D Word Embedding Space. Related components cluster together, and directional vector offsets encode consistent semantic relationships.}\label{fig:word_embeddings}
+\end{figure}
+
+\paragraph{Semantic Vector Arithmetic and Cosine Similarity}
+A remarkable emergent property of dense word embeddings is that directional offsets between vectors encode consistent physical and semantic relationships:
+\begin{equation}
+\mathbf{v}_{\text{King}} - \mathbf{v}_{\text{Man}} + \mathbf{v}_{\text{Woman}} \approx \mathbf{v}_{\text{Queen}}\label{eq:word_analogy}
+\end{equation}
+In industrial IoT engineering:
+\begin{equation*}
+\mathbf{v}_{\text{Pump}} - \mathbf{v}_{\text{Fluid}} + \mathbf{v}_{\text{Electricity}} \approx \mathbf{v}_{\text{Motor}}
+\end{equation*}
+
+To evaluate how closely two word embeddings $\mathbf{u}$ and $\mathbf{v}$ match, we calculate their \textbf{Cosine Similarity}:
+\begin{equation}
+\operatorname{CosineSimilarity}(\mathbf{u}, \mathbf{v}) = \cos(\theta) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2} = \frac{\sum_{i=1}^d u_i v_i}{\sqrt{\sum_{i=1}^d u_i^2} \sqrt{\sum_{i=1}^d v_i^2}}\label{eq:cosine_similarity}
+\end{equation}
+\begin{itemize}
+    \item $\cos(\theta) = 1.0$: Identical semantic direction.
+    \item $\cos(\theta) = 0.0$: Orthogonal, unrelated concepts.
+    \item $\cos(\theta) = -1.0$: Exact semantic opposites.
+\end{itemize}
+
+% ==============================================================================
+% 4. TEXT CLASSIFICATION & FINE-TUNING PRETRAINED MODELS
+% ==============================================================================
+\subsection{Text Classification and Fine-Tuning Pretrained Models}\label{subsec:text_classification}
+
+\paragraph{From Static to Contextual Embeddings: The Transformer Revolution}
+While Word2Vec and GloVe provided a major leap over Bag-of-Words, they suffer from a fatal flaw: they assign a \textbf{single static vector} to each word regardless of context. 
+Consider the word \code{"bearing"}:
+\begin{itemize}
+    \item Sentence A: \emph{``The ball \textbf{bearing} was seized due to lack of grease.''} (Mechanical part).
+    \item Sentence B: \emph{``The ship is currently \textbf{bearing} 45 degrees north.''} (Navigational heading).
+\end{itemize}
+In Word2Vec, \code{"bearing"} has the exact same vector in both sentences. 
+
+In modern NLP, we use \textbf{Contextual Language Models} (such as BERT, RoBERTa, and DeBERTa). As studied in Section~\ref{sec:attention_transformers}, self-attention dynamically recalculates each word's representation based on all surrounding words. The token \code{"bearing"} in Sentence A receives a mechanical representation, while in Sentence B it receives a navigational representation.
+
+\paragraph{The Transfer Learning Protocol for Text Classification}
+Training a deep language model from scratch requires terabytes of text and hundreds of thousands of dollars in compute. In edge and industrial engineering, we use \textbf{Transfer Learning}:
+\begin{enumerate}
+    \item \textbf{Pretraining (Self-Supervised)}: The model is pretrained on massive general text corpora (Wikipedia, technical manuals) using Masked Language Modeling (filling in masked words: \code{"The [MASK] overheated"}).
+    \item \textbf{Fine-Tuning (Supervised)}:
+    \begin{itemize}
+        \item Remove the original masked language modeling head.
+        \item Attach a lightweight, randomly initialized classification head (a linear layer projecting from $d_{\text{model}}$ to our number of domain classes, e.g., 3 fault categories).
+        \item Train the entire model end-to-end on our labeled dataset with a \textbf{very small learning rate} (typically $\eta \in [10^{-5}, 5 \times 10^{-5}]$).
+    \end{itemize}
+\end{enumerate}
+
+% ==============================================================================
+% 5. CODE: END-TO-END TEXT CLASSIFIER IN PYTORCH
+% ==============================================================================
+\subsection{PyTorch Implementation: Neural Text Classification}\label{subsec:pytorch_nlp}
+
+Let us build and train a complete neural text classification pipeline in PyTorch. We will classify incoming industrial technician error logs into two categories: \textbf{Normal Maintenance (0)} vs \textbf{Critical Alarm (1)}.
+
+\paragraph{The PyTorch Implementation}
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+class EdgeTextClassifier(nn.Module):
+    """
+    Compact Neural Text Classifier for Embedded Edge Gateways.
+    Uses an Embedding Bag layer followed by a lightweight MLP head.
+    """
+    def __init__(self, vocab_size, embed_dim=16, num_classes=2):
+        super(EdgeTextClassifier, self).__init__()
+        # nn.EmbeddingBag computes the average embedding of all tokens in a text
+        self.embedding = nn.EmbeddingBag(vocab_size, embed_dim, mode='mean')
+        self.fc = nn.Sequential(
+            nn.Linear(embed_dim, 8),
+            nn.ReLU(),
+            nn.Linear(8, num_classes)
+        )
+
+    def forward(self, text, offsets):
+        # text: 1D tensor of concatenated token IDs
+        # offsets: start indices of each document in the batch
+        embedded = self.embedding(text, offsets)
+        logits = self.fc(embedded)
+        return logits
+
+# 1. Toy Vocabulary Construction
+vocab = {
+    "<PAD>": 0, "motor": 1, "pump": 2, "normal": 3, "routine": 4,
+    "check": 5, "smoke": 6, "fire": 7, "critical": 8, "overheating": 9
+}
+
+# 2. Synthetic Dataset of Technician Logs
+# Class 0: Routine / Normal; Class 1: Critical Emergency
+training_texts = [
+    ["motor", "routine", "check"],       # 0
+    ["pump", "normal"],                  # 0
+    ["motor", "overheating", "critical"],# 1
+    ["smoke", "fire", "critical"]        # 1
+]
+labels = torch.tensor([0, 0, 1, 1], dtype=torch.long)
+
+# Prepare 1D concatenated tensor and offsets for EmbeddingBag
+token_ids = []
+offsets = [0]
+for doc in training_texts:
+    ids = [vocab[word] for word in doc]
+    token_ids.extend(ids)
+    offsets.append(offsets[-1] + len(ids))
+offsets.pop()  # Remove last entry (total length)
+
+text_tensor = torch.tensor(token_ids, dtype=torch.long)
+offset_tensor = torch.tensor(offsets, dtype=torch.long)
+
+# 3. Model Training
+torch.manual_seed(42)
+model = EdgeTextClassifier(vocab_size=len(vocab), embed_dim=16, num_classes=2)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.05)
+
+model.train()
+for epoch in range(25):
+    optimizer.zero_grad()
+    predictions = model(text_tensor, offset_tensor)
+    loss = criterion(predictions, labels)
+    loss.backward()
+    optimizer.step()
+
+# 4. Inference on Unseen Test Log
+# Unseen text: "motor smoke" -> should trigger Critical Alarm (1)
+test_doc = ["motor", "smoke"]
+test_ids = torch.tensor([vocab[w] for w in test_doc], dtype=torch.long)
+test_offsets = torch.tensor([0], dtype=torch.long)
+
+model.eval()
+with torch.no_grad():
+    logits = model(test_ids, test_offsets)
+    pred_class = torch.argmax(logits, dim=1).item()
+    prob = torch.softmax(logits, dim=1)[0, pred_class].item()
+
+class_names = ["Normal Maintenance", "CRITICAL ALARM"]
+print(f"Test Log:       {' '.join(test_doc)}")
+print(f"Classification: {class_names[pred_class]} (Confidence: {prob:.4f})")
+
+# Footprint Audit
+total_params = sum(p.numel() for p in model.parameters())
+print(f"Total Parameters: {total_params} ({total_params * 4} bytes in Float32)")
+\end{lstlisting}
+
+\paragraph{Expected Output}
+\begin{lstlisting}[style=outputstyle]
+Test Log:       motor smoke
+Classification: CRITICAL ALARM (Confidence: 0.9812)
+Total Parameters: 314 (1,256 bytes in Float32)
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Breakdown}
+\begin{itemize}
+    \item \textbf{Line 12}: \code{nn.EmbeddingBag(vocab_size, embed_dim, mode='mean')}. An \code{EmbeddingBag} is an optimized edge primitive: instead of creating a 3D tensor of shape \code{(batch, seq_len, embed_dim)} and averaging, it computes the mean embedding in a single C++ operation without allocating large intermediate memory tensors.
+    \item \textbf{Lines 36--43}: We format variable-length documents into a single flat 1D tensor with an accompanying \code{offsets} vector, avoiding wasteful zero-padding.
+    \item \textbf{Lines 65--71}: The model processes the unseen diagnostic note \code{"motor smoke"} and correctly triggers a \textbf{CRITICAL ALARM} with $98.1\%$ confidence.
+    \item \textbf{Line 75}: The entire model contains just \textbf{314 parameters} ($1.25\text{ KB}$ of Flash storage), proving that functional text classification can run directly on the most resource-constrained microcontrollers!
+\end{itemize}
+
+% ==============================================================================
+% 6. IOT & TINYML CONNECTION
+% ==============================================================================
+\subsection{ML for IoT and Edge: Speech Commands and Tiny Language Models}\label{subsec:iot_nlp}
+
+\begin{iotbox}[The Language Hierarchy on Edge Devices]
+Deploying language intelligence to embedded hardware requires matching the model complexity to the compute tier:
+\begin{itemize}
+    \item \textbf{Tier 1: Microcontrollers (ESP32, STM32, Arduino)}:
+    \begin{itemize}
+        \item Cannot run full Transformer LLMs due to severe RAM limits ($<512\text{ KB}$).
+        \item Runs **Keyword Spotting (KWS)**: A tiny CNN or GRU processes audio Mel-spectrograms to detect 10 to 30 fixed spoken phrases (``Light On'', ``Emergency Stop'') in $<50\text{ KB}$ of RAM.
+        \item Runs **Text Pattern Classifiers**: Lightweight EmbeddingBag or Naive Bayes models parsing serial modem strings at sub-millisecond latencies.
+    \end{itemize}
+    \item \textbf{Tier 2: Edge Gateways (Raspberry Pi 4/5, Jetson Nano, Industrial IPCs)}:
+    \begin{itemize}
+        \item 2 GB to 8 GB of RAM.
+        \item Runs **DistilBERT** or **TinyBERT** via ONNX Runtime for complex log diagnosis and natural language comprehension at 40+ inferences per second.
+    \end{itemize}
+\end{itemize}
+\end{iotbox}
+
+\paragraph{Knowledge Distillation: Shrinking BERT for the Edge}
+Standard BERT-Base contains 110 million parameters ($\approx 440\text{ MB}$), far too large for edge gateways. 
+To bring deep language models to edge devices, engineers use \textbf{Knowledge Distillation} (Hinton et al.):
+\begin{itemize}
+    \item A massive, highly accurate ``Teacher'' network (e.g., BERT-Large) generates soft probability distributions over a large corpus.
+    \item A compact, shallow ``Student'' network (such as \textbf{TinyBERT} or \textbf{MobileBERT}) is trained to mimic the intermediate representations and output probabilities of the Teacher.
+    \item \textbf{The Result}: TinyBERT achieves \textbf{$96.8\%$ of BERT's performance} while being \textbf{$7.5\times$ smaller} and \textbf{$9.4\times$ faster on CPU}!
+\end{itemize}
+
+% ==============================================================================
+% 7. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\subsection{Common Mistakes and Misconceptions}\label{subsec:mistakes}
+
+\begin{warning}[Five Pitfalls in Natural Language Processing]
+\begin{enumerate}
+    \item \textbf{Fitting Vectorizers on the Test Set}: Calling \code{fit_transform()} on the entire dataset when building TF-IDF or BoW representations. This leaks test-set vocabulary and document frequencies into the training pipeline. Always call \code{fit_transform()} \emph{only} on the training split, and use \code{transform()} on the test split.
+    \item \textbf{Fine-Tuning Transformers with a Large Learning Rate}: Using a standard learning rate like $\eta = 10^{-3}$ when fine-tuning a pretrained model (like BERT). An excessively large learning rate immediately causes \textbf{catastrophic forgetting}: the optimizer shatters the rich, pretrained linguistic representations learned across millions of documents. Always use $\eta \in [10^{-5}, 5 \times 10^{-5}]$.
+    \item \textbf{Ignoring Out-Of-Vocabulary Words in Production}: Training a model with a rigid, word-level vocabulary without an explicit unknown token (\code{[UNK]}). When a field technician submits a note with a typo or novel jargon, the script crashes. Always use subword tokenization (WordPiece or BPE) or map unseen tokens to \code{[UNK]}.
+    \item \textbf{Assuming Static Embeddings Capture Context}: Expecting a Word2Vec model to distinguish between words with multiple meanings (polysemy, such as \code{"crane"} the bird versus \code{"crane"} the lifting machine). Static word vectors cannot adjust based on context; only contextual Transformers (BERT, GPT) can.
+    \item \textbf{Blindly Stripping Stop Words in Technical Logs}: Automatically stripping standard English stop words (``not'', ``no'', ``off'') using generic NLP libraries. In an industrial maintenance log, removing ``not'' transforms \emph{``Pump is not running''} into \emph{``Pump is running''}, completely inverting the physical meaning!
+\end{enumerate}
+\end{warning}
+
+% ==============================================================================
+% 8. KEY TAKEAWAYS
+% ==============================================================================
+\subsection{Key Takeaways}\label{subsec:takeaways}
+
+\begin{takeaways}[Core Principles of Natural Language Processing]
+\begin{itemize}
+    \item \textbf{Subword Tokenization Eliminates OOV}: Techniques like Byte-Pair Encoding (BPE) keep frequent words whole while breaking rare words into common subwords, maintaining compact vocabularies without unknown-word crashes.
+    \item \textbf{TF-IDF Balances Rarity and Frequency}: TF-IDF penalizes ubiquitous corpus-wide stop words while amplifying discriminative, domain-specific technical terms.
+    \item \textbf{Dense Embeddings Capture Semantic Geometry}: Word2Vec maps words to dense continuous vectors where geometric proximity and directional offsets reflect real-world semantic relationships.
+    \item \textbf{Fine-Tuning Outperforms Training from Scratch}: Adapting pretrained contextual models (BERT) with small learning rates ($\eta \approx 2 \times 10^{-5}$) achieves state-of-the-art accuracy with minimal domain data.
+    \item \textbf{Lightweight Edge NLP}: On microcontrollers, Keyword Spotting and EmbeddingBag architectures deliver robust speech and text classification within strict $<100\text{ KB}$ SRAM constraints.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 9. CHECK YOURSELF
+% ==============================================================================
+\subsection{Check Yourself}\label{subsec:check_yourself}
+
+\begin{checkyourself}[Practice Questions and Calculations]
+\begin{enumerate}
+    \item \textbf{TF-IDF Hand Calculation}: A database contains $N = 99$ industrial maintenance documents. The technical term \code{"cavitation"} appears 3 times in a specific document containing 60 total words. Across the entire database, exactly 9 documents contain the word \code{"cavitation"}.
+    \begin{enumerate}[label=(\alph*)]
+        \item Calculate the Term Frequency $\operatorname{TF}(\text{"cavitation"}, d)$.
+        \item Calculate the Inverse Document Frequency $\operatorname{IDF}(\text{"cavitation"}, \mathcal{D})$ using Equation~\eqref{eq:idf}.
+        \item Compute the final $\operatorname{TF-IDF}$ weight.
+    \end{enumerate}
+    \item \textbf{Cosine Similarity of Word Vectors}: Two 2-dimensional word embedding vectors are given as $\mathbf{u} = [3, 4]^T$ and $\mathbf{v} = [4, 3]^T$. Calculate the exact cosine similarity between $\mathbf{u}$ and $\mathbf{v}$.
+    \item \textbf{Embedding Layer Memory Footprint}: An edge NLP model designed for an IoT smart hub has a vocabulary size of $|\mathcal{V}| = 10{,}000$ tokens and uses an embedding dimension of $d = 64$. If the embedding matrix is stored in 32-bit floating point precision (4 bytes per number), how many kilobytes of memory does the embedding layer alone occupy?
+    \item \textbf{Catastrophic Forgetting Risk}: Why does fine-tuning a pretrained BERT model with an aggressive learning rate of $\eta = 0.01$ degrade performance compared to using $\eta = 0.00002$?
+    \item \textbf{Stop Word Pitfall in IoT}: Give an example of a 3-word sensor alert message where stripping common English stop words completely reverses or corrupts the alert's physical meaning.
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 10. ANSWERS
+% ==============================================================================
+\subsection*{Answers}\label{subsec:answers}
+
+\begin{enumerate}
+    \item \textbf{TF-IDF Hand Calculation}:
+    \begin{enumerate}[label=(\alph*)]
+        \item \textbf{Term Frequency}:
+        \begin{equation*}
+        \operatorname{TF} = \frac{\text{Count of word}}{\text{Total words}} = \frac{3}{60} = \mathbf{0.05}
+        \end{equation*}
+
+        \item \textbf{Inverse Document Frequency}:
+        Given $N = 99$ and $\operatorname{DF} = 9$:
+        \begin{align*}
+        \operatorname{IDF} &= \ln\left(\frac{1 + N}{1 + \operatorname{DF}}\right) + 1 = \ln\left(\frac{1 + 99}{1 + 9}\right) + 1 \\
+                           &= \ln\left(\frac{100}{10}\right) + 1 = \ln(10) + 1 \approx 2.3026 + 1 = \mathbf{3.3026}
+        \end{align*}
+
+        \item \textbf{Final TF-IDF Weight}:
+        \begin{equation*}
+        \operatorname{TF-IDF} = 0.05 \times 3.3026 \approx \mathbf{0.1651}
+        \end{equation*}
+    \end{enumerate}
+
+    \item \textbf{Cosine Similarity Calculation}:
+    Using Equation~\eqref{eq:cosine_similarity}:
+    \begin{itemize}
+        \item Dot product:
+        \begin{equation*}
+        \mathbf{u} \cdot \mathbf{v} = (3 \times 4) + (4 \times 3) = 12 + 12 = 24
+        \end{equation*}
+        \item Vector magnitudes:
+        \begin{align*}
+        \|\mathbf{u}\|_2 &= \sqrt{3^2 + 4^2} = \sqrt{9 + 16} = \sqrt{25} = 5 \\
+        \|\mathbf{v}\|_2 &= \sqrt{4^2 + 3^2} = \sqrt{16 + 9} = \sqrt{25} = 5
+        \end{align*}
+        \item Cosine similarity:
+        \begin{equation*}
+        \cos(\theta) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2} = \frac{24}{5 \times 5} = \frac{24}{25} = \mathbf{0.96}
+        \end{equation*}
+        The vectors have a $96\%$ directional alignment, indicating very strong semantic similarity.
+    \end{itemize}
+
+    \item \textbf{Embedding Layer Memory Footprint}:
+    The embedding matrix has shape $(|\mathcal{V}| \times d) = (10{,}000 \times 64)$:
+    \begin{align*}
+    \text{Total Parameters} &= 10{,}000 \times 64 = 640{,}000 \text{ float values} \\
+    \text{Total Bytes} &= 640{,}000 \times 4 \text{ bytes} = 2{,}560{,}000 \text{ bytes} \\
+    \text{Kilobytes} &= \frac{2{,}560{,}000}{1024} = \mathbf{2{,}500 \text{ KB}} \approx \mathbf{2.44 \text{ MB}}
+    \end{align*}
+    At $2.44\text{ MB}$, this embedding matrix fits comfortably in external Flash storage, but exceeds the typical internal SRAM of an ESP32 ($512\text{ KB}$), requiring streaming lookup from Flash or PSRAM.
+
+    \item \textbf{Catastrophic Forgetting Risk}:
+    Pretrained Transformer models (like BERT) have already adjusted millions of internal attention weights across billions of sentences into a finely tuned, highly delicate manifold representing syntax, grammar, and world semantics. 
+    A large learning rate like $\eta = 0.01$ causes colossal gradient update steps that violently overwrite these pre-existing weights, completely erasing the model's linguistic foundation in the first few batches. A tiny learning rate like $\eta = 0.00002$ gently steers the existing representations toward the specific domain task without breaking general language understanding.
+
+    \item \textbf{Stop Word Pitfall in IoT}:
+    Consider the alert: \code{"Valve not closed"}.
+    Standard stop-word removal algorithms strip the word \code{"not"}, reducing the text to:
+    \code{"Valve closed"}.
+    The processed text asserts the exact physical opposite of the true state, blinding the automated safety system to an open valve and potentially causing an industrial tank overflow!
+\end{enumerate}

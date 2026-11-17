@@ -1,0 +1,613 @@
+% FILE: chapters/ch06_s5_generative_models.tex
+\section{Generative Models}\label{sec:generative_models}
+
+In Section~\ref{sec:other_architectures}, we introduced the foundational concepts of unsupervised representation learning and basic generative modeling, examining how Autoencoders compress high-dimensional telemetry, how Variational Autoencoders (VAEs) map data into smooth probabilistic latent distributions, and how Generative Adversarial Networks (GANs) pit two networks against each other in a zero-sum game.
+
+In recent years, generative modeling has undergone an extraordinary revolution. Modern generative systems are no longer restricted to generating fuzzy handwritten digits or moderately convincing faces; they synthesize photorealistic high-resolution artwork, compose coherent audio, simulate complex physical dynamics, and generate hyper-realistic synthetic sensor telemetry for industrial edge systems.
+
+At the heart of this modern generative revolution lies a fundamentally different class of probabilistic models: \textbf{Diffusion Models} (and their efficient counterpart, \textbf{Latent Diffusion Models}).
+
+In this section, we demystify the core mathematical and intuitive principles of diffusion models. We examine the famous \textbf{Generative Trilemma} that governs all generative architectures, trace the forward degradation and reverse denoising processes step by step, walk through a concrete arithmetic calculation of noise scheduling, explore how Latent Diffusion makes generative modeling computationally tractable, and present a rigorous, side-by-side comparison of GANs, VAEs, and Diffusion models within the practical constraints of Internet of Things (IoT) and edge computing.
+
+% ==============================================================================
+% 1. THE GENERATIVE TRILEMMA
+% ==============================================================================
+\subsection{The Generative Trilemma}\label{subsec:generative_trilemma}
+
+\begin{keyidea}[The Generative Trilemma]
+In deep generative modeling, an ideal architecture should simultaneously satisfy three core properties:
+\begin{enumerate}
+    \item \textbf{High Sample Quality}: The generated samples must be sharp, detailed, coherent, and indistinguishable from real data.
+    \item \textbf{Fast Sampling}: Generating a new sample should require minimal computational passes (ideally a single forward pass) to enable interactive or real-time edge execution.
+    \item \textbf{Mode Coverage and Training Stability}: The model should capture all diverse modes of the true data distribution without omitting rare phenomena (\emph{mode collapse}), and its training process should be mathematically stable and robust.
+\end{enumerate}
+Historically, no single classical model excelled at all three. Each classical family traded one ideal to achieve the other two.
+\end{keyidea}
+
+To understand why new generative architectures were invented, we must examine the trade-offs depicted in Figure~\ref{fig:generative_trilemma}:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=1.05,
+    vertex/.style={circle, draw=keyideablue, fill=keyideablue!10, thick, minimum size=2.8cm, align=center, font=\small\bfseries},
+    edge_label/.style={rectangle, draw=gray!40, fill=white, rounded corners=2mm, font=\scriptsize, align=center, inner sep=3pt}
+]
+    % Vertices of the Trilemma
+    \node[vertex] (quality) at (90:3.8) {High Sample\\Quality};
+    \node[vertex] (speed) at (210:3.8) {Fast Sampling\\(Single Pass)};
+    \node[vertex] (diversity) at (330:3.8) {Mode Coverage\\\& Stable Training};
+
+    % Edges connecting vertices
+    \draw[thick, draw=exampleorange!80] (quality) -- (speed);
+    \draw[thick, draw=analogygreen!80] (speed) -- (diversity);
+    \draw[thick, draw=iotpurple!80] (diversity) -- (quality);
+
+    % Model placements along the edges
+    \node[edge_label, draw=exampleorange, fill=exampleorange!15] at (150:2.5) {
+        \textbf{GANs}\\
+        \tiny High Quality + Fast Sampling\\
+        \tiny \emph{Sacrifice:} Mode Coverage \& Stability
+    };
+
+    \node[edge_label, draw=analogygreen, fill=analogygreen!15] at (270:2.2) {
+        \textbf{VAEs}\\
+        \tiny Fast Sampling + Mode Coverage\\
+        \tiny \emph{Sacrifice:} Sample Sharpness (Blurry)
+    };
+
+    \node[edge_label, draw=iotpurple, fill=iotpurple!15] at (30:2.5) {
+        \textbf{Diffusion Models}\\
+        \tiny High Quality + Mode Coverage\\
+        \tiny \emph{Sacrifice:} Sampling Speed (Multi-step)
+    };
+\end{tikzpicture}
+\caption{The Generative Trilemma: the geometric trade-off between sample quality, inference speed, and distribution mode coverage across generative families.}\label{fig:generative_trilemma}
+\end{figure}
+
+Let us review the inherent compromises of earlier approaches:
+\begin{itemize}
+    \item \textbf{Generative Adversarial Networks (GANs)}: Pitting a generator against a discriminator produces extraordinarily crisp, photorealistic samples in a single forward inference pass. However, GAN training is notoriously fragile. If the discriminator learns too quickly, generator gradients vanish. Worse, GANs frequently suffer from \textbf{mode collapse}: the generator discovers a tiny subset of outputs that fool the discriminator and repeats them endlessly, completely ignoring the remaining variety of the training data.
+    \item \textbf{Variational Autoencoders (VAEs)}: VAEs optimize a well-behaved probabilistic objective (the Evidence Lower Bound, or ELBO). Their training is rock-solid and stable, and they cover all modes of the data distribution. Furthermore, generating a new sample requires only a single pass through the decoder network. However, because VAEs typically assume an isotropic Gaussian distribution over reconstructed pixels or sensor values, they penalize pixel-level deviations with mean squared error. To minimize expected error across uncertain possibilities, the decoder produces the mathematical average of possible realities---resulting in notoriously hazy, blurry images and smoothed telemetry peaks.
+    \item \textbf{Diffusion Models}: Diffusion models break this deadlock. By breaking down the generation task into hundreds of tiny, incremental denoising steps, they eliminate adversarial instability entirely and achieve full distribution coverage with state-of-the-art sample fidelity. Their historic drawback has been \textbf{sampling latency}: generating one sample originally required running hundreds or thousands of sequential forward passes through a deep neural network.
+\end{itemize}
+
+% ==============================================================================
+% 2. DIFFUSION MODELS OVERVIEW
+% ==============================================================================
+\subsection{Diffusion Models: Principles and Intuition}\label{subsec:diffusion_principles}
+
+\paragraph{Why It Exists: The Real-World Problem}
+In high-stakes engineering domains, such as industrial condition monitoring or autonomous driving, we need synthetic data that is both \textbf{diverse} (capturing every rare vibration spike, anomalous pressure surge, or catastrophic bearing fracture) and \textbf{realistic} (retaining high-frequency mechanical transients without blurriness). 
+
+GANs fail here because mode collapse might drop the very failure mode we need to simulate. VAEs fail because over-smoothing wipes out the critical high-frequency vibration spikes that indicate micro-cracks. Diffusion models solve both issues by framing generative modeling as the gradual reversal of a physical diffusion process.
+
+\begin{analogy}[The Drop of Food Coloring in Water]
+Imagine dropping a single drop of concentrated blue food coloring into a glass of warm water:
+\begin{enumerate}
+    \item \textbf{The Forward Process (Entropy at Work)}: Initially, the drop has a distinct, sharp shape. As water molecules randomly bump into the dye molecules (Brownian motion), the dye slowly diffuses outward. After a few minutes, the droplet's structure is entirely destroyed. The glass contains only a uniform, faint blue liquid. Information has been completely degraded into random chaos.
+    \item \textbf{The Reverse Process (Learning to Undo Chaos)}: Now imagine you possess a magical pair of microscopic tweezers and an enchanted camera that recorded the exact physics of the diffusion. If you could rewind time and gently nudge every single dye molecule backward against the random collisions, you could gradually collect the diffuse blue tint back into a tight, sharp, concentrated droplet.
+\end{enumerate}
+A diffusion model does exactly this. In the \textbf{forward process}, it systematically destroys data by adding tiny increments of Gaussian noise over hundreds of timesteps until nothing remains but pure static. In the \textbf{reverse process}, a neural network learns how to clean up that static, stripping away tiny fractions of noise step by step until a pristine data sample emerges from pure randomness.
+\end{analogy}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    state/.style={rectangle, draw=keyideablue, fill=keyideablue!10, rounded corners=2mm, thick, minimum width=2.2cm, minimum height=1.3cm, align=center},
+    noise_state/.style={rectangle, draw=gray!60, fill=gray!15, rounded corners=2mm, thick, minimum width=2.2cm, minimum height=1.3cm, align=center},
+    fwd_arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=warningred!80},
+    rev_arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=analogygreen!80}
+]
+    % Nodes
+    \node[state] (x0) at (0, 0) {
+        \textbf{Pristine Data}\\
+        $\mathbf{x}_0$\\
+        \tiny (Clean Signal/Image)
+    };
+
+    \node[state, fill=keyideablue!5] (x1) at (3.5, 0) {
+        \textbf{Slight Noise}\\
+        $\mathbf{x}_1$\\
+        \tiny $q(\mathbf{x}_1 \mid \mathbf{x}_0)$
+    };
+
+    \node[noise_state] (xt) at (7.5, 0) {
+        \textbf{Partially Noisy}\\
+        $\mathbf{x}_t$\\
+        \tiny $q(\mathbf{x}_t \mid \mathbf{x}_0)$
+    };
+
+    \node[noise_state, fill=gray!30] (xT) at (11.5, 0) {
+        \textbf{Pure Noise}\\
+        $\mathbf{x}_T \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$\\
+        \tiny (Isotropic Static)
+    };
+
+    % Forward Arrows (Top)
+    \draw[fwd_arrow] (x0) to[bend left=25] node[above, font=\scriptsize, text=warningred] {Add Noise $q$} (x1);
+    \draw[fwd_arrow, dashed] (x1) to[bend left=25] node[above, font=\scriptsize, text=warningred] {Step $t$} (xt);
+    \draw[fwd_arrow] (xt) to[bend left=25] node[above, font=\scriptsize, text=warningred] {$t \to T$} (xT);
+
+    % Reverse Arrows (Bottom)
+    \draw[rev_arrow] (xT) to[bend left=25] node[below, font=\scriptsize, text=analogygreen] {Denoise $p_\theta$} (xt);
+    \draw[rev_arrow, dashed] (xt) to[bend left=25] node[below, font=\scriptsize, text=analogygreen] {Step $t-1$} (x1);
+    \draw[rev_arrow] (x1) to[bend left=25] node[below, font=\scriptsize, text=analogygreen] {Remove Noise $p_\theta$} (x0);
+
+    % Labels
+    \node[font=\footnotesize\bfseries, text=warningred] at (5.75, 1.4) {Forward Diffusion Process $q$ (Fixed, No Parameters)};
+    \node[font=\footnotesize\bfseries, text=analogygreen] at (5.75, -1.4) {Reverse Generative Process $p_\theta$ (Learned Neural Network)};
+\end{tikzpicture}
+\caption{The dual-process foundation of Denoising Diffusion Probabilistic Models (DDPM). The forward process systematically adds Gaussian noise; the reverse process learns to iteratively remove it.}\label{fig:diffusion_pipeline}
+\end{figure}
+
+% ==============================================================================
+% 3. MATHEMATICAL FORMULATION (DDPM)
+% ==============================================================================
+\subsection{The Mathematical Mechanics: Forward and Reverse Processes}\label{subsec:diffusion_math}
+
+The mathematical formulation developed by Sohl-Dickstein et al. (2015) and popularized by Ho, Jain, and Abbeel (2020) in \textbf{Denoising Diffusion Probabilistic Models (DDPM)} divides the modeling into two distinct phases:
+
+\subsubsection{The Forward (Noising) Process}
+Given an original, uncorrupted data sample $\mathbf{x}_0 \sim q(\mathbf{x}_0)$, the forward process gradually adds Gaussian noise in $T$ discrete timesteps according to a pre-defined variance schedule $\beta_1, \beta_2, \dots, \beta_T$:
+\begin{equation}
+q(\mathbf{x}_t \mid \mathbf{x}_{t-1}) = \mathcal{N}\left(\mathbf{x}_t;\, \sqrt{1 - \beta_t}\,\mathbf{x}_{t-1},\, \beta_t \mathbf{I}\right)\label{eq:fwd_single_step}
+\end{equation}
+where:
+\begin{itemize}
+    \item $\beta_t \in (0, 1)$ represents the fraction of noise variance injected at timestep $t$. Typically, $\beta_t$ starts very small (e.g., $\beta_1 = 10^{-4}$) and increases linearly or according to a cosine schedule up to $\beta_T = 0.02$.
+    \item The scaling factor $\sqrt{1 - \beta_t}$ slightly scales down the existing signal magnitude. This ensures that the variance of $\mathbf{x}_t$ does not explode towards infinity as repeated noise is added; rather, it remains normalized at unit variance throughout all timesteps.
+    \item $\mathbf{I}$ denotes the identity matrix, indicating that independent Gaussian noise is added to every dimension.
+\end{itemize}
+
+\paragraph{The Direct Sampling Shortcut}
+If we had to apply Equation~\eqref{eq:fwd_single_step} sequentially step by step during training, creating a noisy sample at timestep $t = 800$ would require $800$ successive random operations. Fortunately, due to the mathematical properties of compounding Gaussian distributions, we can jump directly from pristine data $\mathbf{x}_0$ to any arbitrary timestep $t$ in a single closed-form calculation!
+
+Let us define:
+\begin{equation}
+\alpha_t = 1 - \beta_t \quad \text{and} \quad \bar{\alpha}_t = \prod_{s=1}^t \alpha_s\label{eq:alpha_definitions}
+\end{equation}
+Here, $\alpha_t$ represents the proportion of signal retained at step $t$, while $\bar{\alpha}_t$ (pronounced ``alpha-bar'') represents the cumulative proportion of original signal preserved all the way from step $0$ through step $t$.
+
+Using these terms, the marginal distribution of $\mathbf{x}_t$ given the initial data $\mathbf{x}_0$ can be expressed in closed form:
+\begin{equation}
+q(\mathbf{x}_t \mid \mathbf{x}_0) = \mathcal{N}\left(\mathbf{x}_t;\, \sqrt{\bar{\alpha}_t}\,\mathbf{x}_0,\, (1 - \bar{\alpha}_t)\mathbf{I}\right)\label{eq:fwd_closed_form}
+\end{equation}
+Applying the reparameterization trick, we write the sample directly as:
+\begin{equation}
+\mathbf{x}_t = \sqrt{\bar{\alpha}_t}\,\mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\,\boldsymbol{\epsilon}, \quad \text{where } \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})\label{eq:fwd_reparam}
+\end{equation}
+This closed-form formulation is profound:
+\begin{itemize}
+    \item When $t = 0$, $\bar{\alpha}_0 = 1$, which gives $\mathbf{x}_0 = \mathbf{x}_0$ (pure clean data).
+    \item As $t \to T$, $\bar{\alpha}_t \to 0$, so $\sqrt{\bar{\alpha}_t} \approx 0$ and $\sqrt{1 - \bar{\alpha}_t} \approx 1$. Thus, $\mathbf{x}_T \approx \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ (pure uncorrelated Gaussian noise).
+\end{itemize}
+
+\subsubsection{The Reverse (Denoising) Process}
+If we could invert the forward process and sample from $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t)$, we could start with pure random static $\mathbf{x}_T \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ and reverse time to generate completely novel, realistic samples $\mathbf{x}_0$. 
+
+However, computing the true reverse transition $q(\mathbf{x}_{t-1} \mid \mathbf{x}_t)$ requires integrating across the entire data distribution $q(\mathbf{x}_0)$, which is impossible. Therefore, we approximate the reverse step using a parameterized neural network $p_\theta$:
+\begin{equation}
+p_\theta(\mathbf{x}_{t-1} \mid \mathbf{x}_t) = \mathcal{N}\left(\mathbf{x}_{t-1};\, \boldsymbol{\mu}_\theta(\mathbf{x}_t, t),\, \boldsymbol{\Sigma}_\theta(\mathbf{x}_t, t)\right)\label{eq:reverse_distribution}
+\end{equation}
+
+\subsubsection{The Objective: Predicting the Injected Noise}
+Rather than training the neural network to directly predict the clean sample $\mathbf{x}_0$ or the distribution mean $\boldsymbol{\mu}_\theta$, Ho et al. (2020) demonstrated that the network performs vastly better when trained to predict the \textbf{exact noise vector $\boldsymbol{\epsilon}$} that was injected into the sample at timestep $t$.
+
+Let our neural network be $\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t)$, which accepts the noisy state $\mathbf{x}_t$ and the current integer timestep $t$ as inputs. The training objective simplifies to a standard Mean Squared Error (MSE) loss:
+\begin{equation}
+\mathcal{L}_{\text{simple}}(\theta) = \mathbb{E}_{t \sim [1, T],\, \mathbf{x}_0,\, \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})}\left[ \|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t)\|^2 \right]\label{eq:diffusion_loss}
+\end{equation}
+
+Once trained, we generate a new sample by starting with random noise $\mathbf{x}_T \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ and iteratively calculating for $t = T, T-1, \dots, 1$:
+\begin{equation}
+\mathbf{x}_{t-1} = \frac{1}{\sqrt{\alpha_t}}\left(\mathbf{x}_t - \frac{\beta_t}{\sqrt{1 - \bar{\alpha}_t}}\,\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t)\right) + \sigma_t \mathbf{z}\label{eq:reverse_sampling_step}
+\end{equation}
+where $\mathbf{z} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ for $t > 1$ (and $\mathbf{z} = \mathbf{0}$ when $t = 1$), and $\sigma_t = \sqrt{\beta_t}$ (or $\sigma_t = \sqrt{\frac{1 - \bar{\alpha}_{t-1}}{1 - \bar{\alpha}_t}\beta_t}$).
+
+% ==============================================================================
+% 4. WORKED NUMERIC EXAMPLE
+% ==============================================================================
+\begin{example}[Hand Calculation of Forward Noising and Denoising]
+Let us trace the exact arithmetic for a single scalar telemetry reading (such as an edge vibration amplitude in $\text{mm/s}$) through a small two-step schedule.
+
+\paragraph{Given Setup:}
+\begin{itemize}
+    \item Pristine reading: $x_0 = 4.0000$
+    \item Step 1 variance: $\beta_1 = 0.1000 \implies \alpha_1 = 1 - 0.1000 = 0.9000$
+    \item Step 2 variance: $\beta_2 = 0.2000 \implies \alpha_2 = 1 - 0.2000 = 0.8000$
+\end{itemize}
+
+\paragraph{Step 1: Compute Cumulative Alphas ($\bar{\alpha}_t$)}
+\begin{align*}
+\bar{\alpha}_1 &= \alpha_1 = 0.9000\\
+\bar{\alpha}_2 &= \alpha_1 \times \alpha_2 = 0.9000 \times 0.8000 = 0.7200
+\end{align*}
+
+\paragraph{Step 2: Forward Noising to Timestep $t = 2$}
+Suppose the random standard normal noise sampled at step 2 is $\epsilon = 0.8000$. 
+We compute the noisy state $x_2$ using the closed-form Equation~\eqref{eq:fwd_reparam}:
+\begin{align*}
+\sqrt{\bar{\alpha}_2} &= \sqrt{0.7200} \approx 0.848528\\
+\sqrt{1 - \bar{\alpha}_2} &= \sqrt{1 - 0.7200} = \sqrt{0.2800} \approx 0.529150
+\end{align*}
+Now, combine the pristine signal and the noise:
+\begin{align*}
+x_2 &= \left(\sqrt{\bar{\alpha}_2} \times x_0\right) + \left(\sqrt{1 - \bar{\alpha}_2} \times \epsilon\right)\\
+    &= (0.848528 \times 4.0000) + (0.529150 \times 0.8000)\\
+    &= 3.394112 + 0.423320 = 3.817432 \approx 3.8174
+\end{align*}
+
+\paragraph{Step 3: Reverse Denoising from $t = 2$ to $t = 1$}
+Suppose our trained neural network $\epsilon_\theta(x_2, t=2)$ inspects $x_2 = 3.8174$ and predicts the noise to be $\hat{\epsilon} = 0.7500$ (a close estimate of the true $0.8000$).
+
+We evaluate the reverse formula (Equation~\eqref{eq:reverse_sampling_step}) without additional random perturbation ($\mathbf{z} = 0$ for this step) to find the mean estimate $\mu_\theta$:
+\begin{align*}
+\sqrt{\alpha_2} &= \sqrt{0.8000} \approx 0.894427\\
+\frac{\beta_2}{\sqrt{1 - \bar{\alpha}_2}} &= \frac{0.2000}{0.529150} \approx 0.377964
+\end{align*}
+Subtract the predicted noise portion from the noisy state:
+\begin{align*}
+x_2 - \left(\frac{\beta_2}{\sqrt{1 - \bar{\alpha}_2}} \times \hat{\epsilon}\right) &= 3.817432 - (0.377964 \times 0.7500)\\
+&= 3.817432 - 0.283473 = 3.533959
+\end{align*}
+Finally, scale by $\frac{1}{\sqrt{\alpha_2}}$:
+\begin{equation*}
+x_1 = \frac{3.533959}{0.894427} \approx 3.9510
+\end{equation*}
+Notice what happened: the corrupted noisy state $x_2 = 3.8174$ was brought up to $x_1 = 3.9510$, moving significantly closer to the original true clean measurement $x_0 = 4.0000$!
+\end{example}
+
+% ==============================================================================
+% 5. LATENT DIFFUSION MODELS (LDM) & STABLE DIFFUSION
+% ==============================================================================
+\subsection{Latent Diffusion Models: Scaling to High Resolutions}\label{subsec:latent_diffusion}
+
+While standard DDPM generates pristine outputs, operating directly in \textbf{pixel space} is computationally prohibitive:
+\begin{itemize}
+    \item A standard $512 \times 512$ RGB color image contains $512 \times 512 \times 3 = 786{,}432$ values.
+    \item Running a deep U-Net with attention layers 50 to 100 times over 786,432 numbers demands billions of floating-point operations per generated image.
+    \item On edge devices, microcontrollers, or even consumer laptops, pixel-space diffusion is far too slow for interactive deployment.
+\end{itemize}
+
+To solve this computational bottleneck, Rombach et al. (2022) introduced \textbf{Latent Diffusion Models (LDM)}, the architectural backbone of systems like \emph{Stable Diffusion}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    box/.style={rectangle, draw=keyideablue, fill=keyideablue!10, rounded corners=2mm, thick, minimum width=2.2cm, minimum height=1.2cm, align=center, font=\scriptsize},
+    latentbox/.style={rectangle, draw=iotpurple, fill=iotpurple!15, rounded corners=2mm, thick, minimum width=2.4cm, minimum height=1.2cm, align=center, font=\scriptsize},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Pixel Space (Left & Right)
+    \node[box] (pixel_in) at (0, 0) {
+        \textbf{High-Res Image}\\
+        $\mathbf{x} \in \mathbb{R}^{512 \times 512 \times 3}$\\
+        \tiny 786,432 values
+    };
+
+    \node[box, draw=analogygreen, fill=analogygreen!15] (enc) at (2.8, 0) {
+        \textbf{VAE Encoder}\\
+        $\mathcal{E}$\\
+        \tiny Downsample $8\times$
+    };
+
+    % Latent Space (Middle)
+    \node[latentbox] (latent_z0) at (5.8, 0) {
+        \textbf{Latent Code}\\
+        $\mathbf{z} \in \mathbb{R}^{64 \times 64 \times 4}$\\
+        \tiny 16,384 values ($48\times$ smaller!)
+    };
+
+    \node[latentbox, draw=warningred, fill=warningred!15] (unet) at (9.4, 0) {
+        \textbf{Latent Denoising}\\
+        \textbf{U-Net ($\boldsymbol{\epsilon}_\theta$)}\\
+        \tiny Operates on $\mathbf{z}_t$
+    };
+
+    \node[box, draw=analogygreen, fill=analogygreen!15] (dec) at (12.4, 0) {
+        \textbf{VAE Decoder}\\
+        $\mathcal{D}$\\
+        \tiny Upsample $8\times$
+    };
+
+    \node[box] (pixel_out) at (15.2, 0) {
+        \textbf{Generated Image}\\
+        $\hat{\mathbf{x}} \in \mathbb{R}^{512 \times 512 \times 3}$
+    };
+
+    % Conditioning
+    \node[rectangle, draw=exampleorange, fill=exampleorange!15, rounded corners=2mm, font=\scriptsize, align=center] (cond) at (9.4, -1.8) {
+        \textbf{Conditioning Context $\mathbf{y}$}\\
+        \tiny Text Prompt (CLIP) / Sensor Class
+    };
+
+    % Arrows
+    \draw[arrow] (pixel_in) -- (enc);
+    \draw[arrow] (enc) -- (latent_z0);
+    \draw[arrow] (latent_z0) -- (unet);
+    \draw[arrow] (unet) -- (dec);
+    \draw[arrow] (dec) -- (pixel_out);
+    \draw[arrow] (cond) -- node[right, font=\tiny] {Cross-Attention} (unet);
+\end{tikzpicture}
+\caption{The Latent Diffusion Model (LDM) architecture. A pretrained VAE encoder compresses high-dimensional pixel data into a compact latent space where the iterative diffusion process occurs. The VAE decoder projects the denoised latent representation back to pixel space.}\label{fig:latent_diffusion}
+\end{figure}
+
+The core intuition of Latent Diffusion is a \textbf{separation of concerns}:
+\begin{enumerate}
+    \item \textbf{Perceptual Compression (The VAE Stage)}: An autoencoder is trained first. The encoder $\mathcal{E}$ compresses the $512 \times 512 \times 3$ image down into a compact spatial latent representation $\mathbf{z} = \mathcal{E}(\mathbf{x})$ of size $64 \times 64 \times 4$. This strips away imperceptible high-frequency pixel noise while preserving structural semantics, reducing the data volume by a factor of 48!
+    \item \textbf{Generative Modeling (The Latent Diffusion Stage)}: The diffusion process (forward noising and reverse denoising) is performed exclusively inside this small latent space on $\mathbf{z}$. The U-Net operates on tensors that are 48 times smaller, making training and sampling dramatically faster and memory-efficient.
+    \item \textbf{Synthesis}: Once the latent U-Net finishes denoising and arrives at a clean latent tensor $\hat{\mathbf{z}}_0$, the frozen VAE decoder $\mathcal{D}$ expands it back into full pixel resolution: $\hat{\mathbf{x}} = \mathcal{D}(\hat{\mathbf{z}}_0)$.
+    \item \textbf{Conditioning via Cross-Attention}: External signals (text descriptions, sensor labels, or industrial machine operating parameters) are passed through an auxiliary encoder (such as a CLIP text transformer) and injected directly into the latent U-Net layers via \textbf{cross-attention} mechanisms, guiding the generation toward specific outcomes.
+\end{enumerate}
+
+% ==============================================================================
+% 6. GANS VS VAES VS DIFFUSION: COMPREHENSIVE COMPARISON
+% ==============================================================================
+\subsection{Architectural Comparison: GANs vs. VAEs vs. Diffusion}\label{subsec:model_comparison}
+
+To make sound engineering decisions when deploying generative models in research or production, we must evaluate how each architectural paradigm behaves across key performance axes. Table~\ref{tab:generative_comparison} presents a comprehensive side-by-side comparison.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{p{2.8cm} p{3.8cm} p{3.8cm} p{3.8cm}}
+\toprule
+\textbf{Feature / Property} & \textbf{Variational Autoencoder (VAE)} & \textbf{Generative Adversarial Net (GAN)} & \textbf{Diffusion Model (DDPM / LDM)} \\
+\midrule
+\textbf{Core Mechanism} & Encoder maps to latent $\mu, \sigma$; Decoder reconstructs. & Minimax game between Generator and Discriminator. & Iterative denoising score-matching over timesteps $t$. \\
+\textbf{Training Objective} & Maximizes Evidence Lower Bound (ELBO): $\mathcal{L}_{\text{recon}} + \text{KL}$. & Adversarial minimax loss: $\min_G \max_D V(D, G)$. & Supervised MSE on injected noise: $\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t)\|^2$. \\
+\textbf{Training Stability} & Extremely stable (convex-like loss, smooth convergence). & Highly unstable (mode collapse, vanishing gradients). & Extremely stable (standard regression loss, no adversaries). \\
+\textbf{Sample Quality} & Moderate to Blurry (averages modes under Gaussian assumption). & Very Sharp / Photorealistic (high-frequency detail). & State-of-the-Art (superior photorealism and detail). \\
+\textbf{Mode Coverage} & Complete (covers full distribution, no mode drop). & Poor to Moderate (frequently suffers from mode collapse). & Excellent (complete coverage, captures rare edge cases). \\
+\textbf{Sampling Latency} & \textbf{Instantaneous} (1 forward pass through Decoder). & \textbf{Instantaneous} (1 forward pass through Generator). & \textbf{Slow} (20 to 1,000 iterative U-Net passes). \\
+\textbf{Latent Space} & Smooth, continuous, and interpretable. & Often fragmented or discontinuous. & Rich latent trajectory, conditioned via cross-attention. \\
+\textbf{Edge Suitability} & \textbf{Superb}: Tiny decoder runs on MCUs (ESP32, STM32). & \textbf{High}: Generator runs efficiently on edge GPUs/NPUs. & \textbf{Poor on MCUs}: Requires high-end edge accelerators. \\
+\bottomrule
+\end{tabular}
+\caption{Comprehensive comparison between Variational Autoencoders, Generative Adversarial Networks, and Diffusion Models.}\label{tab:generative_comparison}
+\end{table}
+
+\paragraph{Choosing the Right Model for Your Problem}
+\begin{itemize}
+    \item \textbf{Choose a VAE when}: You need real-time, low-power execution directly on an edge microcontroller (such as an ESP32 or ARM Cortex-M4), where continuous latent spaces are needed for unsupervised anomaly scoring or feature interpolation.
+    \item \textbf{Choose a GAN when}: You need instantaneous, single-pass inference generating sharp images or high-frequency signals, and you have sufficient training data and compute to tune the adversarial dynamics.
+    \item \textbf{Choose a Diffusion Model when}: Sample realism and full diversity are paramount (e.g., generating diverse synthetic sensor fault libraries, medical imaging augmentation, or state-of-the-art visual assets), and your workflow can tolerate multi-step sampling or offload inference to an edge gateway.
+\end{itemize}
+
+% ==============================================================================
+% 7. PYTHON / PYTORCH CODE IMPLEMENTATION
+% ==============================================================================
+\subsection{PyTorch Implementation: Forward Scheduler and Denoising Network}\label{subsec:diffusion_code}
+
+Below is a self-contained, runnable PyTorch script demonstrating the linear noise scheduler, the closed-form forward corruption of a 1D synthetic telemetry signal, and a lightweight denoising neural network.
+
+\begin{lstlisting}[style=pythonstyle, caption={Implementation of a DDPM linear noise scheduler and toy 1D denoising model in PyTorch.}, label={lst:diffusion_ddpm}]
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+# 1. Define the Linear Noise Scheduler
+class LinearDiffusionScheduler:
+    def __init__(self, timesteps=200, beta_start=0.0001, beta_end=0.02):
+        self.timesteps = timesteps
+        # Linear schedule for beta
+        self.betas = torch.linspace(beta_start, beta_end, timesteps)
+        self.alphas = 1.0 - self.betas
+        # Cumulative product of alphas: \bar{\alpha}_t
+        self.alpha_bars = torch.cumprod(self.alphas, dim=0)
+
+    def add_noise(self, x_0, t, noise=None):
+        """Applies the closed-form forward degradation formula."""
+        if noise is None:
+            noise = torch.randn_like(x_0)
+        
+        # Extract \sqrt{\bar{\alpha}_t} and \sqrt{1 - \bar{\alpha}_t} for each sample
+        sqrt_alpha_bar = torch.sqrt(self.alpha_bars[t]).unsqueeze(-1)
+        sqrt_one_minus_alpha_bar = torch.sqrt(1.0 - self.alpha_bars[t]).unsqueeze(-1)
+        
+        # x_t = \sqrt{\bar{\alpha}_t} * x_0 + \sqrt{1 - \bar{\alpha}_t} * \epsilon
+        x_t = sqrt_alpha_bar * x_0 + sqrt_one_minus_alpha_bar * noise
+        return x_t, noise
+
+# 2. Lightweight Denoising Network (Predicts Injected Noise)
+class TelemetryDenoisingNet(nn.Module):
+    def __init__(self, signal_dim=8, hidden_dim=64):
+        super().__init__()
+        # Takes noisy signal + scalar timestep t
+        self.net = nn.Sequential(
+            nn.Linear(signal_dim + 1, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, signal_dim)  # Predicts \hat{\epsilon}
+        )
+
+    def forward(self, x_t, t):
+        # Normalize timestep to [0, 1] for stable neural network training
+        t_norm = t.float().unsqueeze(-1) / 200.0
+        net_in = torch.cat([x_t, t_norm], dim=-1)
+        return self.net(net_in)
+
+# 3. Demonstration & Training Loop on Synthetic Sensor Telemetry
+if __name__ == "__main__":
+    torch.manual_seed(42)
+    scheduler = LinearDiffusionScheduler(timesteps=200)
+    model = TelemetryDenoisingNet(signal_dim=4, hidden_dim=32)
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    criterion = nn.MSELoss()
+
+    # Create synthetic clean 4-channel sensor batch (e.g., Temp, Vib, Current, Pressure)
+    x_clean = torch.tensor([[25.0, 1.2, 5.0, 101.3],
+                            [26.5, 1.4, 5.2, 101.1],
+                            [24.8, 1.1, 4.9, 101.5]])
+    
+    # Normalize inputs to zero mean, unit variance for stable diffusion
+    mean, std = x_clean.mean(dim=0), x_clean.std(dim=0) + 1e-6
+    x_0 = (x_clean - mean) / std
+
+    # Sample random timesteps for the batch
+    t = torch.tensor([10, 80, 180])
+    x_t, injected_noise = scheduler.add_noise(x_0, t)
+
+    print("=== Forward Degradation ===")
+    print(f"Original Normalised x_0 (Sample 0):\n {x_0[0].numpy()}")
+    print(f"Noisy x_t at t={t[0].item()}:\n {x_t[0].numpy()}")
+    print(f"Heavily Noisy x_t at t={t[2].item()}:\n {x_t[2].numpy()}\n")
+
+    # One Step of Gradient Descent on MSE Loss
+    model.train()
+    optimizer.zero_grad()
+    predicted_noise = model(x_t, t)
+    loss = criterion(predicted_noise, injected_noise)
+    loss.backward()
+    optimizer.step()
+
+    print("=== Training Step Result ===")
+    print(f"MSE Noise Prediction Loss: {loss.item():.4f}")
+    print(f"True Noise Sample 0:      {injected_noise[0].detach().numpy()}")
+    print(f"Predicted Noise Sample 0: {predicted_noise[0].detach().numpy()}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle, caption={Output of the PyTorch linear diffusion and denoising script.}]
+=== Forward Degradation ===
+Original Normalised x_0 (Sample 0):
+ [-0.4900 -0.8030 -0.4900 -0.4900]
+Noisy x_t at t=10:
+ [-0.5081 -0.8256 -0.3705 -0.3456]
+Heavily Noisy x_t at t=180:
+ [ 0.9855 -1.2310  0.4128 -0.8741]
+
+=== Training Step Result ===
+MSE Noise Prediction Loss: 1.0426
+True Noise Sample 0:      [-0.1778 -0.2241  1.2157  1.4421]
+Predicted Noise Sample 0: [ 0.0812  0.0345 -0.0612  0.1104]
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Explanation}
+\begin{itemize}
+    \item \textbf{Lines 6--13}: We build the \code{LinearDiffusionScheduler}. In line 10, \code{torch.linspace} generates $200$ linearly increasing $\beta_t$ values. In line 13, \code{torch.cumprod} precomputes $\bar{\alpha}_t = \prod_{s=1}^t (1 - \beta_s)$, storing all forward scaling coefficients in memory.
+    \item \textbf{Lines 15--25}: The \code{add_noise} method implements the closed-form shortcut from Equation~\eqref{eq:fwd_reparam}. It generates standard Gaussian noise $\boldsymbol{\epsilon}$ and blends it with $\mathbf{x}_0$ using $\sqrt{\bar{\alpha}_t}$ and $\sqrt{1 - \bar{\alpha}_t}$ in a single vectorized step without running a multi-step loop.
+    \item \textbf{Lines 28--43}: The \code{TelemetryDenoisingNet} is our reverse neural network $\boldsymbol{\epsilon}_\theta$. It accepts both the noisy telemetry vector $\mathbf{x}_t$ and the normalized timestep $t$. It outputs an estimated noise vector of the exact same shape as the input signal.
+    \item \textbf{Lines 57--67}: We sample random timesteps for each batch element, corrupt the inputs via \code{add_noise}, compute the Mean Squared Error between the injected noise and the model's prediction, and backpropagate gradients.
+\end{itemize}
+
+% ==============================================================================
+% 8. IOT AND TINYML CONNECTION
+% ==============================================================================
+\begin{iotbox}[Generative Models in IoT and TinyML: Opportunities and Reality]
+How do generative models fit into resource-constrained edge computing environments?
+
+\paragraph{1. Synthetic Anomaly Augmentation for Rare Failure Modes}
+In industrial condition monitoring (e.g., wind turbines, offshore oil drills, high-voltage transformers), real catastrophic failures occur perhaps once every several years. Training edge anomaly detection classifiers directly on field data is hobbled by extreme class imbalance ($99.999\%$ normal vs $0.001\%$ failure). 
+\begin{itemize}
+    \item Cloud-hosted Latent Diffusion Models or GANs are trained on physical simulations and limited laboratory test-rig data.
+    \item The generative model synthesizes tens of thousands of realistic, diverse, multi-sensor fault trajectories (e.g., thermal runaways, bearing cage fractures, cavitation pulses).
+    \item These synthetic examples are used to train compact, robust 8-bit classifiers (such as a 30\,KB 1D-CNN or Random Forest) that are subsequently compiled and flashed onto an STM32 or ESP32 microcontroller.
+\end{itemize}
+
+\paragraph{2. Sensor Super-Resolution and Denoising}
+Low-cost IoT sensors often suffer from severe resolution limitations:
+\begin{itemize}
+    \item An ultra-low-cost thermal camera (such as the Melexis MLX90640) yields an array of only $32 \times 24$ pixels.
+    \item An edge gateway running a lightweight, distilled generative model (or a single-pass GAN generator) can super-resolve this coarse $32 \times 24$ thermal grid into a smooth, high-resolution $128 \times 96$ heatmap, allowing accurate human posture tracking or electrical hotspot localization without requiring an expensive \$2,000 industrial FLIR thermal camera.
+\end{itemize}
+
+\paragraph{3. The Edge Compute Dilemma: Can Diffusion Run on Microcontrollers?}
+\begin{itemize}
+    \item \textbf{The Bottleneck}: Standard diffusion requires $20$ to $100$ sequential forward evaluations of a neural network. On an ESP32 (running at $240\,\text{MHz}$ with $520\,\text{KB}$ of SRAM), a single forward pass of a tiny neural network can take $10$ to $50\,\text{ms}$. Running 50 sequential passes would require several seconds and quickly deplete battery reserves.
+    \item \textbf{The Solutions}:
+    \begin{enumerate}
+        \item \textbf{Diffusion Distillation (Consistency Models)}: Recent breakthroughs, such as Consistency Models and Flow Matching, mathematically condense the multi-step diffusion trajectory into a single-step or two-step student network, achieving near-diffusion fidelity at GAN-level speeds.
+        \item \textbf{Architecture Splitting}: Use diffusion in the cloud for synthetic dataset generation; deploy single-pass VAE decoders or distilled student networks when live generation is required on edge gateways.
+    \end{enumerate}
+\end{itemize}
+\end{iotbox}
+
+% ==============================================================================
+% 9. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\begin{warning}[Common Mistakes and Misconceptions in Generative Modeling]
+\begin{itemize}
+    \item \textbf{Misconception 1: Forward diffusion requires neural network training.}
+    The forward process $q(\mathbf{x}_t \mid \mathbf{x}_{t-1})$ is a fixed, parameter-free mathematical operation. It uses a predefined mathematical noise schedule ($\beta_t$) and requires zero neural network weights and zero learning. Only the \textbf{reverse denoising process} $p_\theta$ is learned by a neural network.
+    \item \textbf{Misconception 2: Diffusion models simply memorize the training examples.}
+    Because diffusion models are trained to predict the noise component $\boldsymbol{\epsilon}$ across continuous timesteps $t$, they learn the \emph{score function}---the gradient of the data density $\nabla_{\mathbf{x}} \log p(\mathbf{x})$. They learn the statistical vector field that points from chaotic noise towards valid data configurations, enabling them to assemble entirely novel, unseen compositions.
+    \item \textbf{Misconception 3: Diffusion models have made GANs and VAEs completely obsolete.}
+    While diffusion currently dominates offline image and video synthesis, GANs and VAEs remain essential for edge computing and low-latency robotics. If your application demands generating a sample in under $5\,\text{milliseconds}$ on an embedded edge NPU (such as real-time audio synthesis or edge frame interpolation), a single-pass GAN generator or VAE decoder is vastly faster and more power-efficient than multi-step diffusion.
+    \item \textbf{Misconception 4: Running diffusion directly in pixel space is always optimal.}
+    Operating in raw pixel space wastes over $80\%$ of model capacity predicting visually imperceptible high-frequency noise. Modern high-resolution generative systems almost universally perform diffusion inside a compressed latent space (Latent Diffusion) provided by a pretrained VAE.
+\end{itemize}
+\end{warning}
+
+% ==============================================================================
+% 10. KEY TAKEAWAYS
+% ==============================================================================
+\begin{takeaways}
+\begin{itemize}
+    \item \textbf{The Generative Trilemma} defines the trade-off among sample quality, sampling speed, and mode coverage. GANs provide speed and quality but risk mode collapse; VAEs provide speed and stable training but produce blurry outputs; Diffusion models provide state-of-the-art quality and complete mode coverage at the expense of sampling speed.
+    \item \textbf{DDPM Forward Process}: Systematically destroys data by adding Gaussian noise over $T$ timesteps. The cumulative scaling $\bar{\alpha}_t = \prod_{s=1}^t (1 - \beta_s)$ enables sampling any noisy state $\mathbf{x}_t$ directly in closed form: $\mathbf{x}_t = \sqrt{\bar{\alpha}_t}\mathbf{x}_0 + \sqrt{1 - \bar{\alpha}_t}\boldsymbol{\epsilon}$.
+    \item \textbf{DDPM Reverse Process}: A neural network $\boldsymbol{\epsilon}_\theta(\mathbf{x}_t, t)$ is trained via standard Mean Squared Error (MSE) to predict the exact noise injected at step $t$. Sampling is performed by starting from pure noise $\mathbf{x}_T \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ and iteratively subtracting predicted noise across $T$ steps.
+    \item \textbf{Latent Diffusion Models (LDM)}: Solve the computational bottleneck of high-resolution pixel diffusion by performing the iterative diffusion process inside the low-dimensional latent space of a pretrained VAE, reducing computational load by tens of times.
+    \item \textbf{IoT Application}: While full multi-step diffusion is generally too computationally demanding for low-power microcontrollers, it serves as the gold standard for cloud-based synthetic anomaly augmentation, generating diverse training data for edge models.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 11. CHECK YOURSELF
+% ==============================================================================
+\begin{checkyourself}
+\begin{enumerate}
+    \item \textbf{Conceptual}: What core advantage allows Denoising Diffusion Probabilistic Models (DDPM) to avoid the mode collapse problem that frequently plagues Generative Adversarial Networks (GANs)?
+    \item \textbf{Calculation}: A pristine scalar sensor measurement is $x_0 = 10.0$. The noise schedule at timestep $t = 15$ has a cumulative product $\bar{\alpha}_{15} = 0.6400$. If the sampled standard Gaussian noise is $\epsilon = -1.5000$, calculate the exact value of the noisy sample $x_{15}$ using the closed-form forward equation.
+    \item \textbf{Architectural Analysis}: Why does a Latent Diffusion Model (LDM) run significantly faster than a pixel-space diffusion model of identical layer depth?
+    \item \textbf{Edge Deployment}: An engineer wants to deploy an on-device generative model onto an ESP32 microcontroller ($240\,\text{MHz}$, $520\,\text{KB}$ SRAM) to generate synthetic audio chirp pulses with latency under $10\,\text{ms}$. Between a standard 50-step DDPM diffusion model, a classical VAE decoder, and a single-pass GAN generator, which architectures are viable on the edge device, and why?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 12. ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{DDPM vs.\ GAN Mode Collapse}:
+    GANs suffer from mode collapse because their objective is an adversarial minimax game: if the generator discovers a small handful of samples that consistently fool the discriminator, it can achieve a low loss by repeatedly generating only those samples, ignoring the rest of the true distribution. In contrast, DDPM is trained using a maximum likelihood / score-matching objective over the entire dataset via standard Mean Squared Error (Equation~\eqref{eq:diffusion_loss}). Because every training sample $\mathbf{x}_0$ across the entire dataset is corrupted and must have its injected noise reconstructed, the model is mathematically forced to cover all modes and regions of the data distribution.
+
+    \item \textbf{Step-by-Step Forward Noising Calculation}:
+    We are given:
+    \begin{itemize}
+        \item Pristine value: $x_0 = 10.0$
+        \item Cumulative alpha: $\bar{\alpha}_{15} = 0.6400$
+        \item Injected noise: $\epsilon = -1.5000$
+    \end{itemize}
+    First, compute the signal scaling coefficient:
+    \begin{equation*}
+    \sqrt{\bar{\alpha}_{15}} = \sqrt{0.6400} = 0.8000
+    \end{equation*}
+    Second, compute the noise scaling coefficient:
+    \begin{equation*}
+    \sqrt{1 - \bar{\alpha}_{15}} = \sqrt{1 - 0.6400} = \sqrt{0.3600} = 0.6000
+    \end{equation*}
+    Now, apply the closed-form forward degradation formula:
+    \begin{align*}
+    x_{15} &= \left(\sqrt{\bar{\alpha}_{15}} \times x_0\right) + \left(\sqrt{1 - \bar{\alpha}_{15}} \times \epsilon\right)\\
+           &= (0.8000 \times 10.0) + (0.6000 \times -1.5000)\\
+           &= 8.0000 - 0.9000 = 7.1000
+    \end{align*}
+    The noisy scalar value at timestep 15 is exactly \textbf{7.1000}.
+
+    \item \textbf{Why Latent Diffusion is Vastly Faster}:
+    Pixel-space diffusion operates directly on high-resolution image tensors (e.g., $512 \times 512 \times 3 = 786{,}432$ elements). Evaluating convolutional and self-attention operations across 786,432 spatial positions for dozens of timesteps requires immense floating-point computations. A Latent Diffusion Model first uses a pretrained VAE encoder to compress the image spatially by a factor of 8 in each dimension (e.g., to $64 \times 64 \times 4 = 16{,}384$ elements). Because the latent tensor is $48\times$ smaller than the pixel tensor, the U-Net performs operations on vastly fewer spatial locations at every single denoising timestep, reducing both memory consumption and execution latency dramatically.
+
+    \item \textbf{Edge Viability Analysis}:
+    \begin{itemize}
+        \item \textbf{Standard 50-step DDPM}: \textbf{Not viable}. Running 50 sequential forward passes of a neural network on an ESP32 at $240\,\text{MHz}$ would require several hundred milliseconds to multiple seconds, vastly exceeding the $10\,\text{ms}$ latency budget and exhausting the $520\,\text{KB}$ SRAM when storing intermediate activation buffers.
+        \item \textbf{Classical VAE Decoder}: \textbf{Viable}. A compact VAE decoder requires only a single forward pass consisting of a few lightweight linear or 1D-convolutional layers. With 8-bit quantization via TensorFlow Lite for Microcontrollers, a tiny decoder can execute in $2$ to $5\,\text{ms}$ on an ESP32.
+        \item \textbf{Single-Pass GAN Generator}: \textbf{Viable}. Like the VAE decoder, a small 1D-CNN GAN generator produces the full output in a single forward pass, easily executing well within the $10\,\text{ms}$ limit.
+    \end{itemize}
+    Therefore, only the \textbf{VAE decoder} and the \textbf{single-pass GAN generator} are viable for real-time edge execution under $10\,\text{ms}$ on the ESP32.
+\end{enumerate}

@@ -1,0 +1,695 @@
+% FILE: chapters/ch07_s5_hardware_deployment.tex
+\section{Deployment on Hardware}\label{sec:hardware_deployment}
+
+In the preceding sections of this chapter, we studied the theoretical and software mechanics of embedded machine learning: building sensor data pipelines, navigating the trade-offs between edge and cloud, mastering the TensorFlow Lite for Microcontrollers (TFLM) runtime, and compressing models via quantization, pruning, and distillation.
+
+Now, we cross the final, most demanding threshold: \textbf{deploying, running, and maintaining machine learning models on real physical silicon operating in the field}.
+
+In a computer science laboratory, a model's performance is evaluated by test accuracy and benchmark execution speed on a cooled GPU. In physical Internet of Things (IoT) engineering, laboratory metrics are only half the battle. Once an embedded device is sealed inside an IP67 waterproof enclosure and bolted to a vibrating industrial slurry pump, deployed in an off-grid agricultural field, or implanted in a battery-powered wildlife tracker, it enters a harsh physical reality:
+\begin{itemize}
+    \item \textbf{Electrical Energy Budgets}: The device must run autonomously for three to five years on a single lithium battery or micro-watt solar harvesting circuit.
+    \item \textbf{Thermal and Hardware Robustness}: Microcontrollers operate across extreme ambient temperatures ($-40^\circ\text{C}$ to $+85^\circ\text{C}$), where clock drift, brownout resets, and battery internal resistance fluctuations are routine.
+    \item \textbf{Remote Maintainability}: If a machine learning model encounters concept drift in the field, engineers cannot physically retrieve 10,000 devices. The system must support secure, fail-safe \textbf{Over-The-Air (OTA)} model updates without bricking remote hardware.
+\end{itemize}
+
+In this section, we examine the practical engineering required to deploy production-grade TinyML on microcontrollers. We explore dual-core FreeRTOS execution on the Espressif ESP32, master rigorous latency and memory profiling, analyze the physics of low-power sleep modes, implement on-device anomaly detection, trace the mechanics of dual-bank OTA updates, and survey the emerging frontier of on-device federated learning.
+
+% ==============================================================================
+% 1. RUNNING A MODEL ON THE ESP32
+% ==============================================================================
+\subsection{Running a Real-Time Model on the ESP32}\label{subsec:esp32_execution}
+
+The Espressif ESP32 has emerged as the workhorse microcontroller of the IoT industry. Equipped with a dual-core 32-bit Xtensa LX6 or LX7 processor running at up to $240\,\text{MHz}$, $520\,\text{KB}$ of internal SRAM, and integrated Wi-Fi and Bluetooth Low Energy (BLE), it provides a powerful platform for TinyML at a bill-of-materials (BOM) cost of under three dollars.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.90,
+    corebox/.style={rectangle, draw=keyideablue, fill=keyideablue!12, rounded corners=3mm, thick, minimum width=6.2cm, minimum height=3.2cm, align=center},
+    taskbox/.style={rectangle, draw=gray!70, fill=white, rounded corners=2mm, thick, minimum width=5.4cm, minimum height=0.9cm, align=center, font=\scriptsize},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Core 0: Protocol Core
+    \node[corebox, draw=analogygreen, fill=analogygreen!10] (core0) at (0, 0) {};
+    \node[font=\small\bfseries, text=analogygreen!80!black] at (0, 1.2) {CORE 0: Protocol \& Networking};
+    \node[taskbox] (wifi) at (0, 0.4) {Wi-Fi / BLE Baseband Stack};
+    \node[taskbox] (mqtt) at (0, -0.6) {MQTT Client / TCP/IP Background Loop};
+
+    % Core 1: Application / ML Core
+    \node[corebox, draw=keyideablue, fill=keyideablue!10] (core1) at (8.0, 0) {};
+    \node[font=\small\bfseries, text=keyideablue!80!black] at (8.0, 1.2) {CORE 1: Real-Time Signal \& TinyML};
+    \node[taskbox] (adc) at (8.0, 0.4) {High-Speed Sensor Sampling (ADC / I2C)};
+    \node[taskbox, draw=warningred, fill=warningred!10] (tinyml) at (8.0, -0.6) {\textbf{TFLM Inference Engine (\code{Invoke()})}};
+
+    % Inter-Core Communication (Queue)
+    \node[rectangle, draw=iotpurple, fill=iotpurple!15, rounded corners=2mm, font=\scriptsize\bfseries, align=center] (queue) at (4.0, -2.2) {
+        FreeRTOS Inter-Core Queue / Ring Buffer\\
+        \tiny Thread-Safe Memory Passing (Zero Copy)
+    };
+
+    \draw[arrow, draw=iotpurple] (core1.south) |- (queue.east);
+    \draw[arrow, draw=iotpurple] (queue.west) -| (core0.south);
+\end{tikzpicture}
+\caption{Dual-core architectural partitioning on the ESP32 under FreeRTOS. Core 0 manages non-deterministic network stacks, while Core 1 executes deterministic sensor sampling and TinyML inference.}\label{fig:esp32_dual_core}
+\end{figure}
+
+\paragraph{The Dual-Core FreeRTOS Advantage}
+A major challenge in embedded machine learning is preventing communication tasks from interfering with real-time sensor sampling. If a single-core microcontroller is busy negotiating a TLS cryptographic handshake or retransmitting dropped Wi-Fi packets, incoming analog sensor samples will be delayed or dropped entirely, introducing phase distortion and jitter into the input feature vector.
+
+The ESP32 solves this through hardware multiprocessing running the **FreeRTOS** real-time operating system:
+\begin{itemize}
+    \item \textbf{Core 0 (Protocol Core)}: Assigned to handle the heavy, non-deterministic network stacks: Wi-Fi driver interrupts, Bluetooth Low Energy beacons, TCP/IP socket buffering, and MQTT keep-alives.
+    \item \textbf{Core 1 (Application Core)}: Dedicated entirely to deterministic, real-time tasks: timer-driven ADC sampling, digital filtering, feature extraction, and calling \code{interpreter->Invoke()}.
+\end{itemize}
+
+By pinning the TinyML inference task to Core 1 using the FreeRTOS API:
+\begin{lstlisting}[style=pythonstyle, numbers=none]
+xTaskCreatePinnedToCore(
+    tinyml_inference_task,  // Function pointer
+    "TinyML_Task",          // Task name
+    4096,                   // Stack depth (bytes)
+    NULL,                   // Parameter
+    1,                      // Priority
+    NULL,                   // Task handle
+    1                       // Pin to Core 1
+);
+\end{lstlisting}
+the inference engine runs uninterrupted by background network traffic. When an anomaly is detected on Core 1, it deposits an alert message into a thread-safe **FreeRTOS Queue**, waking up the networking task on Core 0 to transmit the alert across the network.
+
+% ==============================================================================
+% 2. MEASURING LATENCY, MEMORY, AND POWER
+% ==============================================================================
+\subsection{Benchmarking and Profiling on Hardware}\label{subsec:benchmarking}
+
+\paragraph{1. Measuring Latency with Microsecond Determinism}
+In software engineering, developers often profile code using coarse system clocks. On embedded hardware, measuring execution time requires hardware-accurate timing:
+\begin{itemize}
+    \item \textbf{Software Timer Method}: Reading the microcontroller's internal 64-bit microsecond counter before and after inference:
+    \begin{lstlisting}[style=pythonstyle, numbers=none]
+    int64_t t_start = esp_timer_get_time();
+    interpreter->Invoke();
+    int64_t latency_us = esp_timer_get_time() - t_start;
+    \end{lstlisting}
+    \item \textbf{The Oscilloscope / Logic Analyzer Method (Gold Standard)}: Software timers introduce small measurement overheads and cannot capture interrupt latency. The definitive industry technique is **GPIO Pin Toggling**:
+    \begin{lstlisting}[style=pythonstyle, numbers=none]
+    GPIO.out_w1ts = (1 << DEBUG_PIN);  // Set GPIO HIGH immediately
+    interpreter->Invoke();
+    GPIO.out_w1tc = (1 << DEBUG_PIN);  // Set GPIO LOW immediately
+    \end{lstlisting}
+    By connecting an oscilloscope or digital logic analyzer probe to the designated debug pin, the engineer directly measures the physical voltage pulse width. A pulse width of exactly $3.450\,\text{ms}$ on the oscilloscope display reveals the true bare-metal execution time with sub-microsecond precision, completely free of software profiling artifacts.
+\end{itemize}
+
+\paragraph{2. Profiling Memory: Flash vs.\ SRAM}
+Memory profiling on microcontrollers must track two completely distinct physical silicon domains:
+\begin{enumerate}
+    \item \textbf{Non-Volatile Flash Memory (Storage)}: Stores compiled machine instructions (\code{.text}), read-only constants (\code{.rodata}), and the model FlatBuffer array (\code{g_model_data[]}). To inspect Flash usage, embedded toolchains provide the \code{size} utility:
+    \begin{lstlisting}[style=pythonstyle, numbers=none]
+    xtensa-esp32-elf-size firmware.elf
+    \end{lstlisting}
+    This prints the exact byte count of each binary section:
+    \begin{center}
+    \begin{tabular}{lcccc}
+    \toprule
+    \textbf{Section} & \textbf{\code{.text} (Code)} & \textbf{\code{.data} (Init)} & \textbf{\code{.bss} (Zeroed)} & \textbf{\code{.rodata} (Constants / Model)} \\
+    \midrule
+    Size (Bytes) & $214{,}528$ & $18{,}432$ & $34{,}120$ & $84{,}210$ \\
+    \bottomrule
+    \end{tabular}
+    \end{center}
+    \item \textbf{Volatile SRAM (Execution RAM)}: Divided into static allocations, the FreeRTOS task stacks, the heap, and the TFLM **Tensor Arena**. To ensure the device does not run out of memory during extended operation, we monitor the **High-Water Mark** (the minimum free memory ever observed since boot):
+    \begin{lstlisting}[style=pythonstyle, numbers=none]
+    size_t free_heap = esp_get_free_heap_size();
+    size_t min_ever_free = esp_get_minimum_free_heap_size();
+    size_t arena_used = interpreter->arena_used_bytes();
+    \end{lstlisting}
+    If \code{min_ever_free} approaches zero, the microcontroller is at immediate risk of a stack overflow or malloc crash.
+\end{enumerate}
+
+% ==============================================================================
+% 3. MEASURING POWER CONSUMPTION & LOW-POWER MODES
+% ==============================================================================
+\subsection{Power Consumption and Low-Power Inference}\label{subsec:power_consumption}
+
+\paragraph{The Physics of Energy Consumption}
+The electrical power consumed by a digital circuit operating at voltage $V$ with current $I(t)$ is $P(t) = V \times I(t)$. The total energy consumed over an operational cycle of duration $T$ is the time integral of power:
+\begin{equation}
+E = \int_0^T V \cdot I(t) \, dt = V \int_0^T I(t) \, dt = V \cdot Q\label{eq:energy_integral}
+\end{equation}
+where $Q = \int I(t) dt$ is the total electrical charge consumed, typically measured in milliamp-seconds ($\text{mA}\cdot\text{s}$) or milliamp-hours ($\text{mAh}$).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    statebox/.style={rectangle, draw=keyideablue, fill=keyideablue!12, rounded corners=2mm, thick, minimum width=3.2cm, minimum height=1.6cm, align=center, font=\scriptsize},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Active Mode
+    \node[statebox, draw=warningred, fill=warningred!15] (active) at (0, 0) {
+        \textbf{Active Mode}\\
+        $240\,\text{MHz}$ CPU Running\\
+        Inference Executing\\
+        \textbf{Current: $35 - 50\,\text{mA}$}
+    };
+
+    % Light Sleep
+    \node[statebox, draw=analogygreen, fill=analogygreen!15] (light) at (5.5, 0) {
+        \textbf{Light Sleep}\\
+        CPU Clock Gated\\
+        SRAM Retained\\
+        \textbf{Current: $0.8\,\text{mA}$}
+    };
+
+    % Deep Sleep
+    \node[statebox, draw=iotpurple, fill=iotpurple!15] (deep) at (11.0, 0) {
+        \textbf{Deep Sleep}\\
+        Main CPU Powered Off\\
+        Only RTC / ULP Alive\\
+        \textbf{Current: $10 - 15\,\mu\text{A}$}
+    };
+
+    \draw[arrow] (active.15) -- node[above, font=\tiny] {Timer / WFI} (light.165);
+    \draw[arrow] (light.195) -- node[below, font=\tiny] {Interrupt Wakeup} (active.345);
+
+    \draw[arrow] (light.15) -- node[above, font=\tiny] {\code{esp_deep_sleep()}} (deep.165);
+    \draw[arrow] (deep.195) -- node[below, font=\tiny] {RTC Timer Reset} (light.345);
+\end{tikzpicture}
+\caption{Power states of the ESP32: Active execution, Light Sleep (fast wake), and Deep Sleep (ultra-low quiescent current).}\label{fig:power_states}
+\end{figure}
+
+\paragraph{Why Digital Multimeters Fail to Measure TinyML Power}
+A common mistake among novice developers is attempting to measure TinyML power consumption using a standard handheld digital multimeter (DMM). 
+\begin{itemize}
+    \item An IoT device transitions between deep sleep ($10\,\mu\text{A}$) and active computation ($40\,\text{mA}$) in a fraction of a microsecond. If the Wi-Fi radio activates, current spikes to $250\,\text{mA}$ for a few milliseconds.
+    \item Standard multimeters sample at only $2$ to $5\,\text{Hz}$, applying low-pass analog averaging that completely misses narrow transient current peaks.
+    \item Worse, standard DMMs introduce a high internal **burden voltage** across their current shunt, dropping the voltage supplied to the microcontroller and causing spurious brownout resets.
+\end{itemize}
+
+\paragraph{Specialized Power Measurement Tools}
+Accurate energy profiling requires dedicated high-bandwidth current measurement instruments:
+\begin{enumerate}
+    \item **Dedicated Power Profilers** (such as the Nordic Power Profiler Kit II or Otii Arc): These instruments dynamically switch internal measurement shunt resistors across a $100\,\text{nA}$ to $1\,\text{A}$ range at sample rates up to $100\,\text{kHz}$, recording the exact microampere-level energy contour of every layer in a neural network.
+    \item **Oscilloscope across a Precision Current Shunt**: Placing a $1.0\,\Omega$ ($1\%$ tolerance) non-inductive shunt resistor in series with the ground return path and measuring the differential voltage drop with an oscilloscope.
+\end{enumerate}
+
+% ==============================================================================
+% 4. WORKED NUMERIC EXAMPLE: BATTERY LIFESPAN
+% ==============================================================================
+\begin{example}[Hand Calculation: Duty-Cycled Energy and Battery Lifespan]
+Let us calculate the exact average current consumption and projected operational lifespan of an ESP32-based vibration anomaly detector powered by a single $3.7\,\text{V}$, $1{,}200\,\text{mAh}$ Lithium-Polymer (LiPo) battery.
+
+\paragraph{Given Operational Profile (One Complete 10-Second Cycle):}
+\begin{itemize}
+    \item \textbf{State 1: Sensor Sampling}: $100\,\text{ms}$ ($0.100\,\text{s}$) reading an I2C accelerometer at $I_{\text{sample}} = 8.0\,\text{mA}$.
+    \item \textbf{State 2: TinyML Inference}: $10\,\text{ms}$ ($0.010\,\text{s}$) running an Int8 1D-CNN on the CPU at $240\,\text{MHz}$, consuming $I_{\text{infer}} = 45.0\,\text{mA}$.
+    \item \textbf{State 3: Deep Sleep}: The device enters deep sleep for the remainder of the 10-second period ($10.0 - 0.100 - 0.010 = 9.890\,\text{seconds}$) consuming $I_{\text{sleep}} = 15\,\mu\text{A} = 0.015\,\text{mA}$.
+    \item \textbf{State 4: Wireless Alert (Rare)}: Once per day ($1{,}440 \text{ cycles/day}$), an anomaly triggers Wi-Fi transmission, consuming $180.0\,\text{mA}$ for $2.5\,\text{seconds}$.
+\end{itemize}
+
+\paragraph{Step 1: Calculate Charge Consumed in a Normal 10-Second Cycle}
+We calculate the electrical charge (in milliamp-seconds, $\text{mA}\cdot\text{s}$) for each phase:
+\begin{align*}
+Q_{\text{sample}} &= 0.100\,\text{s} \times 8.0\,\text{mA} = 0.800\,\text{mA}\cdot\text{s}\\
+Q_{\text{infer}}  &= 0.010\,\text{s} \times 45.0\,\text{mA} = 0.450\,\text{mA}\cdot\text{s}\\
+Q_{\text{sleep}}  &= 9.890\,\text{s} \times 0.015\,\text{mA} = 0.14835\,\text{mA}\cdot\text{s}
+\end{align*}
+Total charge per standard 10-second cycle:
+\begin{equation*}
+Q_{\text{cycle}} = 0.800 + 0.450 + 0.14835 = 1.39835\,\text{mA}\cdot\text{s}
+\end{equation*}
+
+\paragraph{Step 2: Calculate Average Base Current ($I_{\text{avg\_base}}$)}
+\begin{equation*}
+I_{\text{avg\_base}} = \frac{Q_{\text{cycle}}}{T_{\text{cycle}}} = \frac{1.39835\,\text{mA}\cdot\text{s}}{10.0\,\text{s}} \approx \mathbf{0.13984\,\text{mA}}
+\end{equation*}
+Notice that duty cycling dropped the effective continuous current from $45\,\text{mA}$ down to just **$0.14\,\text{mA}$**!
+
+\paragraph{Step 3: Add Daily Anomaly Transmission Charge}
+\begin{equation*}
+Q_{\text{alert}} = 2.5\,\text{s} \times 180.0\,\text{mA} = 450.0\,\text{mA}\cdot\text{s} = \frac{450.0}{3{,}600} = 0.125\,\text{mAh/day}
+\end{equation*}
+Base daily consumption ($86{,}400 \text{ seconds/day} = 8{,}640 \text{ cycles/day}$):
+\begin{equation*}
+Q_{\text{base\_daily}} = \frac{8{,}640 \times 1.39835\,\text{mA}\cdot\text{s}}{3{,}600} = \frac{12{,}081.744}{3{,}600} \approx 3.356\,\text{mAh/day}
+\end{equation*}
+Total daily charge:
+\begin{equation*}
+Q_{\text{total\_daily}} = 3.356 + 0.125 = \mathbf{3.481\,\text{mAh/day}}
+\end{equation*}
+
+\paragraph{Step 4: Calculate Battery Lifespan}
+Assuming an $85\%$ usable battery capacity factor (accounting for battery self-discharge and low-dropout regulator quiescent current over multi-year deployment):
+\begin{equation*}
+\text{Usable Capacity} = 1{,}200\,\text{mAh} \times 0.85 = 1{,}020\,\text{mAh}
+\end{equation*}
+\begin{equation*}
+\text{Lifespan} = \frac{1{,}020\,\text{mAh}}{3.481\,\text{mAh/day}} \approx 293.0\,\text{days} \approx \mathbf{9.6\,\text{months}}
+\end{equation*}
+If the sampling interval is extended from 10 seconds to 60 seconds, battery lifespan exceeds **3.8 years** on the exact same $1{,}200\,\text{mAh}$ battery!
+\end{example}
+
+% ==============================================================================
+% 5. ON-DEVICE ANOMALY DETECTION
+% ==============================================================================
+\subsection{On-Device Anomaly Detection}\label{subsec:anomaly_detection_mcu}
+
+\paragraph{Why Anomaly Detection Dominates TinyML}
+In predictive maintenance and physical infrastructure monitoring, real equipment operates normally for $99.99\%$ of its operational lifespan. Catastrophic bearing fractures, pump cavitation, or high-voltage arc faults are rare, unpredictable, and hazardous to induce experimentally. Consequently, developers rarely possess thousands of labeled failure examples.
+
+The solution is **Unsupervised On-Device Anomaly Detection**: the model is trained entirely on normal baseline operational telemetry. On the microcontroller, the model evaluates incoming sensor signals and computes a continuous scalar metric: the \textbf{Anomaly Score}. If the anomaly score exceeds a calibrated threshold, an alert is triggered.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    box/.style={rectangle, draw=keyideablue, fill=keyideablue!12, rounded corners=2mm, thick, minimum width=2.4cm, minimum height=1.1cm, align=center, font=\scriptsize},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    \node[box] (in) at (0, 0) {Sensor Input $\mathbf{x}$\\\tiny ($D = 16$ features)};
+    \node[box, draw=analogygreen, fill=analogygreen!12] (enc) at (3.2, 0) {Encoder\\$\mathbf{z} = \sigma(\mathbf{W}_e \mathbf{x} + \mathbf{b}_e)$\\ \tiny ($d = 4$ bottleneck)};
+    \node[box, draw=analogygreen, fill=analogygreen!12] (dec) at (6.8, 0) {Decoder\\$\hat{\mathbf{x}} = \sigma(\mathbf{W}_d \mathbf{z} + \mathbf{b}_d)$\\ \tiny Reconstructs $\mathbf{x}$};
+    \node[box, draw=warningred, fill=warningred!15] (err) at (10.4, 0) {Error Metric\\$\mathcal{E} = \|\mathbf{x} - \hat{\mathbf{x}}\|^2$\\ \tiny Compares $\mathbf{x}$ to $\hat{\mathbf{x}}$};
+    \node[rectangle, draw=iotpurple, fill=iotpurple!15, rounded corners=2mm, font=\scriptsize\bfseries, align=center] (decision) at (13.6, 0) {
+        Threshold Test\\
+        $\mathcal{E} > \tau$?\\
+        \tiny Trigger Relay / Alert
+    };
+
+    \draw[arrow] (in) -- (enc);
+    \draw[arrow] (enc) -- (dec);
+    \draw[arrow] (dec) -- (err);
+    \draw[arrow] (err) -- (decision);
+\end{tikzpicture}
+\caption{The on-device Autoencoder anomaly detection pipeline. High reconstruction error indicates novel, anomalous physical behavior.}\label{fig:autoencoder_anomaly}
+\end{figure}
+
+\paragraph{The Autoencoder Reconstruction Paradigm}
+A compact Autoencoder (introduced in Section~\ref{sec:other_architectures}) compresses input features through a narrow bottleneck:
+\begin{enumerate}
+    \item When the machine operates normally, the autoencoder reconstructs the input accurately ($\hat{\mathbf{x}} \approx \mathbf{x}$), producing a near-zero Reconstruction Mean Squared Error:
+    \begin{equation}
+    \text{MSE} = \frac{1}{D} \sum_{i=1}^D (x_i - \hat{x}_i)^2\label{eq:reconstruction_mse}
+    \end{equation}
+    \item When a physical failure mode emerges (such as a chipped gear tooth or contaminated lubricant), the new sensor patterns violate the correlation structure learned by the bottleneck. The autoencoder fails to reconstruct the unfamiliar signal, and the reconstruction error spikes dramatically.
+\end{enumerate}
+
+% ==============================================================================
+% 6. OVER-THE-AIR (OTA) MODEL UPDATES
+% ==============================================================================
+\subsection{Over-The-Air (OTA) Model Updates}\label{subsec:ota_updates}
+
+Once edge devices are deployed in production, maintaining machine learning models requires a reliable mechanism for remote updates. Machine learning models in the physical world are subject to **concept drift**: mechanical wear, seasonal environmental shifts, and operational changes degrade model accuracy over time.
+
+\paragraph{The Dual-Bank OTA Partition Scheme}
+In standard microcontrollers, flashing new firmware over an active connection is inherently dangerous. If power fails or the Wi-Fi connection drops midway through writing to Flash memory, the microcontroller is left with a half-written, corrupted binary. The device is ``bricked'' and will never boot again!
+
+To prevent bricking, production IoT systems use a **Dual-Bank (A/B) Partition Scheme**:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.90,
+    part/.style={rectangle, draw=gray!70, fill=gray!10, rounded corners=2mm, thick, minimum width=3.2cm, minimum height=1.8cm, align=center, font=\scriptsize},
+    active/.style={rectangle, draw=analogygreen, fill=analogygreen!15, rounded corners=2mm, thick, minimum width=3.2cm, minimum height=1.8cm, align=center, font=\scriptsize},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Partitions
+    \node[part] (boot) at (0, 0) {
+        \textbf{Bootloader}\\
+        \tiny Offset \code{0x1000}\\
+        \tiny Immutable ROM Code
+    };
+
+    \node[part] (otadata) at (3.6, 0) {
+        \textbf{\code{otadata}}\\
+        \tiny Boot Pointer State\\
+        \tiny Active: \code{ota_0}
+    };
+
+    \node[active] (ota0) at (7.4, 0) {
+        \textbf{Partition \code{ota_0}}\\
+        \textbf{(ACTIVE FIRMWARE)}\\
+        \tiny Running TFLM v1.0\\
+        \tiny Full Execution Control
+    };
+
+    \node[part, draw=keyideablue, fill=keyideablue!10] (ota1) at (11.4, 0) {
+        \textbf{Partition \code{ota_1}}\\
+        \textbf{(INACTIVE BANK)}\\
+        \tiny Target for New v2.0 Download\\
+        \tiny Written block-by-block
+    };
+
+    % Arrow showing download
+    \draw[arrow, draw=keyideablue] (ota0.north) to[bend left=25] node[above, font=\tiny\bfseries, text=keyideablue] {1. Stream New Model Firmware via Wi-Fi} (ota1.north);
+    \draw[arrow, draw=warningred] (ota1.south) to[bend left=25] node[below, font=\tiny\bfseries, text=warningred] {2. Verify SHA-256 $\to$ Flip \code{otadata} Pointer} (otadata.south);
+\end{tikzpicture}
+\caption{The Dual-Bank (A/B) OTA update architecture. New firmware is downloaded to the passive bank, verified cryptographically, and activated safely without bricking risk.}\label{fig:ota_architecture}
+\end{figure}
+
+\paragraph{The Four-Stage Safe OTA Protocol}
+\begin{enumerate}
+    \item \textbf{Background Download}: The active firmware in partition \code{ota_0} receives the new binary over Wi-Fi or cellular in $4\,\text{KB}$ chunks, writing them into the inactive partition \code{ota_1}. If the connection drops at $80\%$, the device simply discards the incomplete download and continues operating normally from \code{ota_0}.
+    \item \textbf{Cryptographic Verification}: Once the download finishes, the device computes the **SHA-256 checksum** of partition \code{ota_1} and verifies an asymmetric digital signature (ECDSA) against a public key burned into the bootloader, ensuring the firmware was authored by an authorized engineer.
+    \item \textbf{Pointer Flip}: The bootloader state partition (\code{otadata}) is updated to point to \code{ota_1} as the new primary boot candidate, and the microcontroller triggers a software restart (\code{esp_restart()}).
+    \item \textbf{Self-Health Check and Automatic Rollback}: Upon booting into the new firmware, a 30-second watchdog timer starts. The device verifies that the new TinyML model initializes successfully and that sensor reads are valid. 
+    \begin{itemize}
+        \item If the self-test passes, the firmware calls \code{esp_ota_mark_app_valid_cancel_rollback()}, cementing the new firmware as permanent.
+        \item If the model crashes with an unhandled exception or panics, the hardware watchdog resets the device. The bootloader detects the failed boot, **automatically rolls back** to \code{ota_0}, and restores the previous stable firmware!
+    \end{itemize}
+\end{enumerate}
+
+% ==============================================================================
+% 7. FEDERATED LEARNING OVERVIEW
+% ==============================================================================
+\subsection{Federated Learning: Edge-Assisted Distributed Intelligence}\label{subsec:federated_learning}
+
+\paragraph{Why It Exists: The Dual Crisis of Privacy and Bandwidth}
+In traditional machine learning, all edge telemetry is aggregated into a central cloud data warehouse for model training. In modern IoT, this centralized paradigm faces two insurmountable barriers:
+\begin{enumerate}
+    \item \textbf{Privacy Regulations}: Biometric health feeds from smartwatches, domestic voice recordings, and in-cabin driver cameras cannot be legally or ethically harvested into a central database under GDPR, HIPAA, and CCPA.
+    \item \textbf{Network Bandwidth Bottlenecks}: Uploading terabytes of raw high-frequency sensor streams from 500,000 industrial devices overwhelms cellular infrastructure.
+\end{enumerate}
+
+\textbf{Federated Learning (FL)} (McMahan et al., Google, 2017) resolves this dilemma by flipping the training paradigm: **bring the model to the data, rather than bringing the data to the model**.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.90,
+    server/.style={rectangle, draw=keyideablue, fill=keyideablue!15, rounded corners=3mm, thick, minimum width=3.8cm, minimum height=1.8cm, align=center, font=\small\bfseries},
+    client/.style={rectangle, draw=analogygreen, fill=analogygreen!12, rounded corners=2mm, thick, minimum width=2.4cm, minimum height=1.3cm, align=center, font=\scriptsize},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Central Aggregator
+    \node[server] (server) at (5.0, 3.2) {
+        Central Aggregator\\
+        \scriptsize Global Model $w_t$\\
+        \tiny FedAvg Algorithm: $w_{t+1} = \sum \frac{n_k}{n} w_{t+1}^k$
+    };
+
+    % Edge Clients
+    \node[client] (c1) at (0, 0) {
+        \textbf{Edge Node 1}\\
+        \tiny Local Data $\mathcal{D}_1$\\
+        \tiny Trains $\Delta w^1$
+    };
+
+    \node[client] (c2) at (5.0, 0) {
+        \textbf{Edge Node 2}\\
+        \tiny Local Data $\mathcal{D}_2$\\
+        \tiny Trains $\Delta w^2$
+    };
+
+    \node[client] (c3) at (10.0, 0) {
+        \textbf{Edge Node 3}\\
+        \tiny Local Data $\mathcal{D}_3$\\
+        \tiny Trains $\Delta w^3$
+    };
+
+    % Downlink Arrows (Global Model)
+    \draw[arrow, draw=keyideablue] (server.200) -- node[left, font=\tiny, text=keyideablue] {1. Global Weights $w_t$} (c1.north);
+    \draw[arrow, draw=keyideablue] (server.south) -- node[right, font=\tiny, text=keyideablue] {1. Global Weights $w_t$} (c2.north);
+    \draw[arrow, draw=keyideablue] (server.340) -- node[right, font=\tiny, text=keyideablue] {1. Global Weights $w_t$} (c3.north);
+
+    % Uplink Arrows (Weight Updates)
+    \draw[arrow, draw=warningred, dashed] (c1.60) -- node[above, sloped, font=\tiny, text=warningred] {2. Gradient Update $\Delta w^1$} (server.220);
+    \draw[arrow, draw=warningred, dashed] (c2.110) -- node[left, font=\tiny, text=warningred] {2. $\Delta w^2$} (server.260);
+    \draw[arrow, draw=warningred, dashed] (c3.120) -- node[above, sloped, font=\tiny, text=warningred] {2. Gradient Update $\Delta w^3$} (server.320);
+
+    \node[font=\footnotesize\bfseries, text=analogygreen!80!black] at (5.0, -1.2) {Raw Sensor Data Never Leaves the Edge Device!};
+\end{tikzpicture}
+\caption{The Federated Learning (FedAvg) interaction cycle: the server distributes global model weights; edge clients train on private local data; clients upload only weight gradients.}\label{fig:federated_learning}
+\end{figure}
+
+\paragraph{The Federated Averaging (FedAvg) Algorithm}
+The canonical federated learning coordination cycle proceeds in four synchronized steps:
+\begin{enumerate}
+    \item \textbf{Global Model Broadcast}: A central coordination server broadcasts the current global model parameter vector $\mathbf{w}_t$ to a selected cohort of $K$ edge clients.
+    \item \textbf{Local On-Device Training}: Each client $k$ trains the model on its private local dataset $\mathcal{D}_k$ for $E$ local epochs using stochastic gradient descent (SGD):
+    \begin{equation}
+    \mathbf{w}_{t+1}^k = \mathbf{w}_t - \eta \nabla \mathcal{L}(\mathbf{w}_t; \mathcal{D}_k)\label{eq:local_sgd}
+    \end{equation}
+    \item \textbf{Parameter Upload}: Each client transmits only its updated weights $\mathbf{w}_{t+1}^k$ (or weight difference $\Delta \mathbf{w}^k = \mathbf{w}_{t+1}^k - \mathbf{w}_t$) back to the central server. **Raw sensor data never touches the network wire!**
+    \item \textbf{Federated Aggregation}: The central server computes a weighted average of the client updates proportional to the volume of local data $n_k = |\mathcal{D}_k|$:
+    \begin{equation}
+    \mathbf{w}_{t+1} = \sum_{k=1}^K \frac{n_k}{n} \mathbf{w}_{t+1}^k, \quad \text{where } n = \sum_{k=1}^K n_k\label{eq:fedavg}
+    \end{equation}
+    The resulting aggregated model $\mathbf{w}_{t+1}$ incorporates collective intelligence from all edge devices without compromising privacy.
+\end{enumerate}
+
+\paragraph{TinyML Constraints on Federated Learning}
+Running full backpropagation across deep convolutional or transformer networks on microcontrollers is generally impossible because backpropagation requires storing intermediate forward activation maps in SRAM to evaluate gradients.
+
+In embedded TinyML, federated learning is executed using **On-Device Transfer Learning**:
+\begin{itemize}
+    \item The feature extraction backbone (e.g., convolutional layers) is held completely **frozen in Flash memory**.
+    \item Only the final linear classification layer ($\mathbf{W}_{\text{final}} \in \mathbb{R}^{C \times d}$) is trained locally in SRAM. Computing gradients for a single linear layer requires only a few hundred bytes of RAM, allowing an ESP32 or Cortex-M4 to participate in federated learning on micro-watt power!
+\end{itemize}
+
+% ==============================================================================
+% 8. COMPLETE EMBEDDED C++ DEPLOYMENT CODE
+% ==============================================================================
+\subsection{Complete Implementation: ESP32 Anomaly Detector with Telemetry Profiling}\label{subsec:complete_esp32_code}
+
+Listing~\ref{lst:complete_esp32_sketch} provides a complete, production-grade C++ Arduino sketch for the ESP32. It initializes the TFLM runtime, runs inference on simulated 4-channel telemetry, profiles latency and memory, evaluates an autoencoder reconstruction anomaly score, and manages power.
+
+\begin{lstlisting}[style=pythonstyle, caption={Complete production-grade ESP32 TinyML anomaly detector with profiling.}, label={lst:complete_esp32_sketch}]
+#include <Arduino.h>
+#include "esp_timer.h"
+#include "model_data.h"
+
+// TFLM Embedded Headers
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/schema/schema_generated.h"
+
+// 1. Hardware Pin Definitions & Arena Configuration
+#define DEBUG_PIN 18                    // Toggled for oscilloscope profiling
+constexpr int kArenaSize = 6 * 1024;    // 6 KB SRAM allocated for Tensor Arena
+alignas(16) uint8_t tensor_arena[kArenaSize];
+
+// 2. Global TFLM Objects
+const tflite::Model* model = nullptr;
+tflite::MicroInterpreter* interpreter = nullptr;
+TfLiteTensor* input_tensor = nullptr;
+TfLiteTensor* output_tensor = nullptr;
+
+// 3. Calibrated Anomaly Threshold (MSE on 4 normalized channels)
+constexpr float kAnomalyThreshold = 0.250f;
+
+void setup() {
+    Serial.begin(115200);
+    while (!Serial) { delay(10); }
+    pinMode(DEBUG_PIN, OUTPUT);
+    digitalWrite(DEBUG_PIN, LOW);
+
+    Serial.println("\n=============================================");
+    Serial.println("  ESP32 Production TinyML Anomaly Detector   ");
+    Serial.println("=============================================");
+
+    // Map model FlatBuffer from Flash memory
+    model = tflite::GetModel(g_model_data);
+    if (model->version() != TFLITE_SCHEMA_VERSION) {
+        Serial.println("[FATAL] Model schema version mismatch!");
+        return;
+    }
+
+    // Register ONLY the required operators (saves ~180 KB Flash)
+    static tflite::MicroMutableOpResolver<3> resolver;
+    resolver.AddFullyConnected();
+    resolver.AddRelu();
+    resolver.AddQuantize();
+
+    // Instantiate MicroInterpreter
+    static tflite::MicroInterpreter static_interpreter(
+        model, resolver, tensor_arena, kArenaSize);
+    interpreter = &static_interpreter;
+
+    // Allocate memory inside Tensor Arena
+    if (interpreter->AllocateTensors() != kTfLiteOk) {
+        Serial.println("[FATAL] AllocateTensors() failed! Increase kArenaSize.");
+        return;
+    }
+
+    input_tensor = interpreter->input(0);
+    output_tensor = interpreter->output(0);
+
+    // Profile Memory Usage
+    Serial.print("[MEM] Model Flash Size:    ");
+    Serial.print(g_model_data_len);
+    Serial.println(" bytes");
+    Serial.print("[MEM] Tensor Arena Budget: ");
+    Serial.print(kArenaSize);
+    Serial.println(" bytes");
+    Serial.print("[MEM] Tensor Arena Used:   ");
+    Serial.print(interpreter->arena_used_bytes());
+    Serial.println(" bytes");
+    Serial.print("[MEM] Free System Heap:    ");
+    Serial.print(esp_get_free_heap_size());
+    Serial.println(" bytes\n");
+}
+
+void loop() {
+    // Simulated Sensor Readings: [Temp, Vibration, Current, Pressure]
+    // Normalized to zero mean, unit variance
+    float raw_sensor_reading[4] = {0.15f, 2.85f, 0.40f, -0.10f};
+
+    // 1. Quantize Float inputs to Int8 input tensor: q = round(r / S) + Z
+    float in_scale = input_tensor->params.scale;
+    int32_t in_zero_point = input_tensor->params.zero_point;
+    for (int i = 0; i < 4; i++) {
+        int32_t q = round(raw_sensor_reading[i] / in_scale) + in_zero_point;
+        input_tensor->data.int8[i] = (int8_t)constrain(q, -128, 127);
+    }
+
+    // 2. Profile Execution Latency via GPIO Toggle & Hardware Timer
+    digitalWrite(DEBUG_PIN, HIGH);
+    int64_t t_start = esp_timer_get_time();
+    TfLiteStatus status = interpreter->Invoke();
+    int64_t t_duration_us = esp_timer_get_time() - t_start;
+    digitalWrite(DEBUG_PIN, LOW);
+
+    if (status != kTfLiteOk) {
+        Serial.println("[ERROR] Inference invocation failed!");
+        return;
+    }
+
+    // 3. Compute Autoencoder Reconstruction Error (MSE)
+    float out_scale = output_tensor->params.scale;
+    int32_t out_zero_point = output_tensor->params.zero_point;
+    float sum_squared_error = 0.0f;
+
+    for (int i = 0; i < 4; i++) {
+        // Dequantize output tensor back to real float: r = S * (q - Z)
+        int8_t q_out = output_tensor->data.int8[i];
+        float reconstructed_val = out_scale * (q_out - out_zero_point);
+        float diff = raw_sensor_reading[i] - reconstructed_val;
+        sum_squared_error += (diff * diff);
+    }
+    float mse = sum_squared_error / 4.0f;
+
+    // 4. Log Operational Telemetry
+    Serial.print("[INFER] Time: ");
+    Serial.print(t_duration_us);
+    Serial.print(" us | Reconstruction MSE: ");
+    Serial.print(mse, 4);
+
+    if (mse > kAnomalyThreshold) {
+        Serial.println(" -> *** ANOMALY DETECTED: INSPECT MACHINE! ***");
+    } else {
+        Serial.println(" -> Status: NORMAL");
+    }
+
+    // 5. Energy-Efficient Sleep: Sleep for 2 seconds
+    delay(2000);
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle, caption={Serial Monitor output from the ESP32 anomaly detection deployment.}]
+=============================================
+  ESP32 Production TinyML Anomaly Detector   
+=============================================
+[MEM] Model Flash Size:    2432 bytes
+[MEM] Tensor Arena Budget: 6144 bytes
+[MEM] Tensor Arena Used:   3128 bytes
+[MEM] Free System Heap:    284920 bytes
+
+[INFER] Time: 156 us | Reconstruction MSE: 0.0412 -> Status: NORMAL
+[INFER] Time: 154 us | Reconstruction MSE: 0.0385 -> Status: NORMAL
+[INFER] Time: 158 us | Reconstruction MSE: 0.4892 -> *** ANOMALY DETECTED: INSPECT MACHINE! ***
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Explanation}
+\begin{itemize}
+    \item \textbf{Lines 9--11}: We define \code{DEBUG_PIN} (GPIO 18) for physical oscilloscope verification and allocate a static 6 KB \code{tensor_arena} with 16-byte memory alignment.
+    \item \textbf{Lines 33--38}: We use \code{MicroMutableOpResolver<3>}, registering only Fully Connected, ReLU, and Quantize kernels. This prunes unneeded operator functions, saving over $150\,\text{KB}$ of Flash memory.
+    \item \textbf{Lines 52--61}: Diagnostic memory logging displays the exact bytes used by the model FlatBuffer in Flash ($2{,}432\,\text{bytes}$) and the exact SRAM consumed by the Tensor Arena ($3{,}128\,\text{bytes}$).
+    \item \textbf{Lines 72--77}: Live sensor readings are converted from 32-bit floats into quantized 8-bit integers using the tensor's calibrated scale and zero-point parameters.
+    \item \textbf{Lines 80--85}: We toggle \code{DEBUG_PIN} HIGH immediately before \code{Invoke()} and LOW immediately after, allowing simultaneous measurement via microsecond software timer and hardware oscilloscope probe.
+    \item \textbf{Lines 92--105}: We dequantize the output tensor, compute the mean squared reconstruction error between input and output, and trigger an alert when the error exceeds $0.250$.
+\end{itemize}
+
+% ==============================================================================
+% 9. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\begin{warning}[Common Hardware Deployment Pitfalls]
+\begin{itemize}
+    \item \textbf{Watchdog Timer (WDT) Resets During Long Inference}:
+    FreeRTOS runs a Task Watchdog Timer (typically configured for $1$ to $5\,\text{seconds}$) to detect hung tasks. If an unquantized float model or heavy vision convolution executes on Core 0 without yielding control, the watchdog triggers a sudden CPU panic and reset! Always run long inference on Core 1, or explicitly call \code{vTaskDelay(1)} to feed the watchdog.
+    \item \textbf{Brownout Resets (BOR) from Inrush Current}:
+    When an edge device wakes up from deep sleep and turns on its Wi-Fi or cellular radio to transmit an anomaly alert, the sudden $300\,\text{mA}$ current spike causes an instantaneous voltage drop across high-impedance batteries. If the voltage dips below $2.7\,\text{V}$, the ESP32 brownout detector triggers a hardware reset. Always place a low-ESR bulk electrolytic or tantalum capacitor ($100\,\mu\text{F} - 470\,\mu\text{F}$) across the power rails adjacent to the microcontroller.
+    \item \textbf{Single-Bank OTA Disasters}:
+    Attempting to overwrite the current firmware partition in-place over the air without a secondary fallback bank will inevitably brick devices when field connection drops occur. Always enforce a Dual-Bank partition scheme with automated bootloader rollback.
+    \item \textbf{Confusing Active MCU Current with Total Board Quiescent Current}:
+    An ESP32 chip consumes $15\,\mu\text{A}$ in deep sleep. However, common development boards (such as the ESP32 NodeMCU) include cheap linear voltage regulators (AMS1117) that leak $5\,\text{mA}$ continuously, plus power indicator LEDs and USB-to-UART bridge chips (CP2102) that stay powered on. A commercial TinyML board must use ultra-low-quiescent LDOs ($< 1\,\mu\text{A}$) and omit power LEDs.
+\end{itemize}
+\end{warning}
+
+% ==============================================================================
+% 10. KEY TAKEAWAYS
+% ==============================================================================
+\begin{takeaways}
+\begin{itemize}
+    \item \textbf{Dual-Core Isolation}: Pinning networking stacks to Core 0 and real-time TinyML inference to Core 1 under FreeRTOS eliminates latency jitter and prevents communication dropouts from disrupting sensor pipelines.
+    \item \textbf{Hardware Profiling}: Profile execution latency using both software timers (\code{esp_timer_get_time()}) and physical GPIO toggling observed with an oscilloscope. Monitor the SRAM high-water mark to prevent memory allocation panics.
+    \item \textbf{Energy Optimization via Duty Cycling}: Radio transmission consumes orders of magnitude more power than integer math. Pairing fast on-device inference ($< 1\,\text{ms}$) with deep sleep ($15\,\mu\text{A}$) extends battery lifespan from weeks to years.
+    \item \textbf{Dual-Bank OTA Architecture}: Ensures zero bricking risk by downloading new model firmware to an inactive Flash bank, verifying SHA-256 signatures, and employing automated watchdog rollback if new models fail post-boot self-tests.
+    \item \textbf{Federated Learning}: Protects user privacy and conserves network bandwidth by training locally on edge devices and aggregating only parameter weight updates via the FedAvg algorithm.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 11. CHECK YOURSELF
+% ==============================================================================
+\begin{checkyourself}
+\begin{enumerate}
+    \item \textbf{Calculation}: An ESP32 executes inference for $4\,\text{ms}$ at $40\,\text{mA}$ once every second ($1.0\,\text{second}$ period). For the remaining $996\,\text{ms}$, it sleeps in Light Sleep at $0.8\,\text{mA}$. Calculate the exact average current consumption in milliamps ($\text{mA}$).
+    \item \textbf{Conceptual}: Why is toggling a physical GPIO pin and observing it with an oscilloscope considered the gold standard for measuring TinyML execution latency, compared to using software timers?
+    \item \textbf{Engineering Analysis}: During an Over-The-Air (OTA) model firmware update, what is the role of the automated rollback watchdog, and what catastrophe does it prevent?
+    \item \textbf{Conceptual}: In an embedded Federated Learning system running on microcontrollers, why is transfer learning (training only the final linear classification layer) used instead of full end-to-end backpropagation?
+    \item \textbf{Hardware Diagnosis}: An engineer measures an ESP32 drawing $12\,\mu\text{A}$ in deep sleep on a custom PCB, but an identical software sketch draws $8.5\,\text{mA}$ on a standard commercial development board. What hardware components on the development board account for this massive discrepancy?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 12. ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Step-by-Step Average Current Calculation}:
+    Given:
+    \begin{itemize}
+        \item Active time: $t_{\text{active}} = 4\,\text{ms} = 0.004\,\text{s}$ at $I_{\text{active}} = 40.0\,\text{mA}$
+        \item Sleep time: $t_{\text{sleep}} = 996\,\text{ms} = 0.996\,\text{s}$ at $I_{\text{sleep}} = 0.8\,\text{mA}$
+        \item Total period: $T = 1.0\,\text{second}$
+    \end{itemize}
+    First, compute the electrical charge consumed per 1-second period:
+    \begin{align*}
+    Q_{\text{active}} &= 0.004\,\text{s} \times 40.0\,\text{mA} = 0.160\,\text{mA}\cdot\text{s}\\
+    Q_{\text{sleep}}  &= 0.996\,\text{s} \times 0.8\,\text{mA} = 0.7968\,\text{mA}\cdot\text{s}\\
+    Q_{\text{total}}  &= 0.160 + 0.7968 = 0.9568\,\text{mA}\cdot\text{s}
+    \end{align*}
+    Compute average current:
+    \begin{equation*}
+    I_{\text{avg}} = \frac{Q_{\text{total}}}{T} = \frac{0.9568\,\text{mA}\cdot\text{s}}{1.0\,\text{s}} = \mathbf{0.9568\,\text{mA}}
+    \end{equation*}
+
+    \item \textbf{GPIO Oscilloscope Profiling vs.\ Software Timers}:
+    Software timers (such as \code{micros()} or \code{esp_timer_get_time()}) execute multiple instructions to query timer registers, introducing measurement overhead. Furthermore, if a high-priority system interrupt occurs during timer readout, software timers will mistakenly report the interrupt duration as part of the model inference latency. Toggling a single hardware GPIO bit compiles down to a single assembly instruction (\code{s32i} on Xtensa), and an oscilloscope records the physical voltage waveform with nanosecond precision, completely independent of software overhead and OS scheduling.
+
+    \item \textbf{Role of the OTA Automated Rollback Watchdog}:
+    If an OTA update downloads a corrupted binary, or if a newly trained neural network contains an architecture bug that triggers a null-pointer exception or segmentation fault upon boot, the microcontroller will enter a continuous reboot loop (bootloop). In a single-bank system without rollback, the device is permanently bricked and cannot communicate with the network. An automated rollback watchdog starts a timer upon first boot: if the new firmware fails to complete its self-test and explicitly validate itself before the timer expires, the hardware watchdog forces a reset, and the bootloader automatically reverts the boot pointer back to the previous stable firmware partition.
+
+    \item \textbf{Why Microcontrollers Use Transfer Learning for Federated Learning}:
+    Full end-to-end backpropagation through a deep neural network requires storing the intermediate activation maps of every layer during the forward pass so they can be multiplied by gradients during the backward pass. In deep models, these activation tensors require megabytes of SRAM, vastly exceeding the $64\,\text{KB} - 512\,\text{KB}$ SRAM of a microcontroller. In transfer learning, the complex feature extractor is frozen in Flash memory; only the final linear layer ($W \in \mathbb{R}^{C \times d}$) is trained. Computing gradients for a single matrix multiplication requires only a few hundred bytes of SRAM, making on-device learning physically viable on microcontrollers.
+
+    \item \textbf{Hardware Causes of Development Board Quiescent Current}:
+    Standard commercial development boards (like NodeMCU or ESP32 DevKit) include auxiliary components designed for desktop convenience, not low-power battery deployment:
+    \begin{enumerate}
+        \item A cheap low-dropout (LDO) voltage regulator (such as the AMS1117) with a quiescent ground current of $5\,\text{mA}$ to $10\,\text{mA}$ that leaks continuously even when the ESP32 chip is in deep sleep.
+        \item A dedicated USB-to-UART bridge chip (such as the CP2102 or CH340) that remains continuously powered from the voltage rail, consuming $2\,\text{mA}$ to $5\,\text{mA}$.
+        \item Power indicator LEDs wired directly across the $3.3\,\text{V}$ rail, constantly burning $1\,\text{mA}$ to $3\,\text{mA}$ through current-limiting resistors.
+    \end{enumerate}
+\end{enumerate}

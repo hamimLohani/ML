@@ -138,12 +138,48 @@
     \input{chapters/ch05_s3_training_techniques.tex}
 }{}
 
+\IfFileExists{chapters/ch05_s4_cnn.tex}{
+    \input{chapters/ch05_s4_cnn.tex}
+}{}
+
+\IfFileExists{chapters/ch05_s5_sequence_models.tex}{
+    \input{chapters/ch05_s5_sequence_models.tex}
+}{}
+
+\IfFileExists{chapters/ch05_s6_transformers.tex}{
+    \input{chapters/ch05_s6_transformers.tex}
+}{}
+
+\IfFileExists{chapters/ch05_s7_other_architectures.tex}{
+    \input{chapters/ch05_s7_other_architectures.tex}
+}{}
+
 % --- CHAPTER 6: Specialized Areas ---
 \IfFileExists{chapters/ch06_s1_time_series.tex}{
     \input{chapters/ch06_s1_time_series.tex}
 }{
     \chapter{Specialized Areas}\label{ch:specialized_areas}
 }
+
+\IfFileExists{chapters/ch06_s2_computer_vision.tex}{
+    \input{chapters/ch06_s2_computer_vision.tex}
+}{}
+
+\IfFileExists{chapters/ch06_s3_nlp.tex}{
+    \input{chapters/ch06_s3_nlp.tex}
+}{}
+
+\IfFileExists{chapters/ch06_s4_llms.tex}{
+    \input{chapters/ch06_s4_llms.tex}
+}{}
+
+\IfFileExists{chapters/ch06_s5_generative_models.tex}{
+    \input{chapters/ch06_s5_generative_models.tex}
+}{}
+
+\IfFileExists{chapters/ch06_s6_rl_gnn.tex}{
+    \input{chapters/ch06_s6_rl_gnn.tex}
+}{}
 
 % ==============================================================================
 % PART III: ML FOR IOT
@@ -157,12 +193,32 @@
     \chapter{ML for IoT and Edge (TinyML)}\label{ch:tinyml}
 }
 
+\IfFileExists{chapters/ch07_s2_edge_vs_cloud.tex}{
+    \input{chapters/ch07_s2_edge_vs_cloud.tex}
+}{}
+
+\IfFileExists{chapters/ch07_s3_tinyml_toolchain.tex}{
+    \input{chapters/ch07_s3_tinyml_toolchain.tex}
+}{}
+
+\IfFileExists{chapters/ch07_s4_model_compression.tex}{
+    \input{chapters/ch07_s4_model_compression.tex}
+}{}
+
+\IfFileExists{chapters/ch07_s5_hardware_deployment.tex}{
+    \input{chapters/ch07_s5_hardware_deployment.tex}
+}{}
+
 % --- CHAPTER 8: MLOps and Deployment ---
 \IfFileExists{chapters/ch08_s1_experiment_management.tex}{
     \input{chapters/ch08_s1_experiment_management.tex}
 }{
     \chapter{MLOps and Deployment}\label{ch:mlops_deployment}
 }
+
+\IfFileExists{chapters/ch08_s2_serving.tex}{
+    \input{chapters/ch08_s2_serving.tex}
+}{}
 
 % ==============================================================================
 % PART IV: PRACTICE AND RESEARCH

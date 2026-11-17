@@ -1,0 +1,643 @@
+% FILE: chapters/ch07_s4_model_compression.tex
+\section{Model Compression}\label{sec:model_compression}
+
+In Section~\ref{sec:tinyml_toolchain}, we studied the software mechanics of the TinyML toolchain: converting trained models into static FlatBuffer arrays, allocating fixed Tensor Arenas in SRAM, and executing inference on bare-metal microcontrollers using TensorFlow Lite for Microcontrollers (TFLM).
+
+However, a fundamental engineering barrier remains: \textbf{model size and computational complexity}.
+
+State-of-the-art deep learning architectures developed for cloud servers contain millions---sometimes billions---of parameters. A standard ResNet-50 requires over $25\,\text{million}$ parameters ($100\,\text{MB}$ in 32-bit floating point) and performs approximately $4\,\text{billion}$ floating-point operations (FLOPs) per forward pass. In stark contrast, an edge microcontroller (such as an ARM Cortex-M4 or an Espressif ESP32) typically offers:
+\begin{itemize}
+    \item \textbf{Non-volatile Flash memory (ROM)}: $512\,\text{KB}$ to $2\,\text{MB}$ (must store both application firmware and model weights).
+    \item \textbf{Volatile SRAM (RAM)}: $64\,\text{KB}$ to $512\,\text{KB}$ (must hold the execution stack, network buffers, and layer activation tensors).
+    \item \textbf{Clock frequency}: $64\,\text{MHz}$ to $240\,\text{MHz}$, often lacking hardware floating-point units (FPUs).
+\end{itemize}
+
+Attempting to flash an uncompressed deep neural network onto a microcontroller is impossible: the binary will simply not fit into Flash memory, or \code{AllocateTensors()} will fail when activation buffers exceed SRAM.
+
+To bridge this orders-of-magnitude hardware disparity, we turn to \textbf{Model Compression}: a suite of mathematical and architectural techniques designed to dramatically shrink model storage, slash memory bandwidth, and accelerate execution speed while preserving predictive accuracy.
+
+In this section, we examine the four foundational pillars of model compression:
+\begin{enumerate}
+    \item \textbf{Efficient Architecture Design}: Designing compact, lightweight topologies from the start using Depthwise Separable Convolutions.
+    \item \textbf{Quantization}: Contrasting Post-Training Quantization (PTQ) with Quantization-Aware Training (QAT) using the Straight-Through Estimator.
+    \item \textbf{Network Pruning}: Removing redundant weights and filters via structured and unstructured pruning.
+    \item \textbf{Knowledge Distillation}: Transferring the ``dark knowledge'' of a massive teacher model into a compact student network.
+\end{enumerate}
+
+% ==============================================================================
+% 1. THE COMPRESSION LANDSCAPE
+% ==============================================================================
+\subsection{The Model Compression Landscape}\label{subsec:compression_landscape}
+
+\begin{keyidea}[The Compression Synergies]
+Model compression is not a single isolated technique. Rather, the highest compression ratios are achieved by stacking complementary techniques in series:
+\begin{center}
+\textbf{Compact Architecture Design} $\longrightarrow$ \textbf{Knowledge Distillation} $\longrightarrow$ \textbf{Pruning} $\longrightarrow$ \textbf{Quantization}
+\end{center}
+Combining these four methods routinely yields an **overall memory reduction of $20\times$ to $50\times$** and an **inference speedup of $5\times$ to $10\times$** on embedded microcontrollers, with less than $1\%$ degradation in classification accuracy.
+\end{keyidea}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    technique/.style={rectangle, draw=keyideablue, fill=keyideablue!12, rounded corners=2mm, thick, minimum width=3.3cm, minimum height=1.6cm, align=center, font=\small},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % 4 Techniques in Pipeline
+    \node[technique, draw=analogygreen, fill=analogygreen!12] (arch) at (0, 0) {
+        \textbf{1. Architecture}\\
+        \scriptsize Depthwise Separable\\
+        \scriptsize MobileNet / 1D-CNN\\
+        \tiny $8\times - 9\times$ FLOP reduction
+    };
+
+    \node[technique, draw=iotpurple, fill=iotpurple!12] (distill) at (4.2, 0) {
+        \textbf{2. Distillation}\\
+        \scriptsize Teacher $\to$ Student\\
+        \scriptsize Soft labels \& Dark Knowledge\\
+        \tiny Retains high accuracy
+    };
+
+    \node[technique, draw=warningred, fill=warningred!12] (prune) at (8.4, 0) {
+        \textbf{3. Pruning}\\
+        \scriptsize Magnitude-based\\
+        \scriptsize Structured filter removal\\
+        \tiny $2\times - 4\times$ sparsity gain
+    };
+
+    \node[technique, draw=exampleorange, fill=exampleorange!15] (quant) at (12.6, 0) {
+        \textbf{4. Quantization}\\
+        \scriptsize Float32 $\to$ Int8\\
+        \scriptsize QAT with STE\\
+        \tiny $4\times$ Flash/SRAM reduction
+    };
+
+    \draw[arrow] (arch) -- (distill);
+    \draw[arrow] (distill) -- (prune);
+    \draw[arrow] (prune) -- (quant);
+\end{tikzpicture}
+\caption{The end-to-end model compression pipeline: stacking efficient design, knowledge distillation, pruning, and quantization to fit models onto microcontrollers.}\label{fig:compression_pipeline}
+\end{figure}
+
+% ==============================================================================
+% 2. CHOOSING AND DESIGNING SMALL ARCHITECTURES
+% ==============================================================================
+\subsection{Choosing and Designing Small Architectures}\label{subsec:small_architectures}
+
+\paragraph{Why It Exists: The Real-World Problem}
+The most effective way to deploy a small model is to \textbf{start with a small model}. While compression techniques can prune and quantize an oversized network, applying aggressive compression to an inherently bloated architecture often yields suboptimal results compared to training an architecture specifically designed for parameter efficiency.
+
+\paragraph{Depthwise Separable Convolutions (MobileNet)}
+In a standard 2D convolutional layer (introduced in Section~\ref{sec:cnn}), a filter simultaneously applies spatial convolution across height and width and linear cross-channel combination across all input channels.
+
+Let:
+\begin{itemize}
+    \item $D_F \times D_F$ be the spatial height and width of the input feature map.
+    \item $M$ be the number of input channels (e.g., $M = 32$).
+    \item $N$ be the number of output channels (e.g., $N = 64$).
+    \item $D_K \times D_K$ be the spatial dimensions of the convolutional kernel (typically $3 \times 3$).
+\end{itemize}
+
+A standard convolution requires applying $N$ distinct filters, each of size $D_K \times D_K \times M$, across $D_F \times D_F$ spatial locations. The total computational cost (measured in multiplication-accumulation operations, or MACs) is:
+\begin{equation}
+\text{Cost}_{\text{standard}} = D_K \cdot D_K \cdot M \cdot N \cdot D_F \cdot D_F\label{eq:standard_conv_cost}
+\end{equation}
+
+In 2017, Howard et al.\ (Google) introduced \textbf{Depthwise Separable Convolutions} in the landmark \textbf{MobileNet} architecture. The core insight is to factorize the standard convolution into two separate, simpler operations:
+\begin{enumerate}
+    \item \textbf{Depthwise Convolution}: Applies a single spatial filter of size $D_K \times D_K$ to each input channel independently (channel depth = 1). It performs spatial filtering without cross-channel mixing:
+    \begin{equation}
+    \text{Cost}_{\text{depthwise}} = D_K \cdot D_K \cdot M \cdot D_F \cdot D_F\label{eq:depthwise_cost}
+    \end{equation}
+    \item \textbf{Pointwise Convolution}: A $1 \times 1$ convolution that computes linear combinations of all $M$ channels to produce $N$ output channels:
+    \begin{equation}
+    \text{Cost}_{\text{pointwise}} = 1 \cdot 1 \cdot M \cdot N \cdot D_F \cdot D_F = M \cdot N \cdot D_F \cdot D_F\label{eq:pointwise_cost}
+    \end{equation}
+\end{enumerate}
+
+The total computational cost of a depthwise separable convolution is the sum of both stages:
+\begin{equation}
+\text{Cost}_{\text{separable}} = \left( D_K \cdot D_K \cdot M \cdot D_F \cdot D_F \right) + \left( M \cdot N \cdot D_F \cdot D_F \right)\label{eq:separable_total_cost}
+\end{equation}
+
+\paragraph{Theoretical Computational Savings}
+By dividing Equation~\eqref{eq:separable_total_cost} by Equation~\eqref{eq:standard_conv_cost}, we obtain the exact ratio of computational effort:
+\begin{equation}
+\frac{\text{Cost}_{\text{separable}}}{\text{Cost}_{\text{standard}}} = \frac{D_K \cdot D_K \cdot M \cdot D_F^2 + M \cdot N \cdot D_F^2}{D_K \cdot D_K \cdot M \cdot N \cdot D_F^2} = \frac{1}{N} + \frac{1}{D_K^2}\label{eq:cost_ratio}
+\end{equation}
+For standard $3 \times 3$ convolutional kernels ($D_K = 3$) and typical output channel counts (e.g., $N = 64$):
+\begin{equation*}
+\frac{1}{64} + \frac{1}{3^2} = 0.0156 + 0.1111 = 0.1267 \approx \frac{1}{8}
+\end{equation*}
+Depthwise separable convolutions achieve an **$8\times$ to $9\times$ reduction in computational operations and weight storage**, while typically suffering less than a $1\%$ drop in classification accuracy on embedded vision tasks!
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    box/.style={rectangle, draw=keyideablue, fill=keyideablue!10, rounded corners=2mm, thick, minimum width=2.8cm, minimum height=1.3cm, align=center, font=\scriptsize},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Standard Conv
+    \node[box, draw=warningred, fill=warningred!12] (std) at (0, 1.2) {
+        \textbf{Standard 2D Conv}\\
+        $D_K \times D_K \times M \times N$\\
+        \tiny Spatial + Channel mixed
+    };
+
+    % Separable Stage 1
+    \node[box, draw=analogygreen, fill=analogygreen!12] (dw) at (5.5, 1.2) {
+        \textbf{1. Depthwise Conv}\\
+        $D_K \times D_K \times 1$ per channel\\
+        \tiny Spatial filtering only
+    };
+
+    % Separable Stage 2
+    \node[box, draw=iotpurple, fill=iotpurple!12] (pw) at (10.5, 1.2) {
+        \textbf{2. Pointwise Conv}\\
+        $1 \times 1 \times M \times N$\\
+        \tiny Channel mixing only
+    };
+
+    % Label
+    \node[font=\footnotesize\bfseries, text=warningred] at (0, -0.2) {Single Expensive Step};
+    \node[font=\footnotesize\bfseries, text=analogygreen] at (8.0, -0.2) {Factorized Two-Stage Operation ($8\times$ Faster!)};
+
+    \draw[arrow] (dw) -- (pw);
+\end{tikzpicture}
+\caption{Comparison between standard 2D convolution and Depthwise Separable convolution.}\label{fig:depthwise_separable}
+\end{figure}
+
+% ==============================================================================
+% 3. QUANTIZATION: PTQ VS QAT
+% ==============================================================================
+\subsection{Quantization: Post-Training (PTQ) vs.\ Quantization-Aware Training (QAT)}\label{subsec:ptq_vs_qat}
+
+In Section~\ref{sec:tinyml_toolchain}, we introduced uniform integer quantization, mapping 32-bit floats $r$ to 8-bit integers $q$ via $q = \text{round}(r/S) + Z$. While Post-Training Quantization (PTQ) is fast and requires no retraining, it can lead to severe accuracy degradation in compact models.
+
+\paragraph{Why Post-Training Quantization Can Fail}
+In deep or highly compressed neural networks, individual layers often have narrow parameter distributions with extreme outliers. Forcing all layer activations into 256 discrete bins after training causes accumulated rounding errors across sequential layers. For a model with only 20,000 parameters, losing fine numerical distinctions can shift classification boundaries, causing a catastrophic $10\%$ to $30\%$ drop in accuracy.
+
+\paragraph{Quantization-Aware Training (QAT)}
+To prevent accuracy collapse, we utilize \textbf{Quantization-Aware Training (QAT)}. Instead of quantizing as an afterthought after training, the model is trained with quantization effects simulated directly inside the forward pass of the training loop!
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    node/.style={rectangle, draw=keyideablue, fill=keyideablue!12, rounded corners=2mm, thick, minimum width=2.6cm, minimum height=1.2cm, align=center, font=\scriptsize},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    \node[node] (w_float) at (0, 0) {
+        \textbf{Float Weight $w$}\\
+        \tiny High-precision float32\\
+        \tiny Maintained by SGD
+    };
+
+    \node[node, draw=warningred, fill=warningred!15] (fake_quant) at (4.5, 0) {
+        \textbf{Fake Quantization}\\
+        $q = \text{round}(w / S) + Z$\\
+        $\hat{w} = S \times (q - Z)$\\
+        \tiny Clamped to $[-128, 127]$
+    };
+
+    \node[node, draw=analogygreen, fill=analogygreen!15] (conv) at (9.0, 0) {
+        \textbf{Layer Computation}\\
+        $y = \hat{w} \cdot x + b$\\
+        \tiny Forward pass uses $\hat{w}$
+    };
+
+    \draw[arrow] (w_float) -- node[above, font=\tiny] {Quantize} (fake_quant);
+    \draw[arrow] (fake_quant) -- node[above, font=\tiny] {Forward} (conv);
+
+    % Backward Pass
+    \draw[arrow, draw=iotpurple, dashed] (conv.south) -- ++(0, -0.8) -| node[pos=0.25, below, font=\scriptsize\bfseries, text=iotpurple] {Backward Pass: Straight-Through Estimator (STE) $\frac{\partial \hat{w}}{\partial w} \approx 1$} (w_float.south);
+\end{tikzpicture}
+\caption{The Quantization-Aware Training (QAT) mechanics using fake quantization and the Straight-Through Estimator (STE).}\label{fig:qat_ste}
+\end{figure}
+
+During QAT:
+\begin{enumerate}
+    \item \textbf{Forward Pass (Fake Quantization)}: Weights and intermediate activations are passed through a ``fake quantization'' node:
+    \begin{equation}
+    w_{\text{quant}} = \text{clamp}\left( \text{round}\left( \frac{w}{S} \right) + Z,\, -128,\, 127 \right)
+    \end{equation}
+    \begin{equation}
+    \hat{w} = S \times (w_{\text{quant}} - Z)\label{eq:fake_quant}
+    \end{equation}
+    The downstream layer computation uses this clamped, discretized value $\hat{w}$. The model experiences the exact rounding errors that will occur on bare-metal hardware!
+    \item \textbf{Backward Pass (The Straight-Through Estimator)}: In standard calculus, the derivative of the rounding function $\text{round}(x)$ is zero everywhere (except at half-integers, where it is undefined):
+    \begin{equation*}
+    \frac{d}{dx} \text{round}(x) = 0 \quad \text{for all } x \notin \mathbb{Z} + 0.5
+    \end{equation*}
+    If we applied standard backpropagation, the gradients would evaluate to zero ($\nabla_w \mathcal{L} = 0$), completely halting gradient descent!
+    
+    To overcome this, Bengio et al.\ introduced the \textbf{Straight-Through Estimator (STE)}: during the backward pass, the non-differentiable rounding operation is treated as an identity function ($f(x) \approx x$):
+    \begin{equation}
+    \frac{\partial \hat{w}}{\partial w} = \begin{cases}
+    1 & \text{if } r_{\min} \le w \le r_{\max} \\
+    0 & \text{otherwise (clamped)}
+    \end{cases}\label{eq:ste_gradient}
+    \end{equation}
+    Gradients flow straight through the rounding function without modification, allowing stochastic gradient descent to adjust the underlying high-precision float weights $w$ to compensate for quantization noise.
+\end{enumerate}
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{p{3.5cm} p{5.5cm} p{5.5cm}}
+\toprule
+\textbf{Feature} & \textbf{Post-Training Quantization (PTQ)} & \textbf{Quantization-Aware Training (QAT)} \\
+\midrule
+\textbf{Retraining Required?} & No (converts existing weights in seconds). & Yes (requires fine-tuning for several epochs). \\
+\textbf{Training Code Access} & Not required (operates on frozen \code{.h5} or \code{.onnx}). & Required (must modify model graph with fake nodes). \\
+\textbf{Calibration Data} & Needs $100 - 300$ unlabelled calibration samples. & Uses full labelled training dataset with backprop. \\
+\textbf{Accuracy Retention} & Excellent on large models; can degrade on tiny models. & **Superior**: model actively adapts to integer constraints. \\
+\textbf{Recommended For} & Initial baseline deployment; quick feasibility tests. & Production edge models where accuracy is critical. \\
+\bottomrule
+\end{tabular}
+\caption{Comparison between Post-Training Quantization (PTQ) and Quantization-Aware Training (QAT).}\label{tab:ptq_vs_qat}
+\end{table}
+
+% ==============================================================================
+% 4. NETWORK PRUNING
+% ==============================================================================
+\subsection{Network Pruning: Cutting Dead Connections}\label{subsec:pruning}
+
+\begin{analogy}[Pruning a Fruit Tree]
+In horticulture, an overgrown fruit tree produces hundreds of tangled, weak branches that compete for sunlight and nutrients, yielding small, inferior fruit. A skilled gardener **prunes** the tree, shearing off dead or redundant branches. The root system diverts all its energy into the primary branches, producing larger, healthier fruit on a far more compact tree structure.
+\end{analogy}
+
+Neural networks are notoriously over-parameterized. In a trained dense or convolutional layer, a substantial fraction of weights are extremely close to zero, contributing almost nothing to the final output. **Network Pruning** identifies and permanently zeroes out these redundant parameters.
+
+\paragraph{Magnitude-Based Pruning}
+The most widespread pruning strategy is \textbf{Magnitude-Based Pruning}: given a target sparsity $s \in [0, 1)$ (e.g., $s = 0.60$, meaning $60\%$ of weights will be removed), we rank all weights in a tensor by their absolute magnitude $|w_{ij}|$. We establish a threshold $\theta$ such that $60\%$ of weights fall below $\theta$, and set them to zero:
+\begin{equation}
+w_{ij}^{\text{pruned}} = \begin{cases}
+w_{ij} & \text{if } |w_{ij}| \ge \theta \\
+0 & \text{if } |w_{ij}| < \theta
+\end{cases}\label{eq:magnitude_pruning}
+\end{equation}
+
+\paragraph{Unstructured vs.\ Structured Pruning}
+A vital distinction for embedded engineering is the structural pattern of the removed weights:
+\begin{itemize}
+    \item \textbf{Unstructured Pruning}: Zeroes out individual scalar weights at arbitrary coordinates within a weight matrix.
+    \begin{itemize}
+        \item \emph{Advantage}: High theoretical compression ($80\%$ of weights can be zeroed out with zero accuracy loss).
+        \item \emph{Embedded Reality}: Microcontroller ALUs execute standard dense vector instructions. Accelerating an unstructured sparse matrix requires storing coordinate index pointers (e.g., Compressed Sparse Row format), which adds memory overhead and causes branch mispredictions. On bare metal, unstructured pruning rarely accelerates execution speed!
+    \end{itemize}
+    \item \textbf{Structured Pruning}: Removes entire structural blocks: entire rows of a dense weight matrix, or entire 2D convolutional filters ($D_K \times D_K \times M$).
+    \begin{itemize}
+        \item \emph{Advantage}: The pruned layer remains a dense, regular matrix of smaller dimensions (e.g., a layer with 64 filters shrinks to 32 filters). It accelerates execution natively on **any standard microcontroller ALU** without needing specialized sparse matrix libraries!
+    \end{itemize}
+\end{itemize}
+
+\paragraph{Iterative Pruning and Fine-Tuning}
+Pruning $60\%$ of a network's weights in a single step damages accuracy severely. Instead, we use **Iterative Pruning**:
+\begin{center}
+Train Baseline $\to$ Prune $20\%$ $\to$ Fine-tune 2 epochs $\to$ Prune to $40\%$ $\to$ Fine-tune 2 epochs $\to$ Prune to $60\%$
+\end{center}
+During fine-tuning, the remaining surviving connections dynamically adjust their weights to compensate for the removed pathways, maintaining near-original baseline accuracy.
+
+% ==============================================================================
+% 5. KNOWLEDGE DISTILLATION
+% ==============================================================================
+\subsection{Knowledge Distillation: The Teacher-Student Paradigm}\label{subsec:knowledge_distillation}
+
+\paragraph{Why It Exists: The Limit of Hard Training Labels}
+In standard supervised learning, models are trained against ``one-hot'' target labels. For example, in an industrial motor bearing classifier with three classes (\code{[Normal, Inner_Race_Fault, Ball_Fault]}), a normal sample has ground-truth vector $\mathbf{y} = [1, 0, 0]$.
+
+This hard target provides zero information about inter-class relationships. It tells the network that the sample is normal, but says nothing about whether a normal motor bears subtle physical similarities to an emerging inner-race scratch.
+
+\begin{analogy}[The Master Craftsman and the Apprentice]
+Imagine trying to learn advanced electrical engineering:
+\begin{itemize}
+    \item \textbf{Method A (Hard Labels)}: You are given an answer key that only contains ``Pass'' or ``Fail'' for 10,000 circuits. You have to guess why a circuit failed.
+    \item \textbf{Method B (Knowledge Distillation)}: A veteran master engineer (the \textbf{Teacher}) sits beside you. For every circuit, they explain their nuanced reasoning: \emph{``This circuit is a Pass ($92\%$), but notice the high capacitor ripple ($7\%$) which makes it slightly resemble a power supply failure ($1\%$).''}
+\end{itemize}
+The apprentice (the \textbf{Student}) learns vastly faster and with much higher fidelity from the teacher's nuanced probabilities than from cold binary labels.
+\end{analogy}
+
+\paragraph{The Teacher-Student Mathematical Formulation}
+Introduced by Geoffrey Hinton, Oriol Vinyals, and Jeff Dean (2015), \textbf{Knowledge Distillation} trains a compact, lightweight student network $S_\theta$ under the guidance of a massive, high-capacity teacher network $T_\phi$.
+
+Let $\mathbf{z}^T$ and $\mathbf{z}^S$ denote the raw, unnormalized output logits of the teacher and student models, respectively. To reveal the nuanced probabilities over non-target classes (what Hinton coined **Dark Knowledge**), we apply a softened softmax with a **Temperature Hyperparameter $T > 1$**:
+\begin{equation}
+p_i(T) = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}\label{eq:temperature_softmax}
+\end{equation}
+\begin{itemize}
+    \item When $T = 1$, Equation~\eqref{eq:temperature_softmax} is the standard softmax function, which typically produces sharp probabilities like $[0.999, 0.0009, 0.0001]$.
+    \item As temperature increases ($T = 3$ to $10$), the distribution softens to reveal rich inter-class relationships, e.g., $[0.70, 0.22, 0.08]$.
+\end{itemize}
+
+\paragraph{The Distillation Loss Function}
+The student is trained using a composite loss function combining two objectives:
+\begin{equation}
+\mathcal{L}_{\text{student}} = (1 - \alpha)\,\mathcal{L}_{\text{CE}}\left(\mathbf{y},\, \sigma(\mathbf{z}^S)\right) + \alpha\,T^2\,\mathcal{L}_{\text{KL}}\left( \mathbf{p}^T(T),\, \mathbf{p}^S(T) \right)\label{eq:distillation_loss}
+\end{equation}
+where:
+\begin{itemize}
+    \item $\mathcal{L}_{\text{CE}}$ is standard categorical cross-entropy between the student's normal predictions ($T=1$) and true hard labels $\mathbf{y}$.
+    \item $\mathcal{L}_{\text{KL}}$ is the Kullback-Leibler (KL) divergence measuring the difference between the softened teacher distribution $\mathbf{p}^T(T)$ and softened student distribution $\mathbf{p}^S(T)$.
+    \item $\alpha \in [0, 1]$ balances the influence of the teacher versus ground truth.
+    \item The $T^2$ scaling factor is mathematically required because scaling logits by $1/T$ reduces gradient magnitudes by a factor of $1/T^2$. Multiplying by $T^2$ ensures that the gradient contribution from the teacher remains balanced relative to the hard cross-entropy loss.
+\end{itemize}
+
+% ==============================================================================
+% 6. WORKED NUMERIC EXAMPLES
+% ==============================================================================
+\begin{example}[Hand Calculation: Softmax Temperature and Depthwise Savings]
+Let us work through two explicit numerical calculations: first, calculating softened distillation probabilities; second, computing the exact computational savings of a depthwise separable convolutional layer.
+
+\paragraph{Part A: Softmax Temperature Scaling}
+Suppose a teacher model outputs logits $\mathbf{z} = [4.00, 2.00, -1.00]$ for a 3-class telemetry sample.
+Let us calculate the output probabilities at standard temperature ($T = 1$) versus softened temperature ($T = 2$).
+
+\subparagraph{1. Standard Softmax ($T = 1$):}
+\begin{align*}
+e^{z_1} &= e^{4.00} \approx 54.5982\\
+e^{z_2} &= e^{2.00} \approx 7.3891\\
+e^{z_3} &= e^{-1.00} \approx 0.3679\\
+\text{Sum} &= 54.5982 + 7.3891 + 0.3679 = 62.3552
+\end{align*}
+Probabilities:
+\begin{equation*}
+p_1 = \frac{54.5982}{62.3552} \approx \mathbf{0.8756}, \quad p_2 = \frac{7.3891}{62.3552} \approx \mathbf{0.1185}, \quad p_3 = \frac{0.3679}{62.3552} \approx \mathbf{0.0059}
+\end{equation*}
+
+\subparagraph{2. Softened Softmax ($T = 2$):}
+Divide logits by $T = 2$: $\mathbf{z}/2 = [2.00, 1.00, -0.50]$.
+\begin{align*}
+e^{z_1/2} &= e^{2.00} \approx 7.3891\\
+e^{z_2/2} &= e^{1.00} \approx 2.7183\\
+e^{z_3/2} &= e^{-0.50} \approx 0.6065\\
+\text{Sum} &= 7.3891 + 2.7183 + 0.6065 = 10.7139
+\end{align*}
+Probabilities:
+\begin{equation*}
+p_1 = \frac{7.3891}{10.7139} \approx \mathbf{0.6897}, \quad p_2 = \frac{2.7183}{10.7139} \approx \mathbf{0.2537}, \quad p_3 = \frac{0.6065}{10.7139} \approx \mathbf{0.0566}
+\end{equation*}
+Notice the result: at $T=2$, the secondary probability $p_2$ more than doubled from $11.8\%$ to $25.4\%$, and $p_3$ increased ten-fold from $0.59\%$ to $5.66\%$. The student model can now clearly perceive that class 2 is physically closer to class 1 than class 3!
+
+\paragraph{Part B: Depthwise Separable FLOP Savings}
+Consider an embedded vision layer with:
+\begin{itemize}
+    \item Input size: $10 \times 10$ pixels ($D_F = 10$)
+    \item Input channels: $M = 16$
+    \item Output channels: $N = 32$
+    \item Kernel size: $3 \times 3$ ($D_K = 3$)
+\end{itemize}
+
+\subparagraph{1. Standard 2D Convolution Multiplication Count:}
+Using Equation~\eqref{eq:standard_conv_cost}:
+\begin{align*}
+\text{Ops}_{\text{standard}} &= D_K \times D_K \times M \times N \times D_F \times D_F\\
+&= 3 \times 3 \times 16 \times 32 \times 10 \times 10\\
+&= 9 \times 512 \times 100 = \mathbf{460{,}800 \text{ multiplications}}
+\end{align*}
+
+\subparagraph{2. Depthwise Separable Convolution Multiplication Count:}
+\begin{itemize}
+    \item Depthwise stage: $D_K \times D_K \times M \times D_F \times D_F = 3 \times 3 \times 16 \times 10 \times 10 = 9 \times 16 \times 100 = 14{,}400$
+    \item Pointwise stage: $1 \times 1 \times M \times N \times D_F \times D_F = 1 \times 1 \times 16 \times 32 \times 10 \times 10 = 512 \times 100 = 51{,}200$
+\end{itemize}
+Total operations:
+\begin{equation*}
+\text{Ops}_{\text{separable}} = 14{,}400 + 51{,}200 = \mathbf{65{,}600 \text{ multiplications}}
+\end{equation*}
+
+\subparagraph{3. Ratio and Speedup Factor:}
+\begin{equation*}
+\text{Ratio} = \frac{65{,}600}{460{,}800} \approx \mathbf{0.14236} \implies \text{Speedup} = \frac{460{,}800}{65{,}600} \approx \mathbf{7.02\times}
+\end{equation*}
+The depthwise separable convolution performs **over $7\times$ fewer operations** to process the exact same input tensor!
+\end{example}
+
+% ==============================================================================
+% 7. PYTHON IMPLEMENTATION: DISTILLATION AND PRUNING
+% ==============================================================================
+\subsection{Python Implementations: Knowledge Distillation and Pruning}\label{subsec:code_compression}
+
+Listing~\ref{lst:compression_demo} demonstrates knowledge distillation and structured magnitude-based pruning implemented in pure PyTorch.
+
+\begin{lstlisting}[style=pythonstyle, caption={Knowledge distillation training loop and structured pruning in PyTorch.}, label={lst:compression_demo}]
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import torch.nn.utils.prune as prune
+
+# 1. Define Teacher (Heavy) and Student (Tiny) Networks
+class HeavyTeacherNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(8, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 3)
+        )
+    def forward(self, x): return self.net(x)
+
+class TinyStudentNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(8, 16),
+            nn.ReLU(),
+            nn.Linear(16, 3)
+        )
+    def forward(self, x): return self.net(x)
+
+# 2. Knowledge Distillation Loss Function
+def distillation_loss_fn(student_logits, teacher_logits, labels, T=3.0, alpha=0.7):
+    # Standard cross-entropy with hard labels
+    loss_ce = F.cross_entropy(student_logits, labels)
+    
+    # Softened KL Divergence loss with temperature T
+    soft_student = F.log_softmax(student_logits / T, dim=1)
+    soft_teacher = F.softmax(teacher_logits / T, dim=1)
+    loss_kl = F.kl_div(soft_student, soft_teacher, reduction='batchmean')
+    
+    # Weighted composite loss with T^2 scaling
+    return (1.0 - alpha) * loss_ce + (alpha * (T ** 2)) * loss_kl
+
+# 3. Demonstration of Distillation and Pruning
+if __name__ == "__main__":
+    torch.manual_seed(42)
+    x_train = torch.randn(200, 8)
+    y_train = torch.randint(0, 3, (200,))
+
+    teacher = HeavyTeacherNet()
+    student = TinyStudentNet()
+    optimizer = optim.Adam(student.parameters(), lr=0.01)
+
+    # Train student with distillation for 5 steps
+    teacher.eval()
+    student.train()
+    print("=== Training Student via Knowledge Distillation ===")
+    for step in range(5):
+        optimizer.zero_grad()
+        with torch.no_grad():
+            teacher_logits = teacher(x_train)
+        student_logits = student(x_train)
+        
+        loss = distillation_loss_fn(student_logits, teacher_logits, y_train, T=2.5, alpha=0.6)
+        loss.backward()
+        optimizer.step()
+        if step % 2 == 0:
+            print(f"Step {step}: Total Distillation Loss = {loss.item():.4f}")
+
+    # 4. Apply Structured Pruning to Student's First Linear Layer
+    print("\n=== Structured Pruning on Tiny Student ===")
+    layer_to_prune = student.net[0]
+    print(f"Original Weight Shape: {layer_to_prune.weight.shape}")
+    
+    # Prune 25% of channels (L1-norm structured pruning along dim=0)
+    prune.ln_structured(layer_to_prune, name="weight", amount=0.25, n=1, dim=0)
+    
+    # Make pruning permanent (removes mask hooks)
+    prune.remove(layer_to_prune, "weight")
+    
+    # Count non-zero rows
+    zero_rows = (layer_to_prune.weight.abs().sum(dim=1) == 0).sum().item()
+    print(f"Pruned Neurons (Zeroed Rows): {zero_rows} out of 16")
+    print(f"Active Neurons Remaining:    {16 - zero_rows}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle, caption={Output of the distillation and pruning Python script.}]
+=== Training Student via Knowledge Distillation ===
+Step 0: Total Distillation Loss = 2.4578
+Step 2: Total Distillation Loss = 2.3812
+Step 4: Total Distillation Loss = 2.3204
+
+=== Structured Pruning on Tiny Student ===
+Original Weight Shape: torch.Size([16, 8])
+Pruned Neurons (Zeroed Rows): 4 out of 16
+Active Neurons Remaining:    12
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Explanation}
+\begin{itemize}
+    \item \textbf{Lines 8--26}: We define a 3-layer \code{HeavyTeacherNet} (128 and 64 hidden units) and a lightweight \code{TinyStudentNet} (16 hidden units, suitable for an MCU).
+    \item \textbf{Lines 29--39}: Implements Hinton's distillation loss (Equation~\eqref{eq:distillation_loss}). Line 34 computes \code{F.log_softmax(student_logits / T)} and Line 35 computes \code{F.softmax(teacher_logits / T)}. Line 39 multiplies \code{loss_kl} by \code{T ** 2}.
+    \item \textbf{Lines 65--75}: We apply structured pruning using \code{prune.ln_structured}. Setting \code{amount=0.25} and \code{dim=0} evaluates the $L_1$-norm of each neuron row in the weight matrix and zeroes out the weakest $25\%$ of neurons (4 out of 16).
+\end{itemize}
+
+% ==============================================================================
+% 8. IOT AND TINYML CONNECTION
+% ==============================================================================
+\begin{iotbox}[Industrial Case Study: Compressing an Anomaly Detector for STM32]
+Consider an industrial condition-monitoring sensor deployed on a high-speed centrifugal pump:
+\begin{itemize}
+    \item \textbf{Target Hardware}: STM32F401RE microcontroller ($84\,\text{MHz}$ ARM Cortex-M4, $512\,\text{KB}$ Flash, $96\,\text{KB}$ SRAM).
+    \item \textbf{The Baseline Cloud Model}: A standard 1D ResNet with 12 residual layers, trained on $10\,\text{kHz}$ accelerometer telemetry.
+    \begin{itemize}
+        \item Float32 model size: $3.8\,\text{MB}$ (exceeds $512\,\text{KB}$ Flash by $7.4\times$!).
+        \item Activation RAM: $220\,\text{KB}$ (exceeds $96\,\text{KB}$ SRAM by $2.3\times$!).
+    \end{itemize}
+    \item \textbf{The Compression Pipeline Applied}:
+    \begin{enumerate}
+        \item \textbf{Architecture Replacement}: Replaced standard 1D convolutions with Depthwise Separable Convolutions, reducing baseline parameters from $950{,}000$ to $120{,}000$.
+        \item \textbf{Knowledge Distillation}: Used the original ResNet as a Teacher ($T = 3.0$) to guide the lightweight Student model, recovering $98.8\%$ of the teacher's F1-score.
+        \item \textbf{Structured Pruning}: Pruned $30\%$ of channels iteratively with 3 fine-tuning epochs, shrinking weights to $84{,}000$.
+        \item \textbf{Quantization-Aware Training (QAT)}: Simulated Int8 quantization in PyTorch with STE, eliminating float32 rounding collapse.
+    \end{enumerate}
+    \item \textbf{Final Deployed Metrics}:
+    \begin{itemize}
+        \item Final Int8 model size: **$84\,\text{KB}$** (fits comfortably in $512\,\text{KB}$ Flash).
+        \item Tensor Arena SRAM requirement: **$18\,\text{KB}$** (fits easily in $96\,\text{KB}$ SRAM).
+        \item Inference latency: **$4.1\,\text{ms}$** per classification burst.
+    \end{itemize}
+\end{itemize}
+\end{iotbox}
+
+% ==============================================================================
+% 9. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\begin{warning}[Common Compression Mistakes and Misconceptions]
+\begin{itemize}
+    \item \textbf{Mistake 1: Expecting Unstructured Pruning to Automatically Speed Up MCUs.}
+    Zeroing out individual weights in software creates mathematical zeros, but without specialized sparse hardware accelerators, a standard microcontroller CPU still loops over and multiplies those zeros! Unless you use \textbf{structured pruning} (dropping entire filters/channels) or dedicated sparse runtimes, unstructured pruning reduces storage when compressed with gzip, but yields zero speedup during live inference.
+    \item \textbf{Mistake 2: Forgetting the $T^2$ Scaling Factor in Distillation.}
+    When calculating gradients through softmax with temperature $T$, the gradient magnitudes scale down by $1/T^2$. If you omit the $T^2$ multiplier in Equation~\eqref{eq:distillation_loss}, the soft distillation loss becomes negligibly small compared to the cross-entropy loss, and the student completely ignores the teacher!
+    \item \textbf{Mistake 3: One-Shot Excessive Pruning.}
+    Pruning $70\%$ of weights in a single pass destroys critical feature representations beyond recovery. Always prune incrementally in gradual steps ($10\% \to 25\% \to 40\% \to 60\%$) with fine-tuning epochs between steps.
+    \item \textbf{Mistake 4: Quantizing Without Validating the Input/Output Layers.}
+    A model may be fully quantized to int8 internally, but if the converter leaves the input tensor as float32, the microcontroller runtime must execute float-to-int conversion routines on bare metal, adding runtime overhead and code size.
+\end{itemize}
+\end{warning}
+
+% ==============================================================================
+% 10. KEY TAKEAWAYS
+% ==============================================================================
+\begin{takeaways}
+\begin{itemize}
+    \item \textbf{The Four Pillars}: Maximum edge efficiency is achieved by stacking: (1) Depthwise Separable Architectures, (2) Knowledge Distillation, (3) Structured Pruning, and (4) Int8 Quantization.
+    \item \textbf{Depthwise Separable Convolutions}: Factorizes standard convolutions into depthwise spatial filtering and $1 \times 1$ pointwise channel mixing, slashing computation and parameters by $8\times$ to $9\times$.
+    \item \textbf{Quantization-Aware Training (QAT)}: Simulates integer clamping and rounding during training; uses the Straight-Through Estimator (STE) to backpropagate gradients through non-differentiable rounding steps, preventing accuracy loss in ultra-compact models.
+    \item \textbf{Structured vs.\ Unstructured Pruning}: Unstructured pruning zeroes individual random weights (hard to accelerate on MCUs); structured pruning removes entire rows or filters, yielding smaller dense matrices that run faster on any standard CPU.
+    \item \textbf{Knowledge Distillation}: Softens teacher logits using temperature $T > 1$ to expose subtle inter-class similarities (``dark knowledge''), allowing a small student network to match the accuracy of a massive teacher.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 11. CHECK YOURSELF
+% ==============================================================================
+\begin{checkyourself}
+\begin{enumerate}
+    \item \textbf{Calculation}: A standard 2D convolutional layer has $M = 32$ input channels, $N = 64$ output channels, and a $3 \times 3$ kernel ($D_K = 3$). By what exact theoretical factor does switching to a Depthwise Separable Convolution reduce the multiplication operations?
+    \item \textbf{Conceptual}: Why does the Straight-Through Estimator (STE) set $\frac{\partial \hat{w}}{\partial w} = 1$ during the backward pass of Quantization-Aware Training (QAT), rather than using the mathematically true derivative of the rounding function?
+    \item \textbf{Calculation}: A teacher model outputs logits $\mathbf{z} = [6.0, 3.0]$. Calculate the softened probabilities $p_1$ and $p_2$ at temperature $T = 3.0$.
+    \item \textbf{Engineering Trade-Off}: An engineer applies $70\%$ unstructured weight pruning to a neural network and flashes it to an ESP32 using standard TFLM. Why does the measured execution latency remain virtually identical to the unpruned model?
+    \item \textbf{Conceptual}: What is the purpose of the $T^2$ scaling factor in the Knowledge Distillation loss function (Equation~\eqref{eq:distillation_loss})?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 12. ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Depthwise Separable Reduction Factor}:
+    Using Equation~\eqref{eq:cost_ratio}:
+    \begin{equation*}
+    \text{Ratio} = \frac{1}{N} + \frac{1}{D_K^2} = \frac{1}{64} + \frac{1}{3^2} = \frac{1}{64} + \frac{1}{9} = \frac{9 + 64}{576} = \frac{73}{576} \approx 0.126736
+    \end{equation*}
+    The reduction factor is:
+    \begin{equation*}
+    \text{Factor} = \frac{1}{\text{Ratio}} = \frac{576}{73} \approx \mathbf{7.89\times}
+    \end{equation*}
+    The depthwise separable convolution requires approximately **$7.89\times$ fewer operations**.
+
+    \item \textbf{Purpose of the Straight-Through Estimator (STE)}:
+    The mathematical derivative of the discrete rounding function $\text{round}(x)$ is zero almost everywhere ($\frac{d}{dx} \text{round}(x) = 0$). If standard backpropagation were applied, the chain rule would multiply by zero at the rounding node, resulting in zero gradients ($\nabla_w \mathcal{L} = 0$) and completely preventing the optimizer from updating the weights. The STE substitutes an identity pass-through ($\frac{\partial \hat{w}}{\partial w} = 1$) within the clipping bounds, allowing gradients to flow back and train the underlying floating-point weights.
+
+    \item \textbf{Softened Temperature Calculation}:
+    Given logits $\mathbf{z} = [6.0, 3.0]$ and temperature $T = 3.0$:
+    \begin{equation*}
+    \frac{z_1}{T} = \frac{6.0}{3.0} = 2.0, \quad \frac{z_2}{T} = \frac{3.0}{3.0} = 1.0
+    \end{equation*}
+    Compute exponentials:
+    \begin{align*}
+    e^{2.0} &\approx 7.389056\\
+    e^{1.0} &\approx 2.718282\\
+    \text{Sum} &= 7.389056 + 2.718282 = 10.107338
+    \end{align*}
+    Probabilities:
+    \begin{equation*}
+    p_1 = \frac{7.389056}{10.107338} \approx \mathbf{0.7311}, \quad p_2 = \frac{2.718282}{10.107338} \approx \mathbf{0.2689}
+    \end{equation*}
+    (At $T=1$, $p_1 \approx 0.9526$ and $p_2 \approx 0.0474$. Temperature scaling softened $p_2$ from $4.7\%$ up to $26.9\%$).
+
+    \item \textbf{Why Unstructured Pruning Does Not Accelerate Standard MCUs}:
+    Standard microcontroller firmware executes dense nested matrix-multiplication loops over contiguous memory blocks. Unstructured pruning replaces values with zeros, but does not alter the matrix dimensions. The CPU still loops over every memory index and executes multiplication by zero. To accelerate sparse math, a runtime requires sparse coordinate index formats (like CSR) and conditional branching, which add computational overhead and cause pipeline stalls on simple embedded processors. To achieve real speedups on standard microcontrollers, the engineer must use **structured pruning** (dropping entire channels or neurons).
+
+    \item \textbf{Purpose of the $T^2$ Multiplier in Distillation}:
+    When logits are scaled by $1/T$, the magnitudes of the gradients produced by the softened cross-entropy / KL divergence scale down by a factor of $1/T^2$. Without the $T^2$ multiplier, increasing temperature would cause the distillation gradient to vanish, rendering the teacher's guidance ineffective relative to the unscaled hard-label cross-entropy loss. Multiplying by $T^2$ preserves gradient magnitude consistency regardless of the chosen temperature.
+\end{enumerate}

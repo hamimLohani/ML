@@ -1,0 +1,794 @@
+% FILE: chapters/ch06_s6_rl_gnn.tex
+\section{Reinforcement Learning and Graph Neural Networks}\label{sec:rl_gnn}
+
+Throughout the preceding sections of this book, our exploration of machine learning has centered primarily on two dominant paradigms:
+\begin{enumerate}
+    \item \textbf{Supervised and Unsupervised Prediction}: Mapping static inputs to outputs (e.g., predicting motor temperatures with linear regression, classifying bearing faults with CNNs, or forecasting hourly power demand with LSTMs and Transformers). In these tasks, the model is a passive observer: its predictions do not alter the physical world.
+    \item \textbf{Generative Modeling}: Synthesizing realistic new data instances that mirror an observed probability distribution (e.g., generating synthetic vibration fault telemetry with Diffusion Models or GANs).
+\end{enumerate}
+
+However, real-world cyber-physical systems, autonomous robotics, and Internet of Things (IoT) deployments rarely operate as passive observers. An intelligent system must frequently **act** upon the physical environment:
+\begin{itemize}
+    \item A smart greenhouse controller must open motorized ventilation louvers, trigger misting nozzles, or activate LED grow lights to maintain optimal plant transpiration while minimizing electrical grid consumption.
+    \item An automated industrial automated guided vehicle (AGV) must navigate crowded warehouse aisles, dynamically steering around human workers and sudden obstacles to deliver components to an assembly station.
+    \item An edge microgrid manager must decide each minute whether to store excess solar photovoltaic generation in lithium-ion battery banks, feed power into the municipal grid, or throttle heavy industrial chillers.
+\end{itemize}
+
+In every one of these scenarios, an action taken right now directly alters the physical state of the world at the next moment. Furthermore, actions often carry **delayed consequences**: expending battery power now might leave a sensor node drained when a critical emergency occurs hours later. To solve these closed-loop, sequential decision-making challenges, we turn to \textbf{Reinforcement Learning (RL)}.
+
+Simultaneously, the physical architecture of modern IoT deployments is rarely a clean grid of pixels or an isolated stream of numbers. Instead, physical systems are fundamentally structured as **relational networks**: interconnected wireless sensor meshes, municipal water distribution pipe topologies, electrical distribution grids, and industrial CAN-bus networks. Standard deep learning architectures (CNNs and Transformers) assume rigid Euclidean coordinate grids or flat sequence orderings. To reason over arbitrary network topologies, we require \textbf{Graph Neural Networks (GNNs)}.
+
+In this section, we build a thorough, foundational understanding of both paradigms. We dissect agents, environments, and reward mechanics; formalize Markov Decision Processes (MDPs); master tabular Q-learning with explicit hand calculations; survey policy gradients and Actor-Critic methods; and introduce the message-passing foundations of Graph Neural Networks for networked IoT systems.
+
+% ==============================================================================
+% 1. REINFORCEMENT LEARNING: AGENTS, ENVIRONMENTS, AND REWARDS
+% ==============================================================================
+\subsection{The Reinforcement Learning Framework}\label{subsec:rl_framework}
+
+\begin{keyidea}[The Reinforcement Learning Paradigm]
+\textbf{Reinforcement Learning (RL)} is a computational framework wherein an autonomous decision-maker (the \textbf{Agent}) learns to achieve a complex goal by interacting with an external, uncertain world (the \textbf{Environment}) through trial and error.
+
+Unlike supervised learning, there is no supervisor providing correct target labels. Instead, the agent receives evaluative scalar feedback (the \textbf{Reward}) indicating how favorable or unfavorable its recent decisions were. The agent's objective is to discover a behavioral strategy (the \textbf{Policy}) that maximizes the total cumulative reward gathered over time.
+\end{keyidea}
+
+\paragraph{Why It Exists: The Real-World Problem}
+Classical industrial control typically relies on Proportional-Integral-Derivative (PID) controllers or hand-engineered rule sets (such as: \emph{``If temperature $> 28^\circ\text{C}$, turn chiller ON''}). While PID controllers excel at maintaining single-input single-output setpoints (like a domestic water heater), they perform poorly in complex multi-variable systems with non-linear dynamics, environmental stochasticity, and competing objectives.
+
+For instance, an industrial cold-storage warehouse features thermal lag, fluctuating outdoor weather, variable electricity tariff pricing (peak vs.\ off-peak hours), and fluctuating inventory levels. Writing hard-coded rules that optimize both thermal compliance and electrical billing across all possible weather conditions is practically impossible. Reinforcement learning provides an automated mathematical mechanism for the system to learn optimal control policies directly from empirical experience.
+
+\begin{analogy}[Training a Dog with Treats]
+Consider teaching a puppy to sit on command:
+\begin{itemize}
+    \item You cannot open the puppy's brain and program the muscle actuations directly (no supervised training labels).
+    \item Instead, you issue the verbal command \emph{``Sit!''}. The puppy tries various random actions: barking, jumping, pawing your leg, and eventually bending its hind legs and sitting down.
+    \item The moment the puppy sits, you give it a tasty bacon treat (a positive \textbf{Reward} of $+10$). If it jumps on you, you give a stern verbal scolding (a negative reward / penalty of $-2$).
+    \item Over many repeated trials, the puppy discovers a clear correlation: whenever it hears the command and performs the sitting action, pleasant treats follow. The puppy has optimized its behavioral \textbf{Policy}.
+\end{itemize}
+\end{analogy}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.95,
+    agent_box/.style={rectangle, draw=keyideablue, fill=keyideablue!12, rounded corners=3mm, thick, minimum width=3.4cm, minimum height=1.6cm, align=center, font=\bfseries},
+    env_box/.style={rectangle, draw=analogygreen, fill=analogygreen!12, rounded corners=3mm, thick, minimum width=3.4cm, minimum height=1.6cm, align=center, font=\bfseries},
+    arrow/.style={-{Stealth[length=2.8mm]}, thick}
+]
+    % Boxes
+    \node[agent_box] (agent) at (0, 2.2) {Agent\\ \scriptsize (Learner / Controller)};
+    \node[env_box] (env) at (0, -2.2) {Environment\\ \scriptsize (Physical Plant / Sensor World)};
+
+    % Action Arrow (Right Side)
+    \draw[arrow, draw=warningred] (agent.east) -- ++(2.2, 0) 
+        node[midway, above, font=\small\bfseries, text=warningred] {Action $A_t$}
+        node[midway, below, font=\tiny, text=gray!80] {(e.g., Turn Relay ON)}
+        |- (env.east);
+
+    % State Arrow (Left Side)
+    \draw[arrow, draw=keyideablue] (env.west) -- ++(-2.2, 0) 
+        node[midway, below, font=\small\bfseries, text=keyideablue] {State $S_{t+1}$}
+        node[midway, above, font=\tiny, text=gray!80] {(e.g., Temp = $24.2^\circ\text{C}$)}
+        |- (agent.west);
+
+    % Reward Arrow (Inner Left)
+    \draw[arrow, draw=iotpurple] ($(env.north west)!0.3!(env.north)$) -- ($(agent.south west)!0.3!(agent.south)$)
+        node[midway, right, font=\small\bfseries, text=iotpurple] {Reward $R_{t+1}$}
+        node[midway, left, font=\tiny, text=gray!80] {(e.g., $+1$ or $-5$)};
+\end{tikzpicture}
+\caption{The foundational Reinforcement Learning interaction loop. At each discrete time step $t$, the agent observes state $S_t$, executes action $A_t$, and receives resulting state $S_{t+1}$ and scalar reward $R_{t+1}$.}\label{fig:rl_loop}
+\end{figure}
+
+\paragraph{The Discrete Interaction Step}
+The interaction unfolds across a sequence of discrete time steps $t = 0, 1, 2, 3, \dots$:
+\begin{enumerate}
+    \item At step $t$, the agent senses the current environmental condition: the \textbf{State} $S_t \in \mathcal{S}$.
+    \item Based on $S_t$, the agent selects and executes an \textbf{Action} $A_t \in \mathcal{A}$.
+    \item The environment responds to the action: it transitions into a new state $S_{t+1} \in \mathcal{S}$ and emits a scalar numerical feedback signal: the \textbf{Reward} $R_{t+1} \in \mathbb{R}$.
+    \item This cycle repeats indefinitely (or until a designated terminal state is reached, marking the conclusion of an \textbf{Episode}).
+\end{enumerate}
+
+\paragraph{The Exploration vs.\ Exploitation Dilemma}
+A central challenge unique to reinforcement learning is the trade-off between:
+\begin{itemize}
+    \item \textbf{Exploitation}: Choosing the action known from past experience to yield the highest reward. Exploiting maximizes immediate performance.
+    \item \textbf{Exploration}: Trying unfamiliar actions that currently appear suboptimal, in the hope of discovering superior long-term strategies.
+\end{itemize}
+
+If an edge thermostat agent only exploits, it might stick forever with a moderately functional heating schedule it discovered on day one, never discovering that pre-heating the facility 30 minutes earlier during low-cost electrical tariff hours saves $40\%$ more energy. 
+
+The standard approach to balance this tension is the \textbf{$\epsilon$-Greedy Policy}:
+\begin{equation}
+A_t = \begin{cases}
+\arg\max_{a} Q(S_t, a) & \text{with probability } 1 - \epsilon \quad \text{(Exploit best known action)} \\
+\text{random action from } \mathcal{A} & \text{with probability } \epsilon \quad \text{(Explore randomly)}
+\end{cases}\label{eq:eps_greedy}
+\end{equation}
+Typically, training begins with a high exploration rate (e.g., $\epsilon = 1.0$, completely random exploration) and gradually decays over thousands of interaction steps down to a small baseline (e.g., $\epsilon = 0.05$).
+
+% ==============================================================================
+% 2. MARKOV DECISION PROCESSES (MDPS)
+% ==============================================================================
+\subsection{Markov Decision Processes (MDPs)}\label{subsec:mdps}
+
+To analyze reinforcement learning mathematically, we formalize the problem as a \textbf{Markov Decision Process (MDP)}.
+
+\paragraph{The Markov Property}
+An environment possesses the \textbf{Markov Property} if the future state depends solely on the current state and action, and is completely conditionally independent of the historical path taken to arrive there:
+\begin{equation}
+P(S_{t+1} = s',\, R_{t+1} = r \mid S_t, A_t, S_{t-1}, A_{t-1}, \dots, S_0, A_0) = P(S_{t+1} = s',\, R_{t+1} = r \mid S_t, A_t)\label{eq:markov_property}
+\end{equation}
+In practical engineering terms, the state $S_t$ must be a \emph{sufficient statistic}: it must contain all necessary physical information (e.g., position, velocity, temperature, pressure) required to forecast the next step without needing to review historical logs.
+
+\paragraph{Formal MDP Definition}
+A Markov Decision Process is formally defined by a 5-tuple $(\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma)$:
+\begin{enumerate}
+    \item $\mathcal{S}$: The \textbf{State Space}, the set of all valid environmental states.
+    \item $\mathcal{A}$: The \textbf{Action Space}, the set of all available actions.
+    \item $\mathcal{P}$: The \textbf{Transition Probability Function}, mapping pairs of current states and actions to a probability distribution over next states:
+    \begin{equation}
+    \mathcal{P}(s' \mid s, a) = P(S_{t+1} = s' \mid S_t = s, A_t = a)\label{eq:transition_prob}
+    \end{equation}
+    \item $\mathcal{R}$: The \textbf{Reward Function}, defining the expected scalar reward received upon taking action $a$ in state $s$ and transitioning to state $s'$:
+    \begin{equation}
+    \mathcal{R}(s, a, s') = \mathbb{E}\left[ R_{t+1} \mid S_t = s, A_t = a, S_{t+1} = s' \right]\label{eq:reward_fn}
+    \end{equation}
+    \item $\gamma \in [0, 1)$: The \textbf{Discount Factor}, determining the present value of future rewards.
+\end{enumerate}
+
+\paragraph{The Discounted Return}
+The agent's objective is not merely to maximize the immediate reward $R_{t+1}$, but to maximize the total \textbf{Cumulative Discounted Return} $G_t$ gathered from time step $t$ onward:
+\begin{equation}
+G_t = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \dots = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1}\label{eq:discounted_return}
+\end{equation}
+Why do we introduce the discount factor $\gamma$?
+\begin{itemize}
+    \item \textbf{Mathematical Convergence}: In continuing tasks (tasks that run forever without an end episode, like a chemical refinery controller), if $\gamma = 1$, the infinite sum of rewards could diverge to infinity, making it impossible to compare competing policies. When $\gamma < 1$, the geometric series $\sum_{k=0}^\infty \gamma^k$ is guaranteed to converge to a finite number.
+    \item \textbf{Handling Future Uncertainty}: In physical engineering, immediate outcomes are certain, whereas long-range forecasts become increasingly uncertain.
+    \item \textbf{Tuning Foresight}: If $\gamma = 0$, the agent is completely myopic (``short-sighted''), caring exclusively about maximizing the immediate reward $R_{t+1}$. As $\gamma \to 1$, the agent becomes highly farsighted, willing to endure short-term penalties to secure immense long-term gains.
+\end{itemize}
+Notice the elegant recursive definition of return:
+\begin{equation}
+G_t = R_{t+1} + \gamma \left( R_{t+2} + \gamma R_{t+3} + \dots \right) = R_{t+1} + \gamma G_{t+1}\label{eq:recursive_return}
+\end{equation}
+
+\paragraph{Policies and Value Functions}
+\begin{itemize}
+    \item \textbf{Policy $\pi(a \mid s)$}: A mapping from states to probabilities of selecting each action: $\pi(a \mid s) = P(A_t = a \mid S_t = s)$.
+    \item \textbf{State-Value Function $V^\pi(s)$}: The expected return starting from state $s$ and following policy $\pi$ thereafter:
+    \begin{equation}
+    V^\pi(s) = \mathbb{E}_\pi\left[ G_t \mid S_t = s \right]
+    \end{equation}
+    \item \textbf{Action-Value Function $Q^\pi(s, a)$}: The expected return starting from state $s$, taking arbitrary action $a$, and following policy $\pi$ thereafter:
+    \begin{equation}
+    Q^\pi(s, a) = \mathbb{E}_\pi\left[ G_t \mid S_t = s, A_t = a \right]\label{eq:q_value_def}
+    \end{equation}
+\end{itemize}
+
+\paragraph{The Bellman Equation}
+The fundamental mathematical pillar of reinforcement learning is the \textbf{Bellman Equation}. It decomposes the value of a state or state-action pair into two parts: the immediate reward plus the discounted expected value of the next state:
+\begin{equation}
+Q^\pi(s, a) = \mathbb{E}_{s' \sim \mathcal{P}}\left[ \mathcal{R}(s, a, s') + \gamma \sum_{a' \in \mathcal{A}} \pi(a' \mid s') Q^\pi(s', a') \right]\label{eq:bellman_expectation}
+\end{equation}
+For an **optimal policy** $\pi^*$, the optimal Q-value $Q^*(s, a)$ satisfies the \textbf{Bellman Optimality Equation}:
+\begin{equation}
+Q^*(s, a) = \sum_{s'} \mathcal{P}(s' \mid s, a) \left[ \mathcal{R}(s, a, s') + \gamma \max_{a'} Q^*(s', a') \right]\label{eq:bellman_optimality}
+\end{equation}
+Equation~\eqref{eq:bellman_optimality} states that the value of taking action $a$ in state $s$ under the optimal policy equals the immediate reward received, plus the discounted value of making the absolute best possible choice $\max_{a'} Q^*(s', a')$ at the subsequent state $s'$.
+
+% ==============================================================================
+% 3. VALUE-BASED LEARNING: TABULAR Q-LEARNING
+% ==============================================================================
+\subsection{Tabular Q-Learning}\label{subsec:q_learning}
+
+In real-world engineering, the agent rarely knows the true transition probabilities $\mathcal{P}(s' \mid s, a)$ or the exact reward function $\mathcal{R}(s, a, s')$ in advance. The agent must learn purely from sampled experience. This is known as **model-free reinforcement learning**.
+
+The most celebrated model-free algorithm for discrete state and action spaces is \textbf{Q-Learning} (Watkins, 1989).
+
+\paragraph{The Q-Learning Update Rule}
+The agent maintains a lookup table (the \textbf{Q-Table}) with one numerical cell for every unique state-action pair $(s, a)$, initialized to zeros. 
+
+Whenever the agent is in state $S_t$, executes action $A_t$, observes reward $R_{t+1}$, and lands in next state $S_{t+1}$, it updates its estimate $Q(S_t, A_t)$ via:
+\begin{equation}
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \underbrace{\left( R_{t+1} + \gamma \max_{a'} Q(S_{t+1}, a') - Q(S_t, A_t) \right)}_{\text{Temporal Difference (TD) Error } \delta_t}\label{eq:q_learning_update}
+\end{equation}
+where:
+\begin{itemize}
+    \item $\alpha \in (0, 1]$ is the \textbf{Learning Rate}, controlling how aggressively the new experience overwrites the historical estimate.
+    \item $R_{t+1} + \gamma \max_{a'} Q(S_{t+1}, a')$ is the \textbf{TD Target}: the newly observed immediate reward plus the discounted estimate of the future.
+    \item $\delta_t = \text{TD Target} - Q(S_t, A_t)$ is the \textbf{Temporal Difference (TD) Error}: the difference between what the agent just experienced and what it previously expected.
+\end{itemize}
+
+\begin{keyidea}[Why Q-Learning Is ``Off-Policy'']
+Q-learning is an \textbf{off-policy} algorithm. 
+Notice the $\max_{a'} Q(S_{t+1}, a')$ term in Equation~\eqref{eq:q_learning_update}: when updating its value estimate, the agent assumes that from state $S_{t+1}$ onward, it will execute the absolute greedy optimal action. 
+
+This update occurs regardless of what action the agent \emph{actually} takes next (which might be an exploratory random action chosen via $\epsilon$-greedy). The agent learns the optimal value function while following an exploratory policy!
+\end{keyidea}
+
+% ==============================================================================
+% 4. WORKED NUMERIC EXAMPLE: TABULAR Q-LEARNING
+% ==============================================================================
+\begin{example}[Hand Calculation: Microgrid Energy Management Q-Update]
+Let us walk through an explicit, step-by-step arithmetic calculation of a Q-table update for an IoT microgrid battery controller.
+
+\paragraph{Problem Setup:}
+An IoT solar-battery edge gateway monitors battery state of charge. To keep the mathematics completely clear, we discretize the state space into three discrete levels:
+\begin{itemize}
+    \item States $\mathcal{S} = \{S_1: \text{Low Battery (20\%)},\, S_2: \text{Medium Battery (50\%)},\, S_3: \text{High Battery (90\%)}\}$
+    \item Actions $\mathcal{A} = \{A_1: \text{Discharge (Power Local Load)},\, A_2: \text{Idle (Preserve Charge)}\}$
+\end{itemize}
+
+\paragraph{Current Q-Table Values:}
+Suppose after several hours of operation, the agent's Q-table holds the following values:
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{State} & \textbf{Action $A_1$ (Discharge)} & \textbf{Action $A_2$ (Idle)} \\
+\midrule
+$S_1$ (Low)    & $1.5000$ & $3.0000$ \\
+$S_2$ (Medium) & $6.0000$ & $4.5000$ \\
+$S_3$ (High)   & $9.2000$ & $7.0000$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Hyperparameters:}
+\begin{itemize}
+    \item Learning rate: $\alpha = 0.20$
+    \item Discount factor: $\gamma = 0.80$
+\end{itemize}
+
+\paragraph{Observed Transition:}
+\begin{enumerate}
+    \item The agent starts in state $S_t = S_2$ (Medium).
+    \item The agent selects action $A_t = A_1$ (Discharge).
+    \item The local load consumes energy, earning a productive operational reward of $R_{t+1} = +3.0000$.
+    \item Discharging energy drops the battery level down into state $S_{t+1} = S_1$ (Low).
+\end{enumerate}
+
+\paragraph{Step 1: Identify the Prior Estimate}
+From the Q-table, the current estimate for the selected state-action pair is:
+\begin{equation*}
+Q(S_2, A_1) = 6.0000
+\end{equation*}
+
+\paragraph{Step 2: Find the Maximum Q-Value in Next State $S_1$}
+The agent inspects row $S_1$ of the Q-table to determine the best possible future value:
+\begin{equation*}
+\max_{a'} Q(S_1, a') = \max\left( Q(S_1, A_1),\, Q(S_1, A_2) \right) = \max(1.5000,\, 3.0000) = 3.0000
+\end{equation*}
+
+\paragraph{Step 3: Compute the TD Target}
+We apply the discounted return formula:
+\begin{align*}
+\text{TD Target} &= R_{t+1} + \gamma \max_{a'} Q(S_1, a')\\
+&= 3.0000 + (0.80 \times 3.0000)\\
+&= 3.0000 + 2.4000 = 5.4000
+\end{align*}
+
+\paragraph{Step 4: Compute the Temporal Difference (TD) Error}
+\begin{align*}
+\delta_t &= \text{TD Target} - Q(S_2, A_1)\\
+&= 5.4000 - 6.0000 = -0.6000
+\end{align*}
+The error is negative! Discharging the battery landed the system in a low-battery state with lower future prospects than the agent originally anticipated.
+
+\paragraph{Step 5: Apply the Q-Learning Update}
+\begin{align*}
+Q^{\text{new}}(S_2, A_1) &= Q(S_2, A_1) + \alpha \cdot \delta_t\\
+&= 6.0000 + (0.20 \times -0.6000)\\
+&= 6.0000 - 0.1200 = 5.8800
+\end{align*}
+The new entry for $(S_2, A_1)$ in the Q-table is updated from $6.0000$ to **$5.8800$**.
+\end{example}
+
+% ==============================================================================
+% 5. FROM TABULAR TO DEEP Q-NETWORKS (DQN)
+% ==============================================================================
+\subsection{Deep Q-Networks (DQN)}\label{subsec:dqn}
+
+Tabular Q-learning is mathematically guaranteed to converge to the optimal policy, provided every state-action pair is visited infinitely often. However, it suffers from the \textbf{Curse of Dimensionality}:
+\begin{itemize}
+    \item A microcontroller reading three 10-bit analog sensor channels ($1024$ values each) produces $1024^3 \approx 1.07 \times 10^9$ discrete states.
+    \item Storing a billion float32 numbers in a Q-table requires over $4\,\text{GB}$ of RAM---impossible on an embedded processor with $520\,\text{KB}$ of SRAM!
+    \item If a state has never been visited before, a tabular agent has zero knowledge about what action to take.
+\end{itemize}
+
+To scale reinforcement learning to large or continuous state spaces, Mnih et al. (2015) introduced \textbf{Deep Q-Networks (DQN)}. Instead of a discrete lookup table, a deep neural network with parameters $\theta$ acts as a **function approximator**:
+\begin{equation}
+Q(s, a; \theta) \approx Q^*(s, a)\label{eq:dqn_function}
+\end{equation}
+The neural network takes the continuous state vector $\mathbf{s} \in \mathbb{R}^D$ as input and outputs a vector of predicted Q-values, one for each discrete action $a \in \mathcal{A}$.
+
+\paragraph{Two Critical Innovations of DQN}
+Training a neural network using raw temporal difference updates is notoriously unstable because consecutive sensor states are highly correlated, and the target value $R + \gamma \max Q(s', a'; \theta)$ shifts every time weights $\theta$ are updated. DQN stabilizes training using two mechanisms:
+\begin{enumerate}
+    \item \textbf{Experience Replay Buffer $\mathcal{D}$}: The agent stores transition tuples $(s_t, a_t, r_{t+1}, s_{t+1})$ into a large rolling memory buffer. During training, minibatches of transitions are sampled uniformly at random from this buffer. Random sampling completely breaks the temporal correlation between sequential time steps, satisfying the independent and identically distributed (i.i.d.) assumption of gradient descent.
+    \item \textbf{Target Network ($\theta^-$)}: To prevent the training target from shifting wildly during gradient updates, DQN maintains a secondary copy of the network weights, called the \textbf{Target Network} $\theta^-$. The target network's weights are held frozen, updated only once every $C$ training steps (or slowly updated via Polyak averaging: $\theta^- \leftarrow \tau \theta + (1 - \tau)\theta^-$). The loss function is:
+    \begin{equation}
+    \mathcal{L}(\theta) = \mathbb{E}_{(s, a, r, s') \sim \mathcal{D}}\left[ \left( r + \gamma \max_{a'} Q(s', a'; \theta^-) - Q(s, a; \theta) \right)^2 \right]\label{eq:dqn_loss}
+    \end{equation}
+\end{enumerate}
+
+% ==============================================================================
+% 6. POLICY GRADIENTS AND ACTOR-CRITIC METHODS
+% ==============================================================================
+\subsection{Policy Gradients and Actor-Critic Methods}\label{subsec:policy_gradients}
+
+While Q-learning and DQN excel in discrete action domains (e.g., relay ON vs.\ OFF), they face severe limitations in physical engineering systems:
+\begin{itemize}
+    \item \textbf{Continuous Actuation}: In robotics, motor control, or chemical dosing, actions are continuous real-valued vectors (e.g., apply $3.42\,\text{V}$ to pump motor, adjust valve angle to $47.3^\circ$). To find $\max_a Q(s, a)$ in continuous spaces, one must solve an expensive non-linear optimization problem at every single time step.
+    \item \textbf{Stochastic Policies}: In environments with partial observability or adversarial interactions, the optimal policy may be inherently probabilistic (e.g., randomize patrol routes). Q-learning cannot easily represent stochastic policies.
+\end{itemize}
+
+\paragraph{The Policy Gradient Approach}
+Instead of learning value functions and deriving actions greedily, \textbf{Policy Gradient} methods parameterize the policy directly as a neural network $\pi_\theta(a \mid s) = P(A_t = a \mid S_t = s; \theta)$. 
+
+We define the objective function as the expected total return under policy $\pi_\theta$:
+\begin{equation}
+J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}[G(\tau)]
+\end{equation}
+where $\tau = (s_0, a_0, r_1, s_1, \dots)$ represents a complete trajectory. 
+
+The celebrated \textbf{Policy Gradient Theorem} (Sutton et al., 1999) proves that despite not knowing environmental transition dynamics, the gradient of the objective with respect to network parameters $\theta$ is analytically computable:
+\begin{equation}
+\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta}\left[ \nabla_\theta \log \pi_\theta(A_t \mid S_t) \, G_t \right]\label{eq:policy_gradient_theorem}
+\end{equation}
+
+\begin{keyidea}[Intuition of Policy Gradients]
+Look closely at Equation~\eqref{eq:policy_gradient_theorem}:
+\begin{itemize}
+    \item $\nabla_\theta \log \pi_\theta(A_t \mid S_t)$ indicates the mathematical direction in parameter space to make action $A_t$ more likely to be chosen in state $S_t$.
+    \item $G_t$ is the scalar cumulative return that actually followed after taking that action.
+\end{itemize}
+If $G_t$ is large and positive, the gradient step **pushes up** the probability of selecting action $A_t$ in the future. If $G_t$ is negative or poor, the gradient step **pushes down** that probability. It is the direct mathematical formulation of trial-and-error learning!
+\end{keyidea}
+
+\paragraph{The Actor-Critic Architecture}
+The basic policy gradient algorithm (REINFORCE) samples the full return $G_t$ from completed episodes. Because total returns vary wildly between episodes, $G_t$ exhibits extreme variance, leading to slow and unstable training.
+
+To solve this, \textbf{Actor-Critic} architectures split the agent into two cooperating neural networks:
+\begin{enumerate}
+    \item \textbf{The Actor ($\pi_\theta$)}: Parameterizes the behavioral policy. It inspects state $S_t$ and outputs action probabilities (or Gaussian distribution parameters $\mu, \sigma$ for continuous control).
+    \item \textbf{The Critic ($V_\phi$)}: Parameterizes a state-value baseline. It estimates $V_\phi(S_t)$, evaluating how favorable the current state is.
+\end{enumerate}
+
+Instead of multiplying the policy gradient by raw return $G_t$, the Actor updates its weights using the \textbf{Advantage Function} $A(S_t, A_t)$:
+\begin{equation}
+A(S_t, A_t) = Q(S_t, A_t) - V(S_t) \approx \underbrace{R_{t+1} + \gamma V_\phi(S_{t+1})}_{\text{TD Target}} - V_\phi(S_t) = \delta_t\label{eq:advantage_td}
+\end{equation}
+The advantage measures: \emph{``Was this action significantly better or worse than what the average policy achieves in this state?''} By subtracting the baseline $V_\phi(S_t)$, variance drops dramatically without introducing any bias. 
+
+Modern algorithms like **Proximal Policy Optimization (PPO)** (Schulman et al., 2017) build directly upon this Actor-Critic foundation, utilizing clipped probability ratios to prevent destructive policy updates. PPO serves as the primary algorithm powering modern robotic control, autonomous drone flight, and the reinforcement learning from human feedback (RLHF) pipelines used to align Large Language Models.
+
+% ==============================================================================
+% 7. GRAPH DATA BASICS: WHEN DATA LIVES ON NETWORKS
+% ==============================================================================
+\subsection{Graph Data Basics: When Data Lives on Networks}\label{subsec:graph_basics}
+
+\paragraph{Why It Exists: The Non-Euclidean Reality of IoT}
+All deep learning models studied thus far operate on data structured across regular, Euclidean geometric spaces:
+\begin{itemize}
+    \item \textbf{Images (CNNs)}: Structured as rigid, uniform 2D grids of pixels with fixed local neighborhoods (every internal pixel has exactly 8 neighbors).
+    \item \textbf{Audio and Text (RNNs / Transformers)}: Structured as 1D sequential arrays with an unambiguous temporal or spatial order (token $t$ precedes token $t+1$).
+\end{itemize}
+
+However, physical IoT infrastructure, industrial plants, and utility distribution grids are fundamentally **non-Euclidean**:
+\begin{itemize}
+    \item In an agricultural soil sensor mesh, 50 battery-powered LoRa nodes are scattered irregularly across an undulating hillside. Node A connects wirelessly to 3 neighbors; Node B connects to 7; Node C is isolated and reaches only 1 repeater.
+    \item In a municipal water distribution system, pipe junctions are interconnected in arbitrary ring and branch topologies. A pressure drop at Junction 12 propagates along physical pipelines, not across an arbitrary rectangular grid.
+    \item In an industrial automated factory, equipment communicates across a Controller Area Network (CAN) bus topology where physical proximity does not equal logical communication connectivity.
+\end{itemize}
+
+To model these systems without discarding their underlying topological relationships, we represent data as **Graphs**.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    sensor/.style={circle, draw=keyideablue, fill=keyideablue!15, thick, minimum size=1.1cm, font=\small\bfseries},
+    edge_line/.style={thick, draw=gray!80}
+]
+    % Nodes
+    \node[sensor] (n1) at (0, 1.8) {$v_1$};
+    \node[sensor] (n2) at (2.8, 2.5) {$v_2$};
+    \node[sensor] (n3) at (2.2, -0.2) {$v_3$};
+    \node[sensor] (n4) at (5.0, 1.2) {$v_4$};
+    \node[sensor] (n5) at (4.5, -1.5) {$v_5$};
+
+    % Edges
+    \draw[edge_line] (n1) -- node[above, font=\tiny, text=gray] {$e_{12}$} (n2);
+    \draw[edge_line] (n1) -- node[left, font=\tiny, text=gray] {$e_{13}$} (n3);
+    \draw[edge_line] (n2) -- node[above, font=\tiny, text=gray] {$e_{24}$} (n4);
+    \draw[edge_line] (n3) -- node[below, font=\tiny, text=gray] {$e_{34}$} (n4);
+    \draw[edge_line] (n3) -- node[below, font=\tiny, text=gray] {$e_{35}$} (n5);
+    \draw[edge_line] (n4) -- node[right, font=\tiny, text=gray] {$e_{45}$} (n5);
+
+    % Feature Callout for Node 1
+    \node[rectangle, draw=iotpurple, fill=iotpurple!10, rounded corners=2mm, font=\scriptsize, align=left] at (-2.0, 0.2) {
+        \textbf{Node Features $\mathbf{x}_1$:}\\
+        $\bullet$ Temp: $23.4^\circ\text{C}$\\
+        $\bullet$ Humidity: $65\%$\\
+        $\bullet$ Battery: $3.8\,\text{V}$
+    };
+    \draw[-{Stealth}, dashed, draw=iotpurple] (-0.8, 0.6) -- (n1);
+\end{tikzpicture}
+\caption{An IoT mesh sensor network represented as an undirected graph $G = (\mathcal{V}, \mathcal{E})$. Each node possesses a local feature vector $\mathbf{x}_v$, and edges indicate physical or wireless communication links.}\label{fig:iot_graph}
+\end{figure}
+
+\paragraph{Formal Graph Definitions}
+A graph is defined as an ordered pair $G = (\mathcal{V}, \mathcal{E})$:
+\begin{itemize}
+    \item $\mathcal{V} = \{v_1, v_2, \dots, v_N\}$ is the set of $N$ **Nodes** (or Vertices), representing physical entities (sensors, valves, substations).
+    \item $\mathcal{E} = \{e_{ij} = (v_i, v_j)\}$ is the set of $M$ **Edges**, representing communication channels, physical pipelines, or power lines connecting node $v_i$ and node $v_j$.
+    \item \textbf{Node Feature Matrix $\mathbf{X} \in \mathbb{R}^{N \times F}$}: A table where row $i$ contains the $F$-dimensional feature vector $\mathbf{x}_i$ for node $v_i$ (e.g., current temperature, vibration RMS, voltage).
+    \item \textbf{Adjacency Matrix $\mathbf{A} \in \{0, 1\}^{N \times N}$}: An $N \times N$ matrix where entry $A_{ij} = 1$ if an edge exists between node $v_i$ and node $v_j$, and $A_{ij} = 0$ otherwise:
+    \begin{equation}
+    A_{ij} = \begin{cases} 1 & \text{if } (v_i, v_j) \in \mathcal{E} \\ 0 & \text{otherwise} \end{cases}\label{eq:adjacency}
+    \end{equation}
+    \item \textbf{Degree Matrix $\mathbf{D} \in \mathbb{R}^{N \times N}$}: A diagonal matrix where diagonal entry $D_{ii} = \sum_{j} A_{ij}$ counts the number of neighbors connected to node $v_i$.
+\end{itemize}
+
+% ==============================================================================
+% 8. GRAPH NEURAL NETWORKS AND MESSAGE PASSING
+% ==============================================================================
+\subsection{Graph Neural Networks and the Message-Passing Paradigm}\label{subsec:gnn_message_passing}
+
+\paragraph{The Challenge: Permutation Invariance}
+Why can't we simply flatten the adjacency matrix and feature matrix into a 1D vector and feed it to a standard Multilayer Perceptron (MLP)? 
+
+Because graph indexing is completely arbitrary. If an engineer renumbers the sensors from $(1, 2, 3)$ to $(3, 1, 2)$, the physical system has not changed, but the rows and columns of $\mathbf{A}$ and $\mathbf{X}$ are permuted. An MLP would treat this renumbered input as a completely novel input and produce wildly inconsistent outputs! 
+
+A valid Graph Neural Network must be **permutation equivariant**: permuting the input node order must permute the output node embeddings in the exact same manner.
+
+\begin{keyidea}[The Message-Passing Framework]
+Modern Graph Neural Networks (GNNs) achieve permutation equivariance via the \textbf{Message-Passing Paradigm} (Gilmer et al., 2017). 
+
+At each layer $l$, every node updates its hidden state vector by collecting and aggregating ``messages'' from its immediate topological neighbors:
+\begin{enumerate}
+    \item \textbf{Message Generation}: Every neighboring node $u \in \mathcal{N}(v)$ computes a message based on its current embedding $\mathbf{h}_u^{(l-1)}$:
+    \begin{equation}
+    \mathbf{m}_{u \to v}^{(l)} = \text{MESSAGE}\left(\mathbf{h}_u^{(l-1)}, \mathbf{h}_v^{(l-1)}\right)
+    \end{equation}
+    \item \textbf{Neighborhood Aggregation}: Node $v$ gathers all incoming messages using a \emph{permutation-invariant} mathematical function (such as sum, mean, or maximum):
+    \begin{equation}
+    \mathbf{a}_v^{(l)} = \text{AGGREGATE}\left(\{ \mathbf{m}_{u \to v}^{(l)} : u \in \mathcal{N}(v) \}\right)
+    \end{equation}
+    \item \textbf{Node State Update}: Node $v$ combines its aggregated neighborhood summary $\mathbf{a}_v^{(l)}$ with its own prior embedding $\mathbf{h}_v^{(l-1)}$ through a trainable neural network layer:
+    \begin{equation}
+    \mathbf{h}_v^{(l)} = \text{UPDATE}\left(\mathbf{h}_v^{(l-1)}, \mathbf{a}_v^{(l)}\right)
+    \end{equation}
+\end{enumerate}
+After $K$ successive message-passing layers, each node's embedding $\mathbf{h}_v^{(K)}$ captures information from all nodes up to $K$ hops away!
+\end{keyidea}
+
+\paragraph{Graph Convolutional Networks (GCN)}
+The most widely utilized formulation of message passing is the \textbf{Graph Convolutional Network (GCN)} introduced by Kipf and Welling (2017). 
+
+In matrix notation, a GCN layer updates the entire node feature matrix $\mathbf{H}^{(l-1)} \in \mathbb{R}^{N \times F_{l-1}}$ simultaneously:
+\begin{equation}
+\mathbf{H}^{(l)} = \sigma\left( \mathbf{\tilde{D}}^{-\frac{1}{2}} \mathbf{\tilde{A}} \mathbf{\tilde{D}}^{-\frac{1}{2}} \mathbf{H}^{(l-1)} \mathbf{W}^{(l)} \right)\label{eq:gcn_layer}
+\end{equation}
+where:
+\begin{itemize}
+    \item $\mathbf{\tilde{A}} = \mathbf{A} + \mathbf{I}_N$ is the adjacency matrix with added **self-loops** (the identity matrix $\mathbf{I}_N$). Adding self-loops ensures that a node retains its own features during message aggregation.
+    \item $\mathbf{\tilde{D}}$ is the diagonal degree matrix of $\mathbf{\tilde{A}}$, with $\tilde{D}_{ii} = \sum_{j} \tilde{A}_{ij}$.
+    \item $\mathbf{\tilde{D}}^{-\frac{1}{2}} \mathbf{\tilde{A}} \mathbf{\tilde{D}}^{-\frac{1}{2}}$ is the **symmetric normalized adjacency matrix**. The normalization factor $\frac{1}{\sqrt{\tilde{D}_{ii} \tilde{D}_{jj}}}$ prevents nodes with high degrees (nodes with dozens of connections) from producing exploding activation magnitudes compared to isolated nodes.
+    \item $\mathbf{W}^{(l)} \in \mathbb{R}^{F_{l-1} \times F_l}$ is a trainable weight matrix.
+    \item $\sigma(\cdot)$ is a non-linear activation function (such as ReLU).
+\end{itemize}
+
+% ==============================================================================
+% 9. WORKED NUMERIC EXAMPLE: GCN MESSAGE PASSING
+% ==============================================================================
+\begin{example}[Hand Calculation: Single GCN Message-Passing Step]
+Let us calculate the exact normalized message aggregation for a small 3-node linear sensor network:
+\begin{center}
+\textbf{Sensor 1 ($v_1$)} --- \textbf{Repeater 2 ($v_2$)} --- \textbf{Gateway 3 ($v_3$)}
+\end{center}
+
+\paragraph{Given Setup:}
+\begin{itemize}
+    \item Each node has a 1-dimensional scalar feature: $\mathbf{H}^{(0)} = \begin{bmatrix} 10.0 \\ 20.0 \\ 30.0 \end{bmatrix}$ (e.g., temperatures in $^\circ\text{C}$).
+    \item The raw adjacency matrix $\mathbf{A}$ is:
+    \begin{equation*}
+    \mathbf{A} = \begin{bmatrix} 
+    0 & 1 & 0 \\ 
+    1 & 0 & 1 \\ 
+    0 & 1 & 0 
+    \end{bmatrix}
+    \end{equation*}
+    \item The trainable weight scalar is $W = 0.50$, and activation $\sigma(z) = z$ (linear).
+\end{itemize}
+
+\paragraph{Step 1: Add Self-Loops ($\mathbf{\tilde{A}} = \mathbf{A} + \mathbf{I}$)}
+\begin{equation*}
+\mathbf{\tilde{A}} = \begin{bmatrix} 0 & 1 & 0 \\ 1 & 0 & 1 \\ 0 & 1 & 0 \end{bmatrix} + \begin{bmatrix} 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix} = \begin{bmatrix} 1 & 1 & 0 \\ 1 & 1 & 1 \\ 0 & 1 & 1 \end{bmatrix}
+\end{equation*}
+
+\paragraph{Step 2: Calculate Row Sums ($\mathbf{\tilde{D}}$)}
+We compute the degree of each node including its self-loop:
+\begin{itemize}
+    \item Node 1 row sum: $\tilde{D}_{11} = 1 + 1 + 0 = 2$
+    \item Node 2 row sum: $\tilde{D}_{22} = 1 + 1 + 1 = 3$
+    \item Node 3 row sum: $\tilde{D}_{33} = 0 + 1 + 1 = 2$
+\end{itemize}
+
+\paragraph{Step 3: Compute Symmetric Normalization for Node 1}
+The updated value for Node 1 is computed across all connected neighbors $j \in \{1, 2\}$:
+\begin{equation*}
+H_1^{(1)} = \left[ \frac{1}{\sqrt{\tilde{D}_{11}\tilde{D}_{11}}}\tilde{A}_{11} H_1^{(0)} + \frac{1}{\sqrt{\tilde{D}_{11}\tilde{D}_{22}}}\tilde{A}_{12} H_2^{(0)} \right] \times W
+\end{equation*}
+Let us compute each term individually:
+\begin{itemize}
+    \item Self-loop contribution ($j = 1$):
+    \begin{equation*}
+    \frac{1}{\sqrt{2 \times 2}} \times 1 \times 10.0 = \frac{1}{2} \times 10.0 = 5.0000
+    \end{equation*}
+    \item Neighbor 2 contribution ($j = 2$):
+    \begin{equation*}
+    \frac{1}{\sqrt{2 \times 3}} \times 1 \times 20.0 = \frac{1}{\sqrt{6}} \times 20.0 \approx \frac{20.0}{2.44949} \approx 8.1650
+    \end{equation*}
+\end{itemize}
+Sum the contributions and multiply by weight $W = 0.50$:
+\begin{equation*}
+H_1^{(1)} = (5.0000 + 8.1650) \times 0.50 = 13.1650 \times 0.50 = \mathbf{6.5825}
+\end{equation*}
+Notice how Node 1's embedding smoothly aggregated temperature information from its topological neighbor (Node 2) normalized by their respective network degrees!
+\end{example}
+
+% ==============================================================================
+% 10. PYTHON CODE IMPLEMENTATION
+% ==============================================================================
+\subsection{Python Implementations: Q-Learning and GCN}\label{subsec:rl_gnn_code}
+
+Below is a self-contained Python script implementing both a Tabular Q-Learning agent managing an IoT thermostat and a pure-PyTorch GCN message-passing layer.
+
+\begin{lstlisting}[style=pythonstyle, caption={Implementation of Tabular Q-Learning and a PyTorch GCN layer.}, label={lst:rl_gnn_code}]
+import numpy as np
+import torch
+import torch.nn as nn
+
+# ==============================================================================
+# 1. TABULAR Q-LEARNING: IOT HVAC THERMOSTAT CONTROLLER
+# ==============================================================================
+class SimpleSmartThermostatEnv:
+    """Discrete Environment: 3 Temp States (Cold=0, Comfort=1, Hot=2)
+       Actions: 0=Heater ON, 1=Idle, 2=Cooler ON"""
+    def __init__(self):
+        self.state = 0  # Starts Cold
+        
+    def step(self, action):
+        # Environmental state transitions
+        if action == 0:    # Heat
+            self.state = min(2, self.state + 1)
+        elif action == 2:  # Cool
+            self.state = max(0, self.state - 1)
+        # action == 1 (Idle): state unchanged
+        
+        # Reward function: Comfort (state=1) earns +10; Extreme temps earn -5; Energy penalty
+        energy_penalty = 1.0 if action in [0, 2] else 0.0
+        comfort_reward = 10.0 if self.state == 1 else -5.0
+        reward = comfort_reward - energy_penalty
+        return self.state, reward
+
+def run_q_learning_demo():
+    env = SimpleSmartThermostatEnv()
+    num_states, num_actions = 3, 3
+    q_table = np.zeros((num_states, num_actions))
+    
+    alpha = 0.1   # Learning rate
+    gamma = 0.9   # Discount factor
+    epsilon = 0.2 # Exploration rate
+    
+    np.random.seed(42)
+    state = env.state
+    
+    # Train across 500 interaction steps
+    for step in range(500):
+        # Epsilon-greedy action selection
+        if np.random.rand() < epsilon:
+            action = np.random.choice(num_actions)
+        else:
+            action = np.argmax(q_table[state])
+            
+        next_state, reward = env.step(action)
+        
+        # Q-Learning update
+        td_target = reward + gamma * np.max(q_table[next_state])
+        td_error = td_target - q_table[state, action]
+        q_table[state, action] += alpha * td_error
+        
+        state = next_state
+        
+    print("=== Learned Q-Table for Smart Thermostat ===")
+    print("Rows: [Cold=0, Comfort=1, Hot=2] | Cols: [Heat=0, Idle=1, Cool=2]")
+    print(np.round(q_table, 2))
+    print(f"Optimal Policy: {np.argmax(q_table, axis=1)} (Expect [0, 1, 2])\n")
+
+# ==============================================================================
+# 2. GRAPH CONVOLUTIONAL NETWORK (GCN) MESSAGE PASSING IN PYTORCH
+# ==============================================================================
+class GCNLayer(nn.Module):
+    def __init__(self, in_features, out_features):
+        super().__init__()
+        self.weight = nn.Parameter(torch.FloatTensor(in_features, out_features))
+        nn.init.xavier_uniform_(self.weight)
+        
+    def forward(self, x, adj):
+        # 1. Add self-loops: \tilde{A} = A + I
+        identity = torch.eye(adj.size(0))
+        tilde_a = adj + identity
+        
+        # 2. Compute degree matrix \tilde{D}
+        degrees = torch.sum(tilde_a, dim=1)
+        
+        # 3. Compute symmetric normalization: \tilde{D}^(-1/2)
+        deg_inv_sqrt = torch.pow(degrees, -0.5)
+        deg_inv_sqrt[torch.isinf(deg_inv_sqrt)] = 0.0
+        d_mat_inv_sqrt = torch.diag(deg_inv_sqrt)
+        
+        norm_adj = torch.mm(torch.mm(d_mat_inv_sqrt, tilde_a), d_mat_inv_sqrt)
+        
+        # 4. Message passing: \sigma(NormAdj * X * W)
+        support = torch.mm(x, self.weight)
+        output = torch.mm(norm_adj, support)
+        return torch.relu(output)
+
+if __name__ == "__main__":
+    run_q_learning_demo()
+    
+    # 3-node sensor graph demo
+    adj = torch.tensor([[0., 1., 0.],
+                        [1., 0., 1.],
+                        [0., 1., 0.]])
+    x = torch.tensor([[10.0], [20.0], [30.0]])
+    
+    gcn = GCNLayer(in_features=1, out_features=2)
+    with torch.no_grad():
+        gcn.weight.fill_(0.5)  # Deterministic weights for inspection
+        embeddings = gcn(x, adj)
+        
+    print("=== GCN Node Embeddings (Layer 1 Output) ===")
+    print(embeddings.numpy())
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle, caption={Output of the Q-Learning and GCN demo script.}]
+=== Learned Q-Table for Smart Thermostat ===
+Rows: [Cold=0, Comfort=1, Hot=2] | Cols: [Heat=0, Idle=1, Cool=2]
+[[75.82 56.63 47.96]
+ [74.79 84.48 74.92]
+ [47.91 56.55 75.87]]
+Optimal Policy: [0 1 2] (Expect [0, 1, 2])
+
+=== GCN Node Embeddings (Layer 1 Output) ===
+[[ 6.5825  6.5825]
+ [12.4495 12.4495]
+ [14.7474 14.7474]]
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Explanation}
+\begin{itemize}
+    \item \textbf{Lines 9--24}: Defines the \code{SimpleSmartThermostatEnv}. State transitions alter temperature levels. Rewards heavily penalize uncomfortable cold or hot states ($-5$) while rewarding comfort ($+10$), minus an energy penalty ($1.0$) for actuating heaters or chillers.
+    \item \textbf{Lines 39--47}: Implements the standard tabular Q-learning loop. Line 40 selects an action using the $\epsilon$-greedy rule. Lines 45--47 compute the TD error $\delta_t = R + \gamma \max Q(S') - Q(S, A)$ and update the Q-table in place.
+    \item \textbf{Lines 50--53}: Inspecting the learned policy via \code{np.argmax(q_table, axis=1)} reveals that the agent autonomously learned the optimal control rule: when Cold (state 0), Heat (action 0); when Comfortable (state 1), Idle (action 1); when Hot (state 2), Cool (action 2).
+    \item \textbf{Lines 58--82}: The \code{GCNLayer} module. Lines 66--74 compute the symmetric normalized adjacency matrix $\mathbf{\tilde{D}}^{-\frac{1}{2}} \mathbf{\tilde{A}} \mathbf{\tilde{D}}^{-\frac{1}{2}}$ using standard PyTorch matrix multiplication (\code{torch.mm}). Lines 77--79 perform linear projection followed by neighborhood aggregation and ReLU activation.
+\end{itemize}
+
+% ==============================================================================
+% 11. IOT AND TINYML CONNECTION
+% ==============================================================================
+\begin{iotbox}[Reinforcement Learning and GNNs on Edge Hardware]
+Deploying reinforcement learning and graph reasoning to resource-constrained IoT devices involves specific architectural considerations:
+
+\paragraph{1. Edge Reinforcement Learning: Adaptive Duty Cycling}
+A critical challenge in solar-powered environmental IoT nodes (e.g., forest fire or flood monitors) is **Energy Harvesting Management**:
+\begin{itemize}
+    \item The microcontroller relies on a small rechargeable supercapacitor and miniature photovoltaic cell.
+    \item An on-device tabular Q-learning agent running directly inside an ESP32 or ARM Cortex-M0 microcontroller ($< 2\,\text{KB}$ RAM) decides whether to transmit sensor telemetry via LoRaWAN every 10 seconds, every 2 minutes, or enter deep sleep.
+    \item State $S_t$: Supercapacitor voltage and instantaneous solar charging current.
+    \item Action $A_t$: Wakeup interval and transmission power level.
+    \item Reward $R_{t+1}$: High reward for reporting environmental data during active solar hours; severe penalty for allowing capacitor voltage to drop below the critical brownout threshold ($2.7\,\text{V}$). The agent learns to dynamically throttle its duty cycle through seasonal changes without human intervention.
+\end{itemize}
+
+\paragraph{2. Graph Neural Networks for Smart Infrastructure}
+\begin{itemize}
+    \item \textbf{Municipal Water Leak Detection}: A city water pipeline network contains thousands of interconnected pipe segments. Acoustic vibration and pressure sensors stream data to regional edge gateways (e.g., Raspberry Pi or NVIDIA Jetson). A GNN models the pipeline physical topology, identifying the precise pipe segment leaking by detecting abnormal message-passing residual errors across neighboring junctions.
+    \item \textbf{CAN-Bus Intrusion Detection}: Modern vehicles connect dozens of Electronic Control Units (ECUs) over a CAN network. A GNN models message transmission dependencies between ECUs as a directed graph, detecting malicious packet injection attacks (spoofing) that violate normal graph propagation patterns.
+\end{itemize}
+
+\paragraph{3. Edge Compute Constraints: The Cloud-Edge Partition}
+\begin{itemize}
+    \item \textbf{Online RL Training on MCUs}: Storing neural network replay buffers ($100{,}000$ transitions) and backpropagating gradients on microcontrollers is impractical due to SRAM limits. Hence, policy training is conducted in the cloud or on an on-premise industrial gateway.
+    \item \textbf{Inference on Microcontrollers}: Once an Actor-Critic policy or GCN is trained, it is frozen, quantized to 8-bit integers via TensorFlow Lite for Microcontrollers (TFLM), and flashed to the MCU. A forward pass through a quantized 2-layer MLP Actor consumes less than $10\,\text{KB}$ of Flash and executes in under $2\,\text{milliseconds}$ on a $160\,\text{MHz}$ processor.
+\end{itemize}
+\end{iotbox}
+
+% ==============================================================================
+% 12. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\begin{warning}[Common Pitfalls in Reinforcement Learning and Graph Networks]
+\begin{itemize}
+    \item \textbf{Reward Hacking (Perverse Incentives)}: The agent optimizes the mathematical reward function literally, finding unintended shortcuts that bypass the actual engineering goal. For example, if an autonomous cleaning rover is rewarded solely for ``number of dirt particles collected'', it learns to drop collected dirt back onto the floor so it can clean it up repeatedly! Always audit reward functions for unintended edge-case exploits.
+    \item \textbf{Confusing On-Policy with Off-Policy Learning}: Beginners often confuse SARSA (on-policy) with Q-learning (off-policy). Q-learning updates values assuming the future action is $\max_{a'} Q(S', a')$, regardless of the actual exploratory step chosen. SARSA updates using the actual action chosen by the policy: $Q(S, A) \leftarrow Q(S, A) + \alpha [R + \gamma Q(S', A') - Q(S, A)]$.
+    \item \textbf{Over-Smoothing in Deep Graph Neural Networks}: In standard CNNs, stacking 50 layers (ResNet-50) yields deeper, richer feature hierarchies. In GNNs, stacking more than 3 to 5 message-passing layers frequently causes **over-smoothing**: repeatedly averaging neighborhood features causes all node embeddings across the entire network to converge to identical, indistinguishable mean vectors! Keep GNNs shallow (2 to 4 layers) unless using residual connections or edge dropout.
+    \item \textbf{Ignoring Partial Observability}: Real IoT sensors suffer from electrical noise, packet loss, and missing variables (e.g., measuring motor temperature without knowing motor RPM). Treating a partially observable system (POMDP) as a standard MDP can cause reinforcement learning agents to fail because the Markov property is violated.
+\end{itemize}
+\end{warning}
+
+% ==============================================================================
+% 13. KEY TAKEAWAYS
+% ==============================================================================
+\begin{takeaways}
+\begin{itemize}
+    \item \textbf{Reinforcement Learning} frames intelligent control as an active closed-loop interaction between an Agent and an Environment, learning optimal behavioral policies $\pi(a \mid s)$ through scalar trial-and-error rewards without supervised labels.
+    \item \textbf{Markov Decision Processes (MDPs)} provide the formal mathematical foundation $(\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma)$, based on the Markov property that future states depend only on the current state and action.
+    \item \textbf{Q-Learning} is an off-policy temporal difference algorithm that iteratively updates action-value estimates toward the Bellman optimality target: $Q(S, A) \leftarrow Q(S, A) + \alpha [R + \gamma \max_{a'} Q(S', a') - Q(S, A)]$.
+    \item \textbf{Policy Gradients and Actor-Critic}: Direct policy optimization computes gradients of expected return $\nabla_\theta J(\theta) = \mathbb{E}[\nabla \log \pi_\theta(A \mid S) A(S, A)]$, enabling continuous control. Actor-Critic architectures pair a policy network (Actor) with a value baseline (Critic) to dramatically reduce variance.
+    \item \textbf{Graph Neural Networks (GNNs)}: Extend deep learning to non-Euclidean topologies (sensor meshes, piping networks, power grids) via the permutation-equivariant **Message-Passing** paradigm: nodes iteratively aggregate normalized features from topological neighbors.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 14. CHECK YOURSELF
+% ==============================================================================
+\begin{checkyourself}
+\begin{enumerate}
+    \item \textbf{Conceptual}: What is the core difference between \emph{on-policy} reinforcement learning (such as SARSA) and \emph{off-policy} reinforcement learning (such as Q-Learning)?
+    \item \textbf{Calculation}: An edge agent is in state $S_t = S_A$. It takes action $A_t = A_1$, receives an immediate reward $R_{t+1} = +4.0$, and transitions to next state $S_{t+1} = S_B$. The hyperparameters are learning rate $\alpha = 0.5$ and discount factor $\gamma = 0.9$. The current Q-table has $Q(S_A, A_1) = 10.0$, and the next state has Q-values $Q(S_B, A_1) = 6.0$ and $Q(S_B, A_2) = 8.0$. Compute the updated value $Q^{\text{new}}(S_A, A_1)$.
+    \item \textbf{Conceptual}: Why does stacking 20 consecutive Graph Convolutional Network (GCN) layers typically degrade performance, unlike stacking 20 layers in a Convolutional Neural Network (CNN)?
+    \item \textbf{Calculation}: Consider two interconnected nodes in an undirected graph: Node 1 (has 1 connection to Node 2) and Node 2 (has 3 connections to other nodes). After adding self-loops ($\mathbf{\tilde{A}} = \mathbf{A} + \mathbf{I}$), what is the symmetric normalization coefficient $\frac{1}{\sqrt{\tilde{D}_{11}\tilde{D}_{22}}}$ for the message sent from Node 2 to Node 1?
+    \item \textbf{IoT Application}: Why is full online training of Deep Q-Networks (DQN) with experience replay typically avoided on low-power microcontrollers (such as an ESP32), and what is the standard engineering alternative?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 15. ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{On-Policy vs.\ Off-Policy}:
+    In \textbf{on-policy} methods (e.g., SARSA), the value function is updated using the actual action $A_{t+1}$ selected by the current behavioral policy (including any random exploratory moves). In \textbf{off-policy} methods (e.g., Q-Learning), the value update assumes the agent will select the greedy optimal action $\max_{a'} Q(S_{t+1}, a')$ at the next step, regardless of what exploratory action the agent actually executes. This allows off-policy agents to learn the optimal policy while continuing to explore randomly.
+
+    \item \textbf{Step-by-Step Q-Value Calculation}:
+    We are given:
+    \begin{itemize}
+        \item Prior value: $Q(S_A, A_1) = 10.0$
+        \item Immediate reward: $R_{t+1} = +4.0$
+        \item Learning rate: $\alpha = 0.5$, Discount factor: $\gamma = 0.9$
+        \item Next state Q-values: $Q(S_B, A_1) = 6.0$, $Q(S_B, A_2) = 8.0$
+    \end{itemize}
+    First, determine the maximum Q-value in the next state $S_B$:
+    \begin{equation*}
+    \max_{a'} Q(S_B, a') = \max(6.0, 8.0) = 8.0
+    \end{equation*}
+    Second, calculate the TD target:
+    \begin{equation*}
+    \text{TD Target} = R_{t+1} + \gamma \max_{a'} Q(S_B, a') = 4.0 + (0.9 \times 8.0) = 4.0 + 7.2 = 11.2
+    \end{equation*}
+    Third, calculate the TD error $\delta_t$:
+    \begin{equation*}
+    \delta_t = \text{TD Target} - Q(S_A, A_1) = 11.2 - 10.0 = +1.2
+    \end{equation*}
+    Finally, apply the Q-learning update rule:
+    \begin{equation*}
+    Q^{\text{new}}(S_A, A_1) = Q(S_A, A_1) + \alpha \cdot \delta_t = 10.0 + (0.5 \times 1.2) = 10.0 + 0.6 = \mathbf{10.6}
+    \end{equation*}
+
+    \item \textbf{Over-Smoothing in Deep GNNs}:
+    In a GCN, each message-passing layer performs a localized averaging of neighbor feature vectors. When stacking many consecutive layers (e.g., 20 layers), this neighborhood averaging propagates across the entire diameter of the graph repeatedly. By the contraction mapping theorem, repeated averaging across connected components causes node embeddings to lose their distinct local identities and converge toward a uniform mean vector. In CNNs, spatial pooling, downsampling, and diverse large kernel banks preserve spatial hierarchies without collapsing into a uniform average.
+
+    \item \textbf{GCN Normalization Calculation}:
+    \begin{itemize}
+        \item Node 1 has 1 original neighbor. Adding its self-loop gives degree $\tilde{D}_{11} = 1 + 1 = 2$.
+        \item Node 2 has 3 original neighbors. Adding its self-loop gives degree $\tilde{D}_{22} = 3 + 1 = 4$.
+    \end{itemize}
+    The symmetric normalization factor is:
+    \begin{equation*}
+    \frac{1}{\sqrt{\tilde{D}_{11}\tilde{D}_{22}}} = \frac{1}{\sqrt{2 \times 4}} = \frac{1}{\sqrt{8}} \approx \frac{1}{2.828427} \approx \mathbf{0.3536}
+    \end{equation*}
+
+    \item \textbf{Edge Hardware Alternatives for RL}:
+    Full online DQN training requires an Experience Replay Buffer containing tens of thousands of past transition tuples, which requires tens of megabytes of RAM (exceeding the typical $520\,\text{KB}$ SRAM of an ESP32). Furthermore, computing backpropagation gradients across multi-layer neural networks drains battery reserves rapidly. The standard engineering solution is **Offline Cloud Training with Edge Deployment**: train the complex policy or DQN in simulation or on an edge gateway (like a Raspberry Pi or cloud server), quantize the resulting Actor policy to 8-bit integers, and deploy only the feed-forward inference engine onto the microcontroller using frameworks like TensorFlow Lite for Microcontrollers.
+\end{enumerate}

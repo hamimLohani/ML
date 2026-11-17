@@ -1,0 +1,542 @@
+% FILE: chapters/ch07_s2_edge_vs_cloud.tex
+\section{Edge vs Cloud}\label{sec:edge_vs_cloud}
+
+In Section~\ref{sec:sensor_pipeline}, we traced the journey of physical phenomena from analog silicon transducers into calibrated, filtered digital feature vectors on an embedded microcontroller. Once these features are extracted, a fundamental architectural crossroads emerges:
+
+\begin{center}
+\textbf{Where should the machine learning model actually run?}
+\end{center}
+
+Historically, Internet of Things (IoT) engineering answered this question with an uncompromising, centralized dogma: \emph{``Collect everything on the sensor, digitize it, and blast all raw data across the internet to the cloud for processing.''}
+
+In cloud data centers, vast server clusters equipped with multi-terabyte memory banks and racks of high-power GPUs execute massive neural networks with ease. However, when applied to physical cyber-physical systems, this cloud-centric approach frequently collides with hard physical and economic realities: network transmission latencies, wireless bandwidth saturation, cellular billing costs, rapid battery depletion, and severe privacy vulnerabilities.
+
+At the other extreme lies \textbf{TinyML} and pure on-device edge inference: executing compact, quantized machine learning models directly inside the flash memory and SRAM of resource-constrained microcontrollers (such as an ESP32 or ARM Cortex-M4) physically attached to the sensor.
+
+Neither extreme is universally superior. Building robust, production-grade IoT systems requires mastering the delicate trade-offs between **Edge Computing**, **Cloud Computing**, and the **Hybrid (Hierarchical) Continuum**. In this section, we analyze the four core axes of this trade-off (latency, power, bandwidth, and privacy), establish a rigorous decision framework for architectural placement, work through concrete mathematical energy and bandwidth budgets, and demystify how edge telemetry flows to cloud models via MQTT and HTTP.
+
+% ==============================================================================
+% 1. THE FOUR PILLARS OF THE TRADE-OFF
+% ==============================================================================
+\subsection{The Four Pillars of the Architectural Trade-Off}\label{subsec:four_pillars}
+
+\begin{keyidea}[The Four Fundamental Constraints]
+The decision to execute model inference locally on an edge device versus remotely in a cloud data center is governed by four interdependent physical and economic constraints:
+\begin{enumerate}
+    \item \textbf{Latency}: The time delay between a physical event occurring and a machine learning action being executed.
+    \item \textbf{Bandwidth}: The volume of data transmitted over the wireless network per unit time, directly impacting network congestion and recurring operational data costs.
+    \item \textbf{Power Consumption}: The electrical energy consumed by local computation versus wireless radio transmission, governing battery lifespan.
+    \item \textbf{Privacy and Security}: The exposure of raw, sensitive environmental telemetry or audio-visual data to network interception and centralized storage breaches.
+\end{enumerate}
+\end{keyidea}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.92,
+    spectrum_bar/.style={rectangle, draw=gray!70, fill=gray!10, rounded corners=3mm, thick, minimum width=15cm, minimum height=1.4cm},
+    node_box/.style={rectangle, draw=keyideablue, fill=keyideablue!15, rounded corners=2mm, thick, minimum width=3.2cm, minimum height=2.2cm, align=center, font=\small},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Central Spectrum
+    \node[spectrum_bar] (bar) at (7.5, 0) {};
+    \node[font=\footnotesize\bfseries, text=gray!80] at (7.5, 0.4) {COMPUTATIONAL CONTINUUM};
+
+    % Extreme Left: TinyML Edge
+    \node[node_box, draw=iotpurple, fill=iotpurple!12] (edge) at (0.5, 0) {
+        \textbf{On-Device (TinyML)}\\
+        \scriptsize ESP32 / Cortex-M4\\
+        \scriptsize $240\,\text{MHz}$, $< 1\,\text{MB}$ RAM\\
+        \tiny $\bullet$ Latency: $1 - 20\,\text{ms}$\\
+        \tiny $\bullet$ Bandwidth: Zero\\
+        \tiny $\bullet$ Radio: Sleeping\\
+        \tiny $\bullet$ Privacy: Absolute
+    };
+
+    % Center: Edge Gateway / Fog
+    \node[node_box, draw=analogygreen, fill=analogygreen!12] (fog) at (7.5, 0) {
+        \textbf{Edge Gateway (Fog)}\\
+        \scriptsize Raspberry Pi / Jetson\\
+        \scriptsize Quad-Core, $4 - 16\,\text{GB}$ RAM\\
+        \tiny $\bullet$ Latency: $20 - 100\,\text{ms}$\\
+        \tiny $\bullet$ Local LAN filtering\\
+        \tiny $\bullet$ On-premise control\\
+        \tiny $\bullet$ Moderate compute
+    };
+
+    % Extreme Right: Centralized Cloud
+    \node[node_box, draw=keyideablue, fill=keyideablue!12] (cloud) at (14.5, 0) {
+        \textbf{Centralized Cloud}\\
+        \scriptsize AWS / GCP Server Cluster\\
+        \scriptsize High-End GPUs, Infinite RAM\\
+        \tiny $\bullet$ Latency: $150 - 2000\,\text{ms}$\\
+        \tiny $\bullet$ Bandwidth: High usage\\
+        \tiny $\bullet$ Multi-modal LLMs\\
+        \tiny $\bullet$ Global fleet models
+    };
+
+    % Arrows indicating trade-off trends
+    \draw[-{Stealth[length=3mm]}, line width=1.5pt, draw=warningred] (0.5, -2.0) -- (14.5, -2.0)
+        node[midway, below, font=\scriptsize\bfseries, text=warningred] {Increasing Latency, Network Dependency, and Transmission Bandwidth $\longrightarrow$};
+
+    \draw[-{Stealth[length=3mm]}, line width=1.5pt, draw=analogygreen] (14.5, 2.0) -- (0.5, 2.0)
+        node[midway, above, font=\scriptsize\bfseries, text=analogygreen] {$\longleftarrow$ Increasing Real-Time Determinism, Privacy, and Energy Autonomy};
+\end{tikzpicture}
+\caption{The computational spectrum from resource-constrained microcontrollers at the edge, through local gateways, to massive centralized cloud server clusters.}\label{fig:edge_cloud_spectrum}
+\end{figure}
+
+Let us examine each of these four pillars in technical depth:
+
+\subsubsection{1. Latency: Determinism vs.\ Network Jitter}
+In cloud-based inference, the total round-trip time ($T_{\text{RTT}}$) required to obtain a prediction is the sum of several sequential components:
+\begin{equation}
+T_{\text{cloud}} = t_{\text{sample}} + t_{\text{serialize}} + t_{\text{transmit\_uplink}} + t_{\text{cloud\_queue}} + t_{\text{inference}} + t_{\text{transmit\_downlink}} + t_{\text{actuate}}\label{eq:cloud_latency}
+\end{equation}
+While cloud GPU inference $t_{\text{inference}}$ may take only $5\,\text{ms}$, network transmission over cellular (4G/LTE, NB-IoT) or congested public Wi-Fi introduces substantial delays. In practice, $t_{\text{transmit\_uplink}} + t_{\text{transmit\_downlink}}$ typically ranges from $80\,\text{ms}$ under ideal conditions to upwards of $1{,}500\,\text{ms}$ on cellular networks. Worse, wireless communication suffers from **jitter** (unpredictable variance in latency) and packet loss caused by signal fading, interference, and cell tower handoffs.
+
+In contrast, on-device TinyML inference bypasses the network entirely:
+\begin{equation}
+T_{\text{edge}} = t_{\text{sample}} + t_{\text{inference\_local}} + t_{\text{actuate}}\label{eq:edge_latency}
+\end{equation}
+Because the microcontroller executes instructions locally across its internal bus, $T_{\text{edge}}$ is **deterministic**: if a quantized 1D-CNN takes $4.2\,\text{ms}$ to execute, it will take $4.2\,\text{ms} \pm 0.05\,\text{ms}$ on every single cycle. In safety-critical applications (such as automated emergency braking, industrial punch-press pinch detection, or arc-fault circuit interruption), a delayed prediction is completely useless.
+
+\subsubsection{2. Bandwidth and Network Saturation}
+Physical sensors operating at high sampling frequencies generate vast torrents of raw numerical bytes:
+\begin{itemize}
+    \item A tri-axial vibration accelerometer sampling at $10\,\text{kHz}$ with 16-bit ($2\,\text{byte}$) resolution produces:
+    \begin{equation*}
+    3 \times 10{,}000 \times 2\,\text{bytes/s} = 60{,}000\,\text{bytes/s} = 60\,\text{KB/s} \approx 5.18\,\text{GB/day}
+    \end{equation*}
+    \item An industrial manufacturing plant with 200 monitored motors would generate over $1.03\,\text{terabytes}$ of raw uncompressed telemetry every 24 hours.
+\end{itemize}
+Streaming gigabytes of raw telemetry over commercial cellular networks (LTE-M or satellite) is economically unsustainable and frequently impossible in subterranean mines, rural agricultural fields, or maritime shipping containers. TinyML transforms the microcontroller into an intelligent **semantic filter**: the device samples at $10\,\text{kHz}$ locally, runs inference continuously, and transmits only a 15-byte status report once per hour or upon detecting an anomalous mechanical fracture.
+
+\subsubsection{3. Power: The Energy Cost of Computation vs.\ Radio Transmission}
+A prevalent misconception among software engineers is that executing mathematical computations on a microcontroller consumes significant battery power. In embedded physics, **radio transmission is orders of magnitude more power-hungry than CPU computation**.
+
+\begin{analogy}[The Post Office vs.\ Local Mental Math]
+Imagine you are balancing your monthly personal finances:
+\begin{itemize}
+    \item \textbf{On-Device Computation}: You sit at your desk with a pocket calculator and perform 10,000 arithmetic additions yourself. It takes a few calories of mental energy.
+    \item \textbf{Cloud Offloading}: For every individual arithmetic addition, you write the numbers on a postcard, buy a postage stamp, drive to the central post office, mail it, and wait for the postman to drive back with the answer.
+\end{itemize}
+The energetic cost of driving to the post office dwarfs the energy needed to tap the calculator buttons. In an embedded chip, firing up the RF radio amplifier to broadcast radio waves into the air is the equivalent of driving to the post office!
+\end{analogy}
+
+On an ESP32 microcontroller:
+\begin{itemize}
+    \item Running the CPU at $240\,\text{MHz}$ doing intensive integer arithmetic consumes approximately $30\,\text{mA}$ to $50\,\text{mA}$ at $3.3\,\text{V}$ ($\sim 100 - 165\,\text{mW}$).
+    \item Enabling the Wi-Fi or cellular radio to transmit data spikes current consumption to $160\,\text{mA} - 260\,\text{mA}$ ($\sim 530 - 860\,\text{mW}$), with transient transmission bursts up to $500\,\text{mA}$.
+\end{itemize}
+Every byte transmitted over the air directly drains battery reserves. Computing locally allows the device to keep its radio in a deep sleep mode ($< 15\,\mu\text{A}$), extending battery lifespan from days to years.
+
+\subsubsection{4. Privacy, Confidentiality, and Regulatory Compliance}
+Transmitting raw sensor signals introduces severe operational and legal risks:
+\begin{itemize}
+    \item \textbf{Acoustic and Visual Surveillance}: Streaming microphone audio or camera footage from domestic smart doorbells, hospital patient rooms, or private offices to commercial cloud servers exposes individuals to eavesdropping, corporate espionage, and regulatory penalties under GDPR, HIPAA, or CCPA.
+    \item \textbf{Zero-Data-Retention at the Edge}: When an edge model processes audio (e.g., detecting a broken window or cough) or camera images (e.g., counting warehouse inventory), the raw sensor buffer is analyzed in volatile SRAM and instantly overwritten. The raw audio or video never touches persistent storage and never travels across a network wire. Only high-level anonymous metadata (\code{"ALERT: Glass break detected at 02:14:05"}) is emitted.
+\end{itemize}
+
+% ==============================================================================
+% 2. DECISION FRAMEWORK
+% ==============================================================================
+\subsection{Decision Framework: When to Infer on Device vs.\ Server}\label{subsec:decision_framework}
+
+To guide system designers, Table~\ref{tab:edge_vs_cloud_matrix} synthesizes the architectural trade-offs into a practical evaluation matrix.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{p{3.2cm} p{5.5cm} p{5.5cm}}
+\toprule
+\textbf{Design Dimension} & \textbf{Favor On-Device Edge Inference} & \textbf{Favor Centralized Cloud Inference} \\
+\midrule
+\textbf{Latency Requirement} & Hard real-time ($< 50\,\text{ms}$) or deterministic low jitter (robotics, safety switches). & Soft real-time ($> 500\,\text{ms}$) or asynchronous batch processing (daily reports). \\
+\textbf{Network Connectivity} & Intermittent, unreliable, high-cost cellular/satellite, or completely offline. & High-speed, unmetered, redundant Ethernet or reliable enterprise Wi-Fi. \\
+\textbf{Data Throughput} & High-frequency raw data (audio $16\,\text{kHz}$, vibration $10\,\text{kHz}$, raw video). & Low-frequency scalar telemetry (temperature sampled once every 10 minutes). \\
+\textbf{Model Complexity} & Quantized models ($< 500\,\text{KB}$ Flash, $< 250\,\text{KB}$ SRAM, $< 10\,\text{M}$ FLOPs). & Massive models (Large Language Models, 100-layer Vision Transformers, ensembles). \\
+\textbf{Privacy Sensitivity} & In-cabin driver video, bedroom audio, biometric medical feeds, confidential IP. & Non-sensitive environmental data (ambient weather, municipal parking occupancy). \\
+\textbf{Power Source} & Small Li-ion battery, solar energy harvesting, button cells (CR2032). & Mains power (AC wall outlet, industrial 24V supply, PoE). \\
+\bottomrule
+\end{tabular}
+\caption{Architectural evaluation matrix: choosing between on-device edge inference and cloud-based inference.}\label{tab:edge_vs_cloud_matrix}
+\end{table}
+
+\paragraph{The Cascaded / Tiered Hybrid Architecture}
+In production engineering, the most effective architectures avoid an all-or-nothing dichotomy. Instead, they implement a \textbf{Cascaded (Tiered) Architecture}:
+\begin{enumerate}
+    \item \textbf{Tier 1: Ultra-Low-Power Wake-Up Filter (Edge MCU)}: An ultra-low-power microcontroller (or dedicated analog neuromorphic sensor) runs a micro-model ($< 10\,\text{KB}$) continuously on microwatts of power. For example, it continuously monitors vibration for subtle deviations from baseline.
+    \item \textbf{Tier 2: Verification and Action}: If Tier 1 detects a minor anomaly, it triggers the main microcontroller CPU to run a more sophisticated 8-bit model to classify the fault.
+    \item \textbf{Tier 3: Cloud Escalation (Rare Exception Handling)}: Only when the local models encounter an ambiguous, unprecedented anomaly does the system power on its high-bandwidth wireless radio, transmitting a compressed snippet of raw data to a massive cloud-hosted diagnostic model for expert analysis and historical archiving.
+\end{enumerate}
+
+% ==============================================================================
+% 3. WORKED MATHEMATICAL EXAMPLE
+% ==============================================================================
+\begin{example}[Hand Calculation: Energy and Bandwidth Budgeting]
+Let us calculate the exact daily bandwidth and battery energy consumption for two competing IoT vibration monitoring designs deployed on an industrial water pump.
+
+\paragraph{Common Hardware Specifications:}
+\begin{itemize}
+    \item Sensor: 3-axis accelerometer sampling at $f_s = 1{,}000\,\text{Hz}$ with $16\text{-bit}$ ($2\,\text{bytes}$) per axis.
+    \item Power supply: Single-cell Lithium-ion battery ($3.7\,\text{V}$, $2{,}500\,\text{mAh} = 9{,}250\,\text{mWh} = 33{,}300\,\text{Joules}$).
+    \item Supply voltage: $V_{cc} = 3.3\,\text{V}$ (via low-dropout regulator).
+    \item Deep sleep current: $I_{\text{sleep}} = 15\,\mu\text{A} = 0.015\,\text{mA}$.
+\end{itemize}
+
+\paragraph{Design A: Raw Streaming to Cloud via Wi-Fi}
+The device samples for 1 second every minute, turns on the Wi-Fi radio, and streams the raw binary payload to a cloud API.
+\begin{itemize}
+    \item Data generated per 1-second burst: $3 \text{ axes} \times 1{,}000 \text{ samples} \times 2 \text{ bytes} = 6{,}000\,\text{bytes} \approx 6.0\,\text{KB}$.
+    \item Radio connection and transmission time: $t_{\text{tx}} = 3.0\,\text{seconds}$ (Wi-Fi association + TLS handshake + HTTP POST).
+    \item Wi-Fi active current: $I_{\text{wifi}} = 180.0\,\text{mA}$.
+    \item Bursts per day: $60 \text{ minutes} \times 24 \text{ hours} = 1{,}440 \text{ bursts/day}$.
+\end{itemize}
+
+\paragraph{Design B: On-Device TinyML Inference}
+The device samples for 1 second every minute, processes the data locally using a quantized TinyML model, and transmits only when an anomaly occurs (assumed once per day).
+\begin{itemize}
+    \item Local TinyML inference execution time: $t_{\text{infer}} = 0.05\,\text{seconds}$ ($50\,\text{ms}$).
+    \item CPU active computing current: $I_{\text{cpu}} = 35.0\,\text{mA}$.
+    \item Sampling time: $t_{\text{sample}} = 1.0\,\text{second}$ at $I_{\text{sample}} = 5.0\,\text{mA}$.
+    \item Anomaly transmission (once per day): 50-byte alert message taking $t_{\text{alert}} = 3.0\,\text{seconds}$ at $180.0\,\text{mA}$.
+\end{itemize}
+
+\paragraph{Step 1: Calculate Daily Bandwidth}
+\begin{align*}
+\text{Bandwidth}_{\text{Design A}} &= 1{,}440 \text{ bursts/day} \times 6{,}000 \text{ bytes} = 8{,}640{,}000 \text{ bytes} \approx \mathbf{8.64\,\text{MB/day}} \\
+\text{Bandwidth}_{\text{Design B}} &= 1 \text{ alert/day} \times 50 \text{ bytes} = \mathbf{50\,\text{bytes/day}} \quad (172{,}800\times \text{ reduction!})
+\end{align*}
+
+\paragraph{Step 2: Calculate Daily Energy Consumption for Design A (Cloud Streaming)}
+In each 60-second cycle:
+\begin{itemize}
+    \item Active transmission time: $3.0\,\text{s}$ at $180.0\,\text{mA} \implies 3.0 \times 180.0 = 540.0\,\text{mA}\cdot\text{s}$
+    \item Sleep time: $60.0 - 3.0 = 57.0\,\text{s}$ at $0.015\,\text{mA} \implies 57.0 \times 0.015 = 0.855\,\text{mA}\cdot\text{s}$
+    \item Total charge per cycle: $540.0 + 0.855 = 540.855\,\text{mA}\cdot\text{s}$
+\end{itemize}
+Total charge consumed per day (1,440 cycles):
+\begin{equation*}
+Q_A = 1{,}440 \times 540.855\,\text{mA}\cdot\text{s} = 778{,}831.2\,\text{mA}\cdot\text{s} = \frac{778{,}831.2}{3{,}600} \approx \mathbf{216.34\,\text{mAh/day}}
+\end{equation*}
+Expected battery lifespan for Design A:
+\begin{equation*}
+\text{Lifespan}_A = \frac{2{,}500\,\text{mAh}}{216.34\,\text{mAh/day}} \approx \mathbf{11.5\,\text{days}}
+\end{equation*}
+
+\paragraph{Step 3: Calculate Daily Energy Consumption for Design B (TinyML Edge)}
+In each 60-second cycle:
+\begin{itemize}
+    \item Sampling: $1.0\,\text{s}$ at $5.0\,\text{mA} \implies 1.0 \times 5.0 = 5.0\,\text{mA}\cdot\text{s}$
+    \item Local TinyML inference: $0.05\,\text{s}$ at $35.0\,\text{mA} \implies 0.05 \times 35.0 = 1.75\,\text{mA}\cdot\text{s}$
+    \item Sleep time: $60.0 - 1.05 = 58.95\,\text{s}$ at $0.015\,\text{mA} \implies 58.95 \times 0.015 = 0.884\,\text{mA}\cdot\text{s}$
+    \item Total charge per cycle: $5.0 + 1.75 + 0.884 = 7.634\,\text{mA}\cdot\text{s}$
+\end{itemize}
+Baseline daily charge (1,440 cycles):
+\begin{equation*}
+Q_{\text{base}} = 1{,}440 \times 7.634\,\text{mA}\cdot\text{s} = 10{,}992.96\,\text{mA}\cdot\text{s} = \frac{10{,}992.96}{3{,}600} \approx 3.054\,\text{mAh/day}
+\end{equation*}
+Add the single daily alert transmission:
+\begin{equation*}
+Q_{\text{alert}} = \frac{3.0\,\text{s} \times 180.0\,\text{mA}}{3{,}600} = \frac{540.0}{3{,}600} = 0.150\,\text{mAh/day}
+\end{equation*}
+Total daily charge for Design B:
+\begin{equation*}
+Q_B = 3.054 + 0.150 = \mathbf{3.204\,\text{mAh/day}}
+\end{equation*}
+Expected battery lifespan for Design B:
+\begin{equation*}
+\text{Lifespan}_B = \frac{2{,}500\,\text{mAh}}{3.204\,\text{mAh/day}} \approx \mathbf{780.2\,\text{days}} \approx \mathbf{2.14\,\text{years!}}
+\end{equation*}
+By processing telemetry locally with TinyML instead of streaming raw data to the cloud, battery lifespan increases from **under two weeks** to **over two years** on the exact same battery!
+\end{example}
+
+% ==============================================================================
+% 4. CLOUD DATA FLOW: MQTT AND HTTP
+% ==============================================================================
+\subsection{Cloud Connectivity Protocols: MQTT vs.\ HTTP}\label{subsec:protocols}
+
+When data or anomalies must travel from the edge to a cloud model server, two application-layer protocols dominate the IoT landscape: **HTTP (HyperText Transfer Protocol)** and **MQTT (Message Queuing Telemetry Transport)**.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    actor/.style={rectangle, draw=keyideablue, fill=keyideablue!12, rounded corners=2mm, thick, minimum width=2.6cm, minimum height=1.0cm, align=center, font=\footnotesize\bfseries},
+    broker/.style={rectangle, draw=iotpurple, fill=iotpurple!15, rounded corners=2mm, thick, minimum width=2.8cm, minimum height=1.0cm, align=center, font=\footnotesize\bfseries},
+    msg/.style={-{Stealth[length=2.5mm]}, thick, font=\scriptsize}
+]
+    % HTTP Architecture (Top)
+    \node[actor] (http_client) at (0, 3.5) {Edge Device\\(HTTP Client)};
+    \node[actor, draw=analogygreen, fill=analogygreen!12] (http_server) at (10, 3.5) {Cloud API Server\\(Model Endpoint)};
+
+    \draw[msg, draw=keyideablue] (http_client.15) -- node[above] {HTTP POST /predict (Heavy Headers $\sim 800\,\text{B}$)} (http_server.165);
+    \draw[msg, draw=analogygreen] (http_server.195) -- node[below] {HTTP 200 OK + JSON Response (Synchronous)} (http_client.345);
+
+    % Divider
+    \draw[dashed, draw=gray!50, thick] (-1, 1.8) -- (11, 1.8);
+    \node[font=\scriptsize\bfseries, text=gray] at (5, 2.1) {COMPARISON: SYNCHRONOUS REQUEST-RESPONSE VS ASYNCHRONOUS PUB/SUB};
+
+    % MQTT Architecture (Bottom)
+    \node[actor] (mqtt_pub) at (0, 0) {Edge Sensor\\(Publisher)};
+    \node[broker] (mqtt_broker) at (5, 0) {MQTT Broker\\(Mosquitto/HiveMQ)};
+    \node[actor, draw=analogygreen, fill=analogygreen!12] (mqtt_sub) at (10, 0) {Cloud ML Worker\\(Subscriber)};
+
+    \draw[msg, draw=iotpurple] (mqtt_pub) -- node[above] {PUBLISH (2\,B Header)} node[below, font=\tiny, text=gray] {Topic: \code{factory/motor1/vib}} (mqtt_broker);
+    \draw[msg, draw=analogygreen] (mqtt_broker) -- node[above] {DISPATCH} node[below, font=\tiny, text=gray] {Fan-out to Subscribers} (mqtt_sub);
+\end{tikzpicture}
+\caption{Protocol architectural comparison: Synchronous point-to-point HTTP request-response versus Broker-mediated asynchronous MQTT publish-subscribe.}\label{fig:http_vs_mqtt}
+\end{figure}
+
+\subsubsection{HTTP / REST for Cloud Inference}
+HTTP operates on a **client-server, request-response paradigm**:
+\begin{itemize}
+    \item \textbf{Mechanism}: The edge device initiates a connection to a specific URL (e.g., \code{POST https://api.plant.com/v1/predict}), uploads payload data, and holds the connection open until the server computes the inference and returns an HTTP response code (e.g., \code{200 OK}) with the prediction.
+    \item \textbf{Protocol Overhead}: HTTP is an ASCII text protocol. A minimal HTTP request includes headers for \code{Host}, \code{User-Agent}, \code{Content-Type}, \code{Content-Length}, and authentication tokens (e.g., \code{Bearer eyJ...}), typically generating $500$ to $1{,}000\,\text{bytes}$ of protocol overhead for a tiny $20\text{-byte}$ numerical payload!
+    \item \textbf{Connection Cost}: Every new HTTP transaction requires a TCP three-way handshake plus TLS cryptographic key exchange, consuming thousands of CPU clock cycles and radio uptime.
+    \item \textbf{Best Used For}: Ad-hoc, high-bandwidth interactions, firmware updates over-the-air (OTA), and direct querying of cloud models from edge gateways with unmetered power.
+\end{itemize}
+
+\subsubsection{MQTT for Constrained Telemetry Pipelines}
+MQTT (invented by Andy Stanford-Clark and Arlen Nipper in 1999 for remote oil pipeline satellite telemetry) is an **asynchronous publish-subscribe protocol**:
+\begin{itemize}
+    \item \textbf{Mechanism}: Clients do not talk directly to each other. Instead, all clients connect to a central **MQTT Broker** (e.g., Eclipse Mosquitto, EMQX, AWS IoT Core). The edge sensor **publishes** messages to a hierarchical string topic (e.g., \code{site_a/pump_3/vibration}). A cloud-hosted ML worker **subscribes** to \code{site_a/+/vibration} to receive incoming telemetry automatically.
+    \item \textbf{Ultra-Low Overhead}: The fixed MQTT packet header is just **2 bytes**. A binary sensor payload can be transmitted with negligible packaging waste.
+    \item \textbf{Persistent Connection}: The edge device establishes a single TCP connection and keeps it alive via lightweight heartbeat ping packets (2 bytes every few minutes), eliminating repeated TLS renegotiation overhead.
+    \item \textbf{Quality of Service (QoS) Levels}:
+    \begin{itemize}
+        \item \textbf{QoS 0 (At most once)}: ``Fire and forget''. Zero acknowledgment. Lowest latency and power, but packets may be lost if network drops.
+        \item \textbf{QoS 1 (At least once)}: Guaranteed delivery. The broker acknowledges with \code{PUBACK}. The client retries until acknowledged (may result in duplicate deliveries).
+        \item \textbf{QoS 2 (Exactly once)}: Four-step handshake ensuring exactly one copy is delivered. Highest overhead; rarely needed for high-frequency telemetry.
+    \end{itemize}
+\end{itemize}
+
+% ==============================================================================
+% 5. PYTHON IMPLEMENTATIONS: HTTP AND MQTT
+% ==============================================================================
+\subsection{Python Implementations: Cloud Server and Edge MQTT Client}\label{subsec:code_implementations}
+
+The following two listings demonstrate a complete cloud-edge telemetry pipeline. Listing~\ref{lst:flask_server} implements a cloud-side inference server using FastAPI/Python, and Listing~\ref{lst:mqtt_client} demonstrates an edge client transmitting telemetry via MQTT.
+
+\begin{lstlisting}[style=pythonstyle, caption={Cloud-side REST inference server using FastAPI and PyTorch.}, label={lst:flask_server}]
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import torch
+import torch.nn as nn
+import uvicorn
+
+# 1. Define Request Data Schema
+class TelemetryPayload(BaseModel):
+    device_id: str
+    timestamp: int
+    features: list[float]  # [RMS, Peak-to-Peak, Kurtosis, CrestFactor]
+
+# 2. Mock Cloud Diagnostic Neural Network
+class CloudDiagnosticNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.classifier = nn.Sequential(
+            nn.Linear(4, 16),
+            nn.ReLU(),
+            nn.Linear(16, 2)  # [Normal, Critical_Bearing_Fault]
+        )
+    def forward(self, x):
+        return self.classifier(x)
+
+app = FastAPI(title="Cloud Industrial Model Server")
+model = CloudDiagnosticNet()
+model.eval()
+
+@app.post("/predict")
+def predict_health(payload: TelemetryPayload):
+    if len(payload.features) != 4:
+        raise HTTPException(status_code=400, detail="Expected 4 statistical features")
+    
+    with torch.no_grad():
+        x = torch.tensor([payload.features], dtype=torch.float32)
+        logits = model(x)
+        probs = torch.softmax(logits, dim=1).squeeze().tolist()
+        predicted_class = int(torch.argmax(logits, dim=1).item())
+        
+    status = "FAULT_DETECTED" if predicted_class == 1 else "NORMAL"
+    return {
+        "device_id": payload.device_id,
+        "status": status,
+        "fault_probability": round(probs[1], 4),
+        "action_required": predicted_class == 1
+    }
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)
+\end{lstlisting}
+
+\begin{lstlisting}[style=pythonstyle, caption={Edge telemetry client using Paho-MQTT to stream features.}, label={lst:mqtt_client}]
+import json
+import time
+import paho.mqtt.client as mqtt
+
+BROKER_ADDRESS = "test.mosquitto.org"  # Public test broker
+BROKER_PORT = 1883
+TOPIC = "plant/assembly_line_1/motor_4/telemetry"
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("[Edge Client] Connected successfully to MQTT Broker.")
+    else:
+        print(f"[Edge Client] Connection failed with code {rc}")
+
+def run_edge_telemetry_loop():
+    client = mqtt.Client(client_id="ESP32_Edge_Gateway_01")
+    client.on_connect = on_connect
+    
+    print("[Edge Client] Connecting to broker...")
+    client.connect(BROKER_ADDRESS, BROKER_PORT, keepalive=60)
+    client.loop_start()  # Run network loop in background thread
+    
+    # Simulated 4-channel edge-extracted features [RMS, P2P, Kurtosis, Crest]
+    simulated_telemetry = [
+        {"device_id": "ESP32_01", "features": [0.42, 1.85, 3.12, 4.40]},
+        {"device_id": "ESP32_01", "features": [2.89, 9.40, 7.85, 9.20]}  # High vibration fault
+    ]
+    
+    for i, data in enumerate(simulated_telemetry):
+        payload_str = json.dumps(data)
+        # Publish with QoS 1 (At least once delivery)
+        result = client.publish(TOPIC, payload_str, qos=1)
+        result.wait_for_publish()
+        print(f"[Published Message {i+1}] Topic: {TOPIC} | Payload: {payload_str}")
+        time.sleep(1.0)
+        
+    client.loop_stop()
+    client.disconnect()
+    print("[Edge Client] Completed transmission and entered deep sleep.")
+
+if __name__ == "__main__":
+    run_edge_telemetry_loop()
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle, caption={Output of the edge MQTT telemetry publisher.}]
+[Edge Client] Connecting to broker...
+[Edge Client] Connected successfully to MQTT Broker.
+[Published Message 1] Topic: plant/assembly_line_1/motor_4/telemetry | Payload: {"device_id": "ESP32_01", "features": [0.42, 1.85, 3.12, 4.4]}
+[Published Message 2] Topic: plant/assembly_line_1/motor_4/telemetry | Payload: {"device_id": "ESP32_01", "features": [2.89, 9.4, 7.85, 9.2]}
+[Edge Client] Completed transmission and entered deep sleep.
+\end{lstlisting}
+
+\paragraph{Line-by-Line Code Explanation}
+\begin{itemize}
+    \item \textbf{Listing~\ref{lst:flask_server}, Lines 6--10}: We define \code{TelemetryPayload} using Pydantic, enforcing strict type-checking for incoming REST requests.
+    \item \textbf{Listing~\ref{lst:flask_server}, Lines 26--41}: The \code{/predict} route receives the JSON payload, converts features into a PyTorch tensor, executes inference in \code{torch.no_grad()} mode, and returns structured diagnostic JSON.
+    \item \textbf{Listing~\ref{lst:mqtt_client}, Lines 18--23}: The client connects to the MQTT broker using persistent keepalive. \code{client.loop_start()} handles network polling and TCP acknowledgments asynchronously.
+    \item \textbf{Listing~\ref{lst:mqtt_client}, Lines 30--35}: Sensor features are serialized into compact JSON and published with \code{qos=1}, ensuring that transient wireless packet drops trigger automatic client-side retransmission until confirmed.
+\end{itemize}
+
+% ==============================================================================
+% 6. IOT AND TINYML CONNECTION
+% ==============================================================================
+\begin{iotbox}[Edge vs Cloud in Real-World IoT: The Smart Agriculture Case Study]
+Consider a smart agricultural deployment across a 500-hectare commercial vineyard:
+\begin{itemize}
+    \item \textbf{The Physical Constraints}: The vineyard is remote, covered only by weak, metered 4G cellular service costing \$10 per gigabyte. Power is provided exclusively by small solar panels and $18650$ lithium batteries.
+    \item \textbf{The Failed Cloud Architecture}: The initial engineering team installed cameras and multi-spectral sensors on each trellis pole, attempting to stream 1080p video frames to an AWS cloud computer vision model to detect mildew disease. Within 48 hours, the cellular data quota was exhausted (\$500 overage), and cloudy weather drained the batteries because the 4G cellular transceivers consumed $250\,\text{mA}$ constantly.
+    \item \textbf{The Successful TinyML Solution}: The system was redesigned using low-power OpenMV / ESP32-CAM modules running an 8-bit quantized MobileNet model directly on-device. The camera wakes up once every 30 minutes, captures an image in SRAM, runs local disease inference in $120\,\text{ms}$, and immediately turns off the camera. If no disease is detected, it returns to sleep without turning on the radio. If mildew is detected, it turns on a LoRaWAN transmitter for $0.2\,\text{seconds}$ to transmit a 6-byte message containing the GPS coordinates and disease class.
+    \item \textbf{Result}: Battery lifespan extended to indefinite solar autonomy, cellular data costs dropped to zero, and the grower receives actionable disease maps in real time.
+\end{itemize}
+\end{iotbox}
+
+% ==============================================================================
+% 7. COMMON MISTAKES AND MISCONCEPTIONS
+% ==============================================================================
+\begin{warning}[Common Mistakes and Misconceptions]
+\begin{itemize}
+    \item \textbf{Mistake 1: Assuming Cloud Connectivity Is 100\% Reliable.}
+    Engineers accustomed to reliable office Wi-Fi often design IoT systems that lock up or crash when DNS resolution fails or the cellular signal drops. In industrial plants, reinforced concrete, high-voltage transformers, and heavy metal machinery create severe electromagnetic interference and permanent radio dead zones. An edge system must possess full offline autonomy.
+    \item \textbf{Mistake 2: Sending Raw Sensor Arrays via JSON over HTTP.}
+    JSON is an ASCII text format. A single 16-bit floating-point number (2 bytes in binary, e.g., \code{0x41BC}) becomes a 6-byte string in JSON (\code{"23.45"}), plus commas, quotes, and whitespace. Serializing arrays of 10,000 vibration samples into JSON increases data payload size by $300\%$ to $500\%$, unnecessarily burning cellular data and battery life. Use compact binary protocols (Protocol Buffers, CBOR, or raw struct packing) when transmission is necessary.
+    \item \textbf{Mistake 3: Believing Edge ML Makes the Cloud Obsolete.}
+    Edge ML replaces the cloud for \emph{inference execution}, not for the broader machine learning lifecycle. The cloud remains indispensable for fleet-wide model monitoring, retraining models on new edge failure cases, aggregating global analytics, and orchestrating Over-The-Air (OTA) firmware deployments.
+    \item \textbf{Mistake 4: Overlooking the TLS Encryption Overhead.}
+    Establishing a secure TLS (HTTPS or MQTTS) connection requires exchanging public key certificates (often $2\,\text{KB}$ to $5\,\text{KB}$ of data) and executing complex asymmetric cryptographic mathematics (RSA or Elliptic Curve Diffie-Hellman). On an 8-bit or 16-bit microcontroller, TLS negotiation can take several seconds of continuous CPU calculation, consuming significant battery energy.
+\end{itemize}
+\end{warning}
+
+% ==============================================================================
+% 8. KEY TAKEAWAYS
+% ==============================================================================
+\begin{takeaways}
+\begin{itemize}
+    \item \textbf{The Architectural Spectrum}: Spans from on-device TinyML microcontrollers ($< 1\,\text{MB}$ RAM, deterministic sub-$20\,\text{ms}$ latency, zero transmission bandwidth) to centralized cloud servers (virtually infinite compute, but high latency, recurring data costs, and privacy exposure).
+    \item \textbf{Radio vs.\ Compute Physics}: In battery-powered IoT devices, radio transmission consumes dramatically more energy than local mathematical computation. Processing data locally with TinyML extends battery lifespan by orders of magnitude.
+    \item \textbf{Bandwidth Multiplication}: High-frequency sensors (audio, vibration) generate gigabytes of raw data daily. On-device feature extraction and edge inference act as intelligent semantic filters, reducing network transmission volumes by up to $99.9\%$.
+    \item \textbf{Cascaded Tiered Architecture}: Modern IoT systems deploy tiny models at the sensor to filter normal data, escalating only ambiguous or anomalous events to edge gateways or cloud models.
+    \item \textbf{MQTT vs.\ HTTP}: HTTP is synchronous, text-heavy, and point-to-point, making it suitable for edge gateways and cloud REST APIs. MQTT is lightweight, asynchronous, and broker-mediated with a 2-byte header, making it the industry standard for low-power edge telemetry.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 9. CHECK YOURSELF
+% ==============================================================================
+\begin{checkyourself}
+\begin{enumerate}
+    \item \textbf{Conceptual}: Why does an automated emergency shutoff switch on an industrial CNC milling machine require on-device TinyML inference rather than cloud-based API inference?
+    \item \textbf{Calculation}: A remote weather station samples an analog wind sensor at $100\,\text{Hz}$ with 2 bytes per sample. 
+    \begin{enumerate}
+        \item If it streams raw binary samples continuously to the cloud, how many megabytes of raw data does it transmit in 24 hours?
+        \item If it runs a local TinyML model that computes average wind speed and turbulence class, transmitting a 20-byte summary once every 10 minutes, how many kilobytes does it transmit in 24 hours?
+    \end{enumerate}
+    \item \textbf{Energy Analysis}: An ESP32 takes $40\,\text{ms}$ at $40\,\text{mA}$ to run a local 8-bit model, versus $2.5\,\text{seconds}$ at $180\,\text{mA}$ to connect to Wi-Fi and stream data. How many times more electrical charge (in $\text{mA}\cdot\text{s}$) does the cloud transmission consume compared to the edge inference?
+    \item \textbf{Protocol Comparison}: Identify two major architectural differences between HTTP and MQTT that make MQTT superior for battery-operated wireless sensor networks.
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 10. ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Safety-Critical Deterministic Latency}:
+    An industrial CNC emergency shutoff must actuate within milliseconds if a tool fracture or human pinch hazard occurs. Cloud-based API inference introduces network round-trip delays ($100 - 1{,}500\,\text{ms}$), unpredictable jitter, and vulnerability to network dropouts. If the factory Wi-Fi experiences interference or the internet service provider drops packets, the emergency command would be delayed, resulting in catastrophic machine destruction or human injury. Local TinyML inference executes deterministically in milliseconds without network reliance.
+
+    \item \textbf{Step-by-Step Bandwidth Calculation}:
+    \begin{enumerate}
+        \item \textbf{Continuous Raw Streaming}:
+        \begin{itemize}
+            \item Data rate: $100\,\text{samples/s} \times 2\,\text{bytes/sample} = 200\,\text{bytes/s}$.
+            \item Seconds in 24 hours: $24 \times 3{,}600 = 86{,}400\,\text{seconds}$.
+            \item Total bytes: $200\,\text{bytes/s} \times 86{,}400\,\text{s} = 17{,}280{,}000\,\text{bytes}$.
+            \item In megabytes (decimal MB): $\frac{17{,}280{,}000}{1{,}000{,}000} = \mathbf{17.28\,\text{MB/day}}$ (or $\approx 16.48\,\text{MiB/day}$).
+        \end{itemize}
+        \item \textbf{Local TinyML Summary}:
+        \begin{itemize}
+            \item Reports per day: $\frac{24 \times 60\,\text{minutes}}{10\,\text{minutes}} = 144\,\text{reports/day}$.
+            \item Total bytes: $144 \times 20\,\text{bytes} = 2{,}880\,\text{bytes}$.
+            \item In kilobytes: $\frac{2{,}880}{1{,}000} = \mathbf{2.88\,\text{KB/day}}$.
+        \end{itemize}
+        Edge processing reduces transmitted volume by a factor of $6{,}000\times$.
+    \end{enumerate}
+
+    \item \textbf{Charge Consumption Comparison}:
+    \begin{itemize}
+        \item Local TinyML charge:
+        \begin{equation*}
+        Q_{\text{edge}} = 0.040\,\text{s} \times 40\,\text{mA} = 1.6\,\text{mA}\cdot\text{s}
+        \end{equation*}
+        \item Cloud transmission charge:
+        \begin{equation*}
+        Q_{\text{cloud}} = 2.5\,\text{s} \times 180\,\text{mA} = 450.0\,\text{mA}\cdot\text{s}
+        \end{equation*}
+        \item Ratio:
+        \begin{equation*}
+        \frac{Q_{\text{cloud}}}{Q_{\text{edge}}} = \frac{450.0}{1.6} = \mathbf{281.25\times}
+        \end{equation*}
+        Transmitting data across the wireless radio consumes over **281 times more battery charge** than computing the inference locally!
+    \end{itemize}
+
+    \item \textbf{HTTP vs.\ MQTT Key Differences}:
+    \begin{enumerate}
+        \item \textbf{Header Overhead}: HTTP is an ASCII text protocol with headers typically exceeding $500 - 1{,}000\,\text{bytes}$ per request. MQTT is a compact binary protocol with a fixed header of only **2 bytes**, dramatically reducing radio broadcast time and energy consumption.
+        \item \textbf{Connection Architecture}: HTTP is synchronous, connectionless, and point-to-point, requiring repeated TCP handshakes and TLS renegotiation. MQTT maintains a persistent, lightweight TCP connection with an asynchronous publish-subscribe broker, enabling instant data dispatch and multi-client broadcast without polling.
+    \end{enumerate}
+\end{enumerate}
