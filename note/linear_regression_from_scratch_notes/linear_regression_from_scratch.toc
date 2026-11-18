@@ -1,0 +1,27 @@
+\contentsline {section}{\numberline {1}What Is Linear Regression?}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}A motivating example}{3}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Important terminology}{3}{subsection.1.2}%
+\contentsline {section}{\numberline {2}The Linear Regression Equation}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}The intercept ($\beta _0$)}{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}The slope ($\beta _1$)}{4}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Positive, negative, and zero slopes}{4}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Worked prediction}{5}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}Beta versus beta-hat}{5}{subsection.2.5}%
+\contentsline {section}{\numberline {3}How Does Linear Regression Learn?}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Actual values and predictions}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Residuals}{5}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Why not simply sum the residuals?}{6}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Cost Functions: RSS and MSE}{6}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Residual Sum of Squares (RSS)}{6}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Mean Squared Error (MSE)}{6}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}The objective of Linear Regression}{7}{subsection.4.3}%
+\contentsline {section}{\numberline {5}Gradient Descent: The Main Idea}{7}{section.5}%
+\contentsline {subsection}{\numberline {5.1}The loss landscape}{7}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}What is a gradient?}{8}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}The update rule}{8}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Learning rate}{9}{subsection.5.4}%
+\contentsline {section}{\numberline {6}Gradient Descent for Simple Linear Regression}{9}{section.6}%
+\contentsline {section}{\numberline {7}One Complete Numerical Update}{10}{section.7}%
+\contentsline {section}{\numberline {8}Iterations and Convergence}{10}{section.8}%
+\contentsline {section}{\numberline {9}Summary: The Complete Learning Pipeline}{11}{section.9}%
+\contentsline {section}{\numberline {10}Key Formula Sheet}{11}{section.10}%
