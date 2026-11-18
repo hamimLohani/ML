@@ -1,0 +1,396 @@
+% FILE: chapters/appA_glossary.tex
+\chapter{Glossary of Machine Learning and TinyML Terms}\label{app:glossary}
+
+Throughout this textbook, we have introduced hundreds of foundational concepts spanning linear algebra, statistical learning theory, deep neural network architectures, signal processing, embedded systems, and MLOps.
+
+This comprehensive glossary serves as an authoritative, alphabetical reference for every major technical term used in the book. Each entry provides a concise, plain-language definition that explains the core intuition, its mathematical or hardware significance, and its concrete application in real-world engineering.
+
+\begin{keyidea}[The Value of Terminology Precision]
+Engineering and scientific progress rely on shared, unambiguous definitions. In interdisciplinary fields like TinyML---which bridges the gap between software data science and physical electrical engineering---using precise terminology prevents costly communication failures, software bugs, and hardware design flaws.
+\end{keyidea}
+
+\begin{analogy}[The Scientific Rosetta Stone]
+Imagine entering a foreign workshop where veteran machinists use terms like \emph{collet}, \emph{tramming}, \emph{backlash}, and \emph{gcode}. Without understanding their lexicon, you cannot operate their machines safely or comprehend their instructions. This glossary is your Rosetta Stone: whenever you encounter an unfamiliar term in an academic paper, an engineering meeting, or a hardware datasheet, return here to quickly decode its meaning and operational context.
+\end{analogy}
+
+\begin{iotbox}[Embedded and TinyML Vocabulary]
+Terms marked with \textnormal{\sffamily\scriptsize\bfseries [TinyML \& Hardware]} represent the specialized language of resource-constrained edge systems. Understanding the precise distinction between \textbf{SRAM} (volatile runtime activation memory) and \textbf{Flash ROM} (static weight storage), or between \textbf{Active Current} and \textbf{Quiescent Deep Sleep Current}, is essential when engineering battery-powered smart devices designed to operate autonomously for years.
+\end{iotbox}
+
+\vspace{1em}
+
+\section*{A}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Ablation Study}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Research]}]: An experimental procedure where individual components, loss terms, or features are systematically removed one by one to quantify their isolated contribution to overall performance.
+\item[\textbf{Accuracy}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: The proportion of total predictions that are correct: $(TP + TN) / (TP + TN + FP + FN)$. Misleading on imbalanced datasets where predicting the majority class yields high scores.
+\item[\textbf{Activation Function}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A non-linear mathematical operation (e.g., ReLU, Sigmoid, GELU) applied to a neuron's weighted sum, enabling networks to learn non-linear decision boundaries.
+\item[\textbf{Active Current}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: The electrical current consumed by a microcontroller while CPU cores and peripherals are actively computing inferences ($30\,\text{mA}$ to $240\,\text{mA}$ on an ESP32 at $240\,\text{MHz}$).
+\item[\textbf{Adam Optimizer}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: An adaptive optimization algorithm tracking exponentially decaying averages of past gradients (first moment) and squared gradients (second moment) for stable, rapid convergence.
+\item[\textbf{Affine Quantization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: An asymmetric integer quantization mapping continuous floats $r$ to discrete 8-bit integers $q$ via scale $S$ and zero-point $Z$: $q = \text{round}(r / S) + Z$.
+\item[\textbf{Aliasing}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Signal Processing]}]: An irreversible distortion occurring when an analog signal is sampled below twice its highest frequency ($f_s < 2 f_{\max}$), causing high frequencies to fold into false low frequencies.
+\item[\textbf{Analog-to-Digital Converter (ADC)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: A hardware peripheral converting continuous analog voltages into discrete binary integers (e.g., a 12-bit ADC maps $0\,\text{V}--3.3\,\text{V}$ to integers $0$--$4095$).
+\item[\textbf{Anomaly Detection}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: The identification of rare, abnormal observations deviating from baseline normal behavior, commonly solved on edge devices using autoencoder reconstruction error thresholds.
+\item[\textbf{Area Under the ROC Curve (ROC-AUC)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A threshold-independent metric measuring the probability that a model ranks a random positive instance higher than a random negative instance ($0.5 = \text{random}$, $1.0 = \text{perfect}$).
+\item[\textbf{Autoencoder}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: An unsupervised neural network with an encoder compressing inputs into a lower-dimensional latent bottleneck and a decoder reconstructing the original signal, used for edge anomaly detection.
+\end{description}
+
+\section*{B}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Backpropagation}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The foundational algorithm computing partial derivatives of the loss function with respect to all network weights by applying the calculus chain rule from output backwards.
+\item[\textbf{Bagging}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: Bootstrap Aggregating: an ensemble method training independent base models (e.g., decision trees) on bootstrap samples with replacement, averaging outputs to dramatically reduce variance.
+\item[\textbf{Bandwidth}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Networking]}]: The data transfer rate across a network. Transmitting raw high-frequency sensor telemetry saturates bandwidth, motivating on-device TinyML inference.
+\item[\textbf{Batch Normalization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A layer normalizing hidden activations across mini-batches to zero mean and unit variance, stabilizing deep network training and mitigating internal covariate shift.
+\item[\textbf{Bayes' Theorem}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: A fundamental probability formula updating conditional beliefs given evidence: $P(A|B) = \frac{P(B|A) P(A)}{P(B)}$, forming the foundation of Bayesian classification.
+\item[\textbf{Bessel's Correction}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Statistics]}]: Using $N - 1$ instead of $N$ in sample variance calculations ($s^2 = \frac{1}{N-1} \sum (x_i - \bar{x})^2$), correcting downward bias when estimating population variance.
+\item[\textbf{Better BibTeX (BBT)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Research Tools]}]: A Zotero extension generating deterministic citation keys and auto-exporting live \code{.bib} files with preserved capitalization for \LaTeX{} publishing.
+\item[\textbf{Bias-Variance Tradeoff}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: The fundamental trade-off where prediction error decomposes into bias (underfitting), variance (overfitting), and irreducible noise: $\text{MSE} = \text{Bias}^2 + \text{Variance} + \sigma_\epsilon^2$.
+\item[\textbf{Binary Cross-Entropy}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The standard loss function for two-class classification: $\mathcal{L} = -\frac{1}{N} \sum [y \ln(\hat{p}) + (1-y) \ln(1-\hat{p})]$, penalizing overconfident incorrect predictions.
+\item[\textbf{Bit-width}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML \& Hardware]}]: The number of binary bits representing numeric values in memory (e.g., 32-bit float vs. 8-bit integer). Lower bit-widths slash memory usage and energy consumption.
+\item[\textbf{Boosting}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: A sequential ensemble method training weak learners iteratively, with each new model focusing computational capacity on correcting the residual errors of preceding models.
+\item[\textbf{Box-Cox Transformation}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: A parametric power transform stabilizing variance and mapping skewed positive features into an approximately normal distribution: $y^{(\lambda)} = (y^\lambda - 1)/\lambda$.
+\end{description}
+
+\section*{C}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Calibration}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: The property where predicted probabilities reflect empirical real-world frequencies (e.g., samples predicted at $80\%$ confidence are correct $80\%$ of the time).
+\item[\textbf{Catastrophic Forgetting}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The tendency of neural networks to completely erase previously learned skills upon being trained sequentially on a new task or distribution.
+\item[\textbf{Categorical Cross-Entropy}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The standard loss function for multi-class classification: $\mathcal{L} = -\sum_{k=1}^K y_k \ln(\hat{p}_k)$, measuring divergence between true one-hot targets and Softmax probabilities.
+\item[\textbf{Centroid}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: The geometric center or mean coordinate vector of a cluster of data points in multi-dimensional feature space, updated iteratively in K-Means clustering.
+\item[\textbf{Channel Pruning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: A structured model compression technique removing entire convolutional channels from weight tensors, directly reducing memory buffer sizes and runtime FLOPs.
+\item[\textbf{CI/CD}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: Continuous Integration and Continuous Deployment: automated pipelines executing unit tests, code linting, and container builds on every Git commit.
+\item[\textbf{Concept Drift}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: A production phenomenon where the true relationship between input features $\mathbf{X}$ and target $y$ changes over time ($P(y|\mathbf{X})$ shifts), degrading model accuracy.
+\item[\textbf{Confidence Interval}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Statistics]}]: A statistical interval $[ar{x} - ME, \bar{x} + ME]$ computed from sample data expected to contain the true population parameter with a chosen confidence level (e.g., $95\%$).
+\item[\textbf{Confusion Matrix}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A table cross-tabulating ground-truth labels against model predictions across True Positives, False Positives, True Negatives, and False Negatives.
+\item[\textbf{Convolutional Neural Network (CNN)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A specialized neural architecture utilizing shared parameter kernels and pooling operations to extract translation-invariant spatial and temporal features.
+\item[\textbf{Cosine Similarity}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: A metric measuring the cosine of the angle between two vectors: $\cos(\theta) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\| \|\mathbf{v}\|}$, evaluating directional orientation irrespective of magnitude.
+\item[\textbf{Cross-Validation}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A resampling validation method partitioning data into $K$ folds, iteratively training on $K-1$ folds and testing on the remaining fold to assess out-of-sample generalization.
+\end{description}
+
+\section*{D}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Data Augmentation}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: Artificially inflating training set diversity by applying domain-preserving transformations (e.g., jitter, rotations, noise) without changing true semantic labels.
+\item[\textbf{Data Drift}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: A production shift where input feature distributions change over time ($P(\mathbf{X})$ shifts) while the underlying relationship $P(y|\mathbf{X})$ remains unchanged.
+\item[\textbf{Data Leakage}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: A critical flaw occurring when information from outside the training partition (such as test labels or future timestamps) contaminates the model training process.
+\item[\textbf{Decision Tree}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: A non-parametric model partitioning feature space into orthogonal rectangular regions via greedy recursive splits that maximize purity (Information Gain or Gini Impurity).
+\item[\textbf{Deep Sleep}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: An ultra-low-power microcontroller operating mode powering down CPU cores and radios, leaving only a real-time clock drawing microamp-level current ($10\,\mu\text{A}$ to $15\,\mu\text{A}$).
+\item[\textbf{Depthwise Separable Convolution}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A factorization splitting standard convolution into depthwise spatial filtering per channel followed by $1 \times 1$ pointwise channel mixing, cutting compute by $8\times$ to $9\times$.
+\item[\textbf{Derivative}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: The instantaneous rate of change of a function with respect to an independent variable: $f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$.
+\item[\textbf{Dimensionality Reduction}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: Transforming high-dimensional data into a lower-dimensional space while preserving structural variance and relationships (e.g., via Principal Component Analysis).
+\item[\textbf{Docker}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: An open-source containerization platform packaging software code, runtime dependencies, and system libraries into an immutable, portable software container.
+\item[\textbf{Dot Product}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: An algebraic operation multiplying corresponding components of two vectors and summing the products: $\mathbf{u} \cdot \mathbf{v} = \sum u_i v_i = \|\mathbf{u}\| \|\mathbf{v}\| \cos(\theta)$.
+\item[\textbf{Dropout}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A regularization technique randomly setting a fraction $p$ of hidden activations to zero during training passes, preventing co-adaptation of neurons.
+\item[\textbf{Duty Cycling}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: An energy-saving operating pattern alternating between short active bursts ($10\,\text{ms}$ to $50\,\text{ms}$) of sensing/inference and prolonged deep sleep, slashing average power by $98\%$.
+\end{description}
+
+\section*{E}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Early Stopping}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: Terminating neural network training automatically when validation loss fails to improve for a set number of consecutive epochs (patience), preventing overfitting.
+\item[\textbf{Edge AI}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: Executing machine learning models locally on physical embedded devices and microcontrollers at the network periphery rather than routing data to central cloud servers.
+\item[\textbf{Edge Impulse}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML Tools]}]: A developer platform providing automated pipelines for sensor data collection, DSP feature extraction, model training, integer quantization, and C++ library export.
+\item[\textbf{Eigenvalue \& Eigenvector}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: An eigenvector $\mathbf{v}$ of matrix $\mathbf{A}$ maintains its spatial direction under linear transformation, scaling only by eigenvalue $\lambda$: $\mathbf{A}\mathbf{v} = \lambda \mathbf{v}$.
+\item[\textbf{Embedded C++}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Software]}]: A disciplined C++ programming style avoiding dynamic heap allocation (\code{malloc}, \code{new}) and exceptions to ensure deterministic execution within strict microcontroller SRAM.
+\item[\textbf{Ensemble Learning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: Combining the predictions of multiple diverse models (via averaging, voting, or stacking) to achieve superior accuracy and lower variance than individual models.
+\item[\textbf{Entropy}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Information Theory]}]: A fundamental measure of uncertainty or impurity in a probability distribution: $H(P) = -\sum p_i \log_2(p_i)$. A pure, single-outcome distribution has zero entropy.
+\item[\textbf{Epoch}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: One complete forward and backward optimization pass through the entire training dataset.
+\item[\textbf{ESP32}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: A low-cost, dual-core 32-bit microcontroller by Espressif ($240\,\text{MHz}$, $520\,\text{KB}$ SRAM, integrated Wi-Fi/BLE), standard for prototyping connected TinyML systems.
+\item[\textbf{Euclidean Distance}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: The geometric straight-line distance between two vectors $\mathbf{p}$ and $\mathbf{q}$ in $n$-dimensional space: $d(\mathbf{p}, \mathbf{q}) = \sqrt{\sum_{i=1}^n (p_i - q_i)^2}$.
+\item[\textbf{Exploding Gradient Problem}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A training pathology where backpropagated gradient magnitudes grow exponentially across layers, causing numerical overflow and parameter divergence.
+\end{description}
+
+\section*{F}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{False Alarm Rate (FAR)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: The proportion of normal evaluation instances incorrectly flagged as anomalies: $\text{FAR} = FP / (FP + TN)$. In industrial IoT, high FAR causes alert fatigue.
+\item[\textbf{False Negative (FN)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A classification error where an actual positive instance (e.g., bearing crack) is incorrectly classified as negative (normal).
+\item[\textbf{False Positive (FP)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A classification error where an actual negative instance (e.g., healthy motor) is incorrectly flagged as positive (anomalous).
+\item[\textbf{Fast Fourier Transform (FFT)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Signal Processing]}]: An efficient algorithm computing the Discrete Fourier Transform in $\mathcal{O}(N \log N)$ operations, converting time-domain sensor waveforms into frequency spectra.
+\item[\textbf{FastAPI}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: A modern, asynchronous Python web framework built on Starlette and Pydantic, widely used for deploying high-throughput model inference endpoints.
+\item[\textbf{Feature Engineering}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: The process of extracting, transforming, and constructing informative numerical variables from raw sensor telemetry to maximize model learning efficiency.
+\item[\textbf{Feature Map}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The output tensor generated by convolving an input tensor with a learnable filter kernel, indicating detected spatial or temporal features.
+\item[\textbf{Federated Learning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Distributed ML]}]: A decentralized training paradigm where edge devices compute gradients on private local data and transmit only weight updates to a central server.
+\item[\textbf{FINER Criteria}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Research]}]: A framework evaluating research questions: Feasible, Interesting, Novel, Ethical, and Relevant before committing substantial engineering time.
+\item[\textbf{Fixed-Point Arithmetic}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: Simulating fractional real numbers using integer registers by fixing radix point position, enabling fast inference on microcontrollers lacking hardware FPUs.
+\item[\textbf{Flash Memory (ROM)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: Non-volatile on-chip semiconductor memory retaining compiled firmware binaries and quantized model weights when power is disconnected ($4\,\text{MB}$ to $16\,\text{MB}$ on ESP32).
+\item[\textbf{FlatBuffers}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML Tools]}]: A memory-efficient serialization format enabling TensorFlow Lite for Microcontrollers to read models directly from read-only Flash without copying or unpacking.
+\item[\textbf{F1 Score}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: The harmonic mean of Precision and Recall: $\text{F1} = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}$, balancing false alarms and missed detections.
+\item[\textbf{FreeRTOS}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: A market-leading open-source real-time operating system microkernel providing priority-based preemptive task scheduling and queues on embedded microcontrollers.
+\end{description}
+
+\section*{G}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Gated Recurrent Unit (GRU)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A streamlined recurrent cell using reset and update gates to regulate sequential information flow without maintaining a separate cell state memory.
+\item[\textbf{Generalization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: The core capability of a trained machine learning model to accurately predict outcomes on novel, previously unobserved data drawn from the target distribution.
+\item[\textbf{Generative Adversarial Network (GAN)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A generative framework pitting a Generator network synthesizing synthetic data against a Discriminator network distinguishing real from synthetic samples.
+\item[\textbf{Gini Impurity}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: A criterion measuring the probability of incorrect labeling under random assignment: $G = 1 - \sum p_k^2$, used for evaluating CART decision tree splits.
+\item[\textbf{Global Average Pooling}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A pooling layer computing the average activation across spatial dimensions ($H \times W \to 1 \times 1$), drastically reducing parameters and replacing dense layers.
+\item[\textbf{Google XYZ Formula}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Career]}]: A resume bullet formula: \emph{``Accomplished [X], as measured by [Y], by doing [Z],''} emphasizing measurable quantitative engineering outcomes.
+\item[\textbf{Gradient}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: The vector of first-order partial derivatives of a scalar function: $\nabla f = [\frac{\partial f}{\partial x_1}, \dots, \frac{\partial f}{\partial x_d}]^T$, pointing along steepest ascent.
+\item[\textbf{Gradient Boosting}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: An ensemble method training weak decision trees sequentially to predict the negative gradient (pseudo-residuals) of the loss function with respect to ensemble predictions.
+\item[\textbf{Gradient Descent}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Optimization]}]: An iterative optimization algorithm updating parameter weights along the negative gradient direction: $\mathbf{w}_{t+1} = \mathbf{w}_t - \eta \nabla f(\mathbf{w}_t)$.
+\item[\textbf{Graph Neural Network (GNN)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Specialized Architectures]}]: A deep learning model operating directly on non-Euclidean graph topologies, updating node states via recursive neighborhood message passing.
+\item[\textbf{Grid Search}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Hyperparameter Tuning]}]: A brute-force hyperparameter optimization technique training and evaluating models across every point in a pre-defined Cartesian parameter grid.
+\end{description}
+
+\section*{H}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Hardware-in-the-Loop (HIL)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML \& Testing]}]: An automated testing setup where physical microcontrollers are flashed and stimulated with synthetic sensor data to measure real latency and memory execution.
+\item[\textbf{Hidden State}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The internal memory vector $\mathbf{h}_t$ of a recurrent neural network summarizing historical temporal information observed up to time step $t$.
+\item[\textbf{High-Pass Filter}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Signal Processing]}]: A filter passing signal frequencies higher than a cutoff while attenuating lower frequencies, commonly used to eliminate static gravity offsets from accelerometers.
+\item[\textbf{Holdout Set}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A clean dataset partition completely quarantined from training and tuning, used exclusively to evaluate final model generalization.
+\item[\textbf{HTTP}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Networking]}]: Hypertext Transfer Protocol: the standard application-layer protocol for web services. In IoT, HTTP incurs high header overhead ($> 500$ bytes) relative to MQTT.
+\item[\textbf{Hyperparameter}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: An external structural configuration parameter (e.g., learning rate, tree depth, batch size) that cannot be estimated directly from training data.
+\item[\textbf{Hyperplane}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: A flat affine subspace of dimension $d - 1$ in a $d$-dimensional space, serving as the linear decision boundary in linear models and SVMs.
+\item[\textbf{Hysteresis}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: Employing separate activation and deactivation thresholds to prevent noisy sensor fluctuations from repeatedly triggering spurious alarm state toggles.
+\end{description}
+
+\section*{I}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{I2C}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: Inter-Integrated Circuit: a synchronous two-wire serial communication bus (SDA and SCL) standard for reading sensors like the MPU-6050 at $100\,\text{kHz}$ or $400\,\text{kHz}$.
+\item[\textbf{Imbalanced Data}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: A dataset condition where class frequencies are severely skewed (e.g., $99.9\%$ normal and $0.1\%$ failure), requiring balanced metrics like Macro-F1.
+\item[\textbf{Imputation}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: Replacing missing values in a dataset with estimated statistics (mean, median, mode, or KNN predictions) to prevent downstream model failure.
+\item[\textbf{Inductive Bias}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: The set of structural assumptions and mathematical constraints an algorithm uses to prioritize hypotheses and generalize beyond observed samples.
+\item[\textbf{Inference}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: The operational deployment phase where a trained model processes unobserved inputs through its forward pass to generate predictions.
+\item[\textbf{Information Gain}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: The expected reduction in entropy achieved by partitioning a dataset on a feature: $\text{IG}(S, A) = H(S) - \sum \frac{|S_v|}{|S|} H(S_v)$.
+\item[\textbf{In-place Operation}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Software Engineering]}]: A computation modifying data directly in its existing memory buffer without allocating secondary memory, essential within microcontroller SRAM limits.
+\item[\textbf{Integer Quantization (Int8)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: Converting 32-bit floating-point weights and activations to signed 8-bit integers ($-128$ to $+127$), achieving $4\times$ memory reduction and hardware SIMD speedup.
+\item[\textbf{Internal SRAM}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: Fast on-chip Static RAM ($520\,\text{KB}$ on ESP32) holding runtime stacks, heaps, and activation tensor arenas, with zero wait-state access.
+\item[\textbf{Interrupt Service Routine (ISR)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: A prioritized embedded function executing immediately upon hardware trigger events (e.g., timer alarm, sensor pin threshold), pausing main CPU execution.
+\item[\textbf{Inverted Residual Block}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The MobileNetV2 building block using narrow-wide-narrow bottlenecks with depthwise separable convolutions and residual skip connections between narrow bottlenecks.
+\item[\textbf{Intersection over Union (IoU)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Computer Vision]}]: The ratio of overlapping area to total union area between predicted and ground-truth bounding boxes: $\text{IoU} = \frac{\text{Area}(B_p \cap B_g)}{\text{Area}(B_p \cup B_g)}$.
+\end{description}
+
+\section*{J}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Jaccard Similarity}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: A set similarity metric measuring the size of intersection divided by the size of union: $J(A, B) = \frac{|A \cap B|}{|A \cup B|}$.
+\item[\textbf{Jacobian Matrix}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: The matrix of all first-order partial derivatives of a vector-valued multivariable function $\mathbf{f}: \mathbb{R}^n \to \mathbb{R}^m$.
+\item[\textbf{Jitter}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Networking]}]: Statistical variation or fluctuation in arrival times of communication packets or sensor clock intervals, stabilized via hardware timers.
+\item[\textbf{Joules per Inference}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML \& Hardware]}]: The energy efficiency metric for edge machine learning: $E = V_{\text{supply}} \times I_{\text{active}} \times t_{\text{latency}}$.
+\end{description}
+
+\section*{K}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{K-Fold Cross-Validation}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: Splitting training data into $K$ equal folds, iteratively training on $K-1$ folds and evaluating on the holdout fold to produce unbiased generalization metrics.
+\item[\textbf{K-Means Clustering}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: An unsupervised algorithm iteratively assigning points to the nearest cluster centroid in Euclidean space and updating centroids to the mean of assigned points.
+\item[\textbf{K-Nearest Neighbors (KNN)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: A non-parametric model assigning an unobserved query point the majority label or average target value of its $k$ closest labeled neighbors.
+\item[\textbf{Kalman Filter}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Signal Processing]}]: An optimal recursive estimation algorithm that filters noisy sensor measurements over time to produce accurate estimates of physical system states.
+\item[\textbf{Kernel Trick}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: Mapping low-dimensional data into high-dimensional space in SVMs using an inner product function (e.g., RBF kernel) without computing higher-dimensional coordinates.
+\item[\textbf{Knowledge Distillation}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Compression]}]: Training a compact student network to mimic the softened probability distributions and intermediate activations of a large teacher network.
+\item[\textbf{Kolmogorov-Smirnov Test}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Statistics]}]: A non-parametric statistical test evaluating whether two continuous empirical distributions differ by calculating the maximum distance between their CDFs.
+\item[\textbf{Kullback-Leibler Divergence}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Information Theory]}]: An asymmetric metric measuring the information lost when probability distribution $Q$ is used to approximate distribution $P$: $D_{\text{KL}}(P \parallel Q)$.
+\end{description}
+
+\section*{L}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{L1 Regularization (Lasso)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: Adding an absolute weight penalty to the loss function ($\lambda \sum |w_i|$), driving non-essential coefficients to exactly zero for feature selection.
+\item[\textbf{L2 Regularization (Ridge)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: Adding a squared weight penalty to the loss function ($\lambda \sum w_i^2$), shrinking weights toward zero to mitigate multicollinearity and overfitting.
+\item[\textbf{Lag Feature}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Time Series]}]: A feature created by shifting historical observations backwards in time (e.g., $y_{t-1}, y_{t-2}$) to provide temporal context in tabular models.
+\item[\textbf{Latency}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML \& Systems]}]: The elapsed time required for a model to execute a complete forward inference pass, measured in milliseconds on the physical target processor.
+\item[\textbf{Layer Normalization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: Normalizing hidden activations across feature dimensions within each training sample independently, avoiding dependency on mini-batch size.
+\item[\textbf{Learning Rate (\eta)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Optimization]}]: A scalar hyperparameter controlling step size along the negative gradient during parameter optimization: $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla \mathcal{L}$.
+\item[\textbf{Learning Rate Schedule}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Optimization]}]: A pre-defined policy adjusting the learning rate across training epochs (e.g., cosine annealing, step decay) to ensure fast early progress and stable convergence.
+\item[\textbf{Leaky ReLU}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: An activation function allowing a small non-zero slope $\alpha x$ (where $\alpha \approx 0.01$) when $x < 0$, preventing neurons from becoming permanently inactive.
+\item[\textbf{LightGBM}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: A fast, memory-efficient gradient boosting framework using histogram-based binning, gradient-based one-side sampling, and exclusive feature bundling.
+\item[\textbf{Linear Regression}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: A foundational supervised algorithm modeling linear relationships between continuous target $y$ and features $\mathbf{x}$: $y = \mathbf{w}^T \mathbf{x} + b + \epsilon$.
+\item[\textbf{Little's Law}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps \& Systems]}]: A queuing theorem stating average concurrent requests in a stationary system equals throughput multiplied by average request latency: $L = \lambda \times W$.
+\item[\textbf{Log Loss}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: The negative log-likelihood of true class labels given predicted probabilities: $-\frac{1}{N} \sum [y \ln(\hat{p}) + (1-y) \ln(1-\hat{p})]$.
+\item[\textbf{Logistic Regression}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: A classification algorithm applying the Sigmoid function to a linear combination of features to output class probabilities: $P(y=1|\mathbf{x}) = \sigma(\mathbf{w}^T \mathbf{x} + b)$.
+\item[\textbf{Long Short-Term Memory (LSTM)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A recurrent architecture using input, forget, and output gates across a cell state memory line to overcome vanishing gradients on long sequential data.
+\item[\textbf{Loss Function}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A mathematical objective function measuring the penalty between predicted model outputs $\hat{y}$ and true ground truth $y$, minimized during training.
+\item[\textbf{Low-Pass Filter}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Signal Processing]}]: A digital DSP filter passing signal frequencies below a cutoff while attenuating higher frequencies to eliminate sensor noise.
+\end{description}
+
+\section*{M}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Macro-F1 Score}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: The unweighted arithmetic mean of individual class F1 scores: $\frac{1}{K} \sum \text{F1}_k$, treating all classes equally regardless of sample frequency.
+\item[\textbf{Magnitude Pruning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: Setting all network weights whose absolute value falls below a threshold to zero ($|w_i| < \theta \implies w_i = 0$), reducing non-essential parameters.
+\item[\textbf{Manhattan Distance}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: The distance between two vectors computed as the sum of absolute coordinate differences: $d_1(\mathbf{p}, \mathbf{q}) = \sum |p_i - q_i|$.
+\item[\textbf{Markov Decision Process (MDP)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Reinforcement Learning]}]: A mathematical framework for modeling decision-making in stochastic environments, defined by state, action, transition probability, reward, and discount factor.
+\item[\textbf{Matrix Multiplication}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: An algebraic operation producing matrix $\mathbf{C} \in \mathbb{R}^{m \times p}$ from $\mathbf{A} \in \mathbb{R}^{m \times n}$ and $\mathbf{B} \in \mathbb{R}^{n \times p}$ via $c_{ij} = \sum_{k=1}^n a_{ik} b_{kj}$.
+\item[\textbf{Max Pooling}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A spatial downsampling layer outputting the maximum activation value across each window (e.g., $2 \times 2$), adding translation invariance and cutting tensor dimensions.
+\item[\textbf{Mean Absolute Error (MAE)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A regression metric measuring average magnitude of absolute errors: $\frac{1}{N} \sum |y_i - \hat{y}_i|$, less sensitive to outliers than MSE.
+\item[\textbf{Mean Squared Error (MSE)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A standard regression loss and metric measuring the average squared difference between predictions and targets: $\frac{1}{N} \sum (y_i - \hat{y}_i)^2$.
+\item[\textbf{Microcontroller (MCU)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: A self-contained integrated circuit housing a CPU core, static RAM, Flash program storage, and I/O peripherals on one silicon chip (e.g., ESP32, STM32).
+\item[\textbf{Min-Max Normalization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: Rescaling continuous numeric features into a bounded range $[0, 1]$: $x_{\text{norm}} = \frac{x - x_{\min}}{x_{\max} - x_{\min}}$.
+\item[\textbf{MobileNet}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A family of efficient computer vision architectures designed for mobile and embedded devices, using depthwise separable convolutions to maximize accuracy per FLOP.
+\item[\textbf{Model Drift}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: The progressive degradation of an inference model's accuracy in production over time due to shifts in input distributions or underlying relationships.
+\item[\textbf{Model Registry}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: A centralized software catalog (e.g., MLflow) storing, versioning, annotating, and managing the lifecycle of trained model binaries from staging to production.
+\item[\textbf{Momentum}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Optimization]}]: An optimization acceleration method accumulating a velocity vector in persistent gradient directions: $\mathbf{v}_{t+1} = \gamma \mathbf{v}_t + \eta \nabla \mathcal{L}$.
+\item[\textbf{MQTT}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Networking]}]: Message Queuing Telemetry Transport: an ultra-lightweight publish-subscribe protocol running over TCP with minimal header overhead ($2$ bytes), standard for IoT telemetry.
+\item[\textbf{MPU-6050}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: A standard 6-axis MEMS IMU sensor module measuring 3-axis linear acceleration and 3-axis angular velocity, communicating over I2C.
+\item[\textbf{Multicollinearity}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Statistics]}]: A condition in multiple regression where two or more predictor features are highly linearly correlated, inflating coefficient variances and destabilizing models.
+\item[\textbf{Multilayer Perceptron (MLP)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A feedforward neural network consisting of an input layer, one or more fully connected hidden layers with non-linear activation functions, and an output layer.
+\item[\textbf{Multi-Head Attention}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: Projecting queries, keys, and values into $h$ parallel sub-spaces in Transformers, allowing simultaneous attention to information from different representation sub-spaces.
+\end{description}
+
+\section*{N}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Natural Language Processing (NLP)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Specialized Areas]}]: The artificial intelligence domain focused on enabling computers to parse, interpret, understand, and generate human language text and speech.
+\item[\textbf{Neuron (Artificial)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The fundamental computational unit of an artificial neural network computing a weighted sum of inputs plus a bias and applying an activation function: $y = f(\mathbf{w}^T \mathbf{x} + b)$.
+\item[\textbf{Non-Maximum Suppression (NMS)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Computer Vision]}]: A post-processing step in object detection that removes overlapping redundant bounding boxes by keeping only the highest-scoring detection among candidates with high IoU.
+\item[\textbf{Normal Distribution}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Probability]}]: The symmetric bell-curve probability distribution defined by mean $\mu$ and standard deviation $\sigma$: $f(x) = \frac{1}{\sigma \sqrt{2\pi}} \exp\left(-\frac{(x - \mu)^2}{2\sigma^2}\right)$.
+\item[\textbf{Null Hypothesis (H0)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Statistics]}]: The default baseline statistical hypothesis positing that there is no true difference, effect, or relationship between observed experimental variables.
+\item[\textbf{NumPy}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Software Engineering]}]: The foundational open-source Python library for scientific computing, providing fast $N$-dimensional array objects (\code{ndarray}) and vectorized C routines.
+\item[\textbf{Nyquist-Shannon Sampling Theorem}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Signal Processing]}]: A signal processing theorem stating a continuous analog signal can be perfectly digitized and reconstructed if and only if sampling frequency exceeds twice the highest frequency: $f_s > 2 f_{\max}$.
+\end{description}
+
+\section*{O}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Object Detection}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Computer Vision]}]: The computer vision task of predicting spatial bounding box coordinates and semantic class labels for multiple objects within an image tensor.
+\item[\textbf{One-Hot Encoding}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: Converting a categorical feature with $K$ unique categories into a binary vector of length $K$ containing a single $1$ and $K-1$ zeros.
+\item[\textbf{Ordinary Least Squares (OLS)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: A closed-form mathematical solution for estimating linear regression weights by minimizing residual sum of squares: $\mathbf{w} = (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{y}$.
+\item[\textbf{Out-of-Fold (OOF) Prediction}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: Validation predictions generated on holdout folds during cross-validation, combined across all folds to form a clean, leakage-free dataset for ensembling and validation.
+\item[\textbf{Outlier}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: A data observation deviating significantly from other sample observations, potentially caused by measurement error, sensor fault, or physical anomaly.
+\item[\textbf{Overfitting}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: A failure of generalization where a model memorizes idiosyncrasies and random noise of the training data, achieving high training accuracy but poor validation performance.
+\item[\textbf{Over-the-Air (OTA) Update}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Systems]}]: A wireless deployment mechanism downloading and flashing new compiled binary firmware onto microcontrollers over Wi-Fi, cellular, or Bluetooth without physical cables.
+\end{description}
+
+\section*{P}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Padding}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: Adding zero-valued pixels to the perimeter of an input tensor before convolution to preserve spatial output dimensions (\emph{Same} padding) or allow shrinkage (\emph{Valid} padding).
+\item[\textbf{Parameter}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: An internal configuration variable (e.g., weights $\mathbf{W}$, biases $\mathbf{b}$) learned directly from data during training via optimization algorithms.
+\item[\textbf{Pareto Frontier}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Optimization]}]: The set of optimal non-dominated solutions where improving one performance metric (e.g., accuracy) inevitably degrades another metric (e.g., latency or SRAM).
+\item[\textbf{Partial Derivative}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: The rate of change of a multivariable function $f(x_1, \dots, x_d)$ with respect to one variable $x_i$, holding all other variables constant: $\frac{\partial f}{\partial x_i}$.
+\item[\textbf{Perceptron}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The simplest artificial neuron model computing a linear combination of inputs followed by a step threshold activation to produce a binary classification decision.
+\item[\textbf{Pipeline}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps \& Engineering]}]: A modular software construct chaining preprocessing transforms and an estimator into a single object, preventing data leakage during cross-validation.
+\item[\textbf{Platt Scaling}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A post-processing calibration method fitting a scalar logistic regression model to classifier margins to transform raw scores into well-calibrated probabilities.
+\item[\textbf{Population Stability Index (PSI)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: A metric measuring distribution drift between a baseline dataset $P$ and a live population $Q$ across $K$ bins: $\text{PSI} = \sum (P_k - Q_k) \ln(P_k / Q_k)$.
+\item[\textbf{Positional Encoding}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: Deterministic sinusoidal or learned vectors added to input token embeddings in Transformers to inject spatial and temporal sequence ordering information.
+\item[\textbf{Post-Training Quantization (PTQ)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: Converting a trained 32-bit floating-point neural network to 8-bit integers using a calibration dataset without requiring full retraining.
+\item[\textbf{Precision}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: The proportion of positive model predictions that are correct: $\text{Precision} = TP / (TP + FP)$. It penalizes false alarms.
+\item[\textbf{Predictive Maintenance (PdM)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Industrial IoT]}]: Using real-time sensor telemetry and ML models to predict mechanical degradation before catastrophic breakdown, scheduling maintenance only when needed.
+\item[\textbf{Principal Component Analysis (PCA)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: An unsupervised linear dimensionality reduction algorithm projecting data onto orthogonal principal axes capturing maximum sample variance.
+\item[\textbf{Pruning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: Removing non-essential weight connections (unstructured) or entire filter channels (structured) from a trained neural network to reduce size and latency.
+\item[\textbf{PSRAM}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: Pseudo-Static RAM: external RAM providing large memory capacity ($4\,\text{MB}$ to $8\,\text{MB}$ on ESP32-CAM) over SPI, with higher latency than internal SRAM.
+\item[\textbf{PyTorch}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A premier open-source deep learning framework by Meta AI, featuring dynamic computational graphs, Pythonic tensor APIs, and native GPU acceleration.
+\end{description}
+
+\section*{Q}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Q-Learning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Reinforcement Learning]}]: A model-free, off-policy reinforcement learning algorithm learning optimal action-value functions $Q(s, a)$ via iterative Bellman equation updates.
+\item[\textbf{Quantization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: Approximating continuous 32-bit floating-point weights and activations with discrete 8-bit integers to reduce memory storage and compute latency.
+\item[\textbf{Quantization-Aware Training (QAT)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: Simulating 8-bit integer rounding errors during training forward passes, allowing model weights to adapt to quantization noise and preserving high accuracy.
+\item[\textbf{Quantization Error}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: The numerical distortion introduced when continuous floating-point numbers are rounded to discrete lower-precision integer bins: $|r - (q - Z) \cdot S|$.
+\item[\textbf{Quantization Scale (S)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: A positive scalar constant defining the continuous step size represented by each integer increment: $S = \frac{r_{\max} - r_{\min}}{q_{\max} - q_{\min}}$.
+\item[\textbf{Quantization Zero-Point (Z)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: The integer value representing the exact quantization mapping of real-world floating-point zero ($0.0$), ensuring zero-padding is distortion-free.
+\item[\textbf{Quiescent Current}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: The baseline electrical current consumed by a microcontroller and its power regulator while resting in deep sleep ($10\,\mu\text{A}$ to $20\,\mu\text{A}$).
+\end{description}
+
+\section*{R}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{R-squared (R2)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: Coefficient of determination measuring the proportion of variance in target variable $y$ explained by features $\mathbf{x}$ in a regression model: $1 - \frac{\text{SS}_{\text{res}}}{\text{SS}_{\text{tot}}}$.
+\item[\textbf{Random Forest}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: An ensemble model constructing a forest of de-correlated decision trees, each trained on a bootstrap sample with random feature selection, combining outputs by voting or averaging.
+\item[\textbf{Random Seed}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Software Engineering]}]: An initial starting integer provided to a pseudo-random number generator to guarantee deterministic, reproducible data splits and weight initializations.
+\item[\textbf{Recall (Sensitivity)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: The proportion of actual positive ground-truth instances identified by a model: $\text{Recall} = TP / (TP + FN)$. It penalizes missed positive detections.
+\item[\textbf{Receiver Operating Characteristic (ROC)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A diagnostic plot graphing True Positive Rate against False Positive Rate across all possible classification decision thresholds.
+\item[\textbf{Reconstruction Error}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The squared numerical difference between an input tensor and its reconstructed output generated by an autoencoder: $\mathcal{L} = \|\mathbf{x} - \hat{\mathbf{x}}\|^2_2$.
+\item[\textbf{Rectified Linear Unit (ReLU)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The standard activation function $f(x) = \max(0, x)$, delivering fast computation, non-saturating positive gradients, and sparse representations.
+\item[\textbf{Recurrent Neural Network (RNN)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A neural network architecture passing internal hidden state activations from one time step to the next to model temporal sequence dependencies.
+\item[\textbf{Regression}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: A supervised machine learning task where the target output variable $y$ is a continuous real number (e.g., remaining useful life, housing price).
+\item[\textbf{Regularization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: Techniques (e.g., L1/L2 penalties, dropout, early stopping) added to learning algorithms to prevent overfitting and improve generalization on unobserved data.
+\item[\textbf{Reinforcement Learning (RL)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: A machine learning paradigm where an autonomous agent learns to maximize cumulative numerical rewards by interacting with an environment.
+\item[\textbf{Residual Connection}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A skip connection adding a layer's input directly to its output: $\mathbf{y} = f(\mathbf{x}) + \mathbf{x}$, allowing gradients to propagate unattenuated through very deep networks.
+\item[\textbf{REST API}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: A web service interface communicating via standard HTTP methods (GET, POST) with JSON payloads to serve real-time model inferences.
+\item[\textbf{Retraining Trigger}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: An automated threshold (such as a drop in F1 score or high PSI) initiating an automated pipeline to pull fresh data, retrain a model, and run validation gates.
+\item[\textbf{Root Mean Squared Error (RMSE)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: The square root of Mean Squared Error: $\sqrt{\frac{1}{N} \sum (y_i - \hat{y}_i)^2}$, expressing regression errors in the original measurement units of the target variable.
+\item[\textbf{Root Mean Squared Log Error (RMSLE)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A regression metric measuring relative percentage error by computing RMSE on log-transformed variables: $\sqrt{\frac{1}{N} \sum (\ln(\hat{y}_i + 1) - \ln(y_i + 1))^2}$.
+\end{description}
+
+\section*{S}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Sample Rate}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Signal Processing]}]: The frequency at which discrete measurement samples are recorded from an analog sensor per second, measured in Hertz (Hz).
+\item[\textbf{Scaled Dot-Product Attention}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The Transformer attention equation: $\text{softmax}\left(\frac{\mathbf{Q}\mathbf{K}^T}{\sqrt{d_k}}\right)\mathbf{V}$, dividing dot products by $\sqrt{d_k}$ to prevent gradient vanishing.
+\item[\textbf{Scikit-Learn}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Software Engineering]}]: The standard open-source Python library for classical machine learning and data engineering, featuring unified modular APIs (\code{fit}, \code{predict}).
+\item[\textbf{Self-Attention}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: An attention mechanism projecting queries, keys, and values from the same sequence, capturing contextual relationships across all positions.
+\item[\textbf{Semantic Segmentation}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Computer Vision]}]: Classifying every individual pixel in an image into a semantic category (e.g., road, leaf, sky) without separating distinct object instances.
+\item[\textbf{Sensitivity}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: Identical to Recall: the True Positive Rate measuring the fraction of actual positive cases detected by a classifier.
+\item[\textbf{Sensor Drift}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Sensors]}]: The systematic deviation of physical sensor calibration over time due to temperature, mechanical wear, contamination, or electronic component aging.
+\item[\textbf{Shadow Deployment}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: Duplicating live production traffic to a new model version running in parallel, logging predictions to monitor performance without serving outputs to users.
+\item[\textbf{Shunt Resistor}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: A precision resistor placed in series with an embedded power rail; measuring voltage drop across it ($V = IR$) enables high-resolution current profiling.
+\item[\textbf{Sigmoid Function}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: A smooth mathematical function $\sigma(x) = \frac{1}{1 + e^{-x}}$ mapping continuous real numbers monotonically into the probability range $(0, 1)$.
+\item[\textbf{Silhouette Score}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: A clustering validation metric evaluating how close a sample is to its own cluster compared to neighboring clusters, ranging from $-1$ to $+1$.
+\item[\textbf{Singular Value Decomposition (SVD)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: Factoring a real matrix $\mathbf{A} \in \mathbb{R}^{m \times n}$ into orthogonal matrices $\mathbf{U}, \mathbf{V}$ and diagonal matrix $\boldsymbol{\Sigma}$: $\mathbf{A} = \mathbf{U} \boldsymbol{\Sigma} \mathbf{V}^T$.
+\item[\textbf{Softmax Function}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A function normalizing a vector of real-valued logits $\mathbf{z}$ into a valid probability distribution: $\text{softmax}(z_i) = \frac{e^{z_i}}{\sum e^{z_j}}$.
+\item[\textbf{Specificity}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: The True Negative Rate: the proportion of actual negative instances correctly identified as negative: $\text{Specificity} = TN / (TN + FP) = 1 - \text{FPR}$.
+\item[\textbf{SRAM}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: Static RAM: fast, volatile microcontroller memory holding runtime stack, heap, and activation tensor arenas during model inference.
+\item[\textbf{Stacking}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: An ensemble method using predictions from diverse base models as input features to train a meta-model that learns to combine their outputs optimally.
+\item[\textbf{Standard Deviation}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Statistics]}]: The square root of variance, measuring the statistical dispersion of data points around their arithmetic mean: $\sigma = \sqrt{\frac{1}{N} \sum (x_i - \mu)^2}$.
+\item[\textbf{Standard Error (SE)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Statistics]}]: The standard deviation of a sample mean estimate: $SE = s / \sqrt{N}$, quantifying sampling uncertainty around the population mean.
+\item[\textbf{Stationarity}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Time Series]}]: A property of time series whose statistical parameters (mean, variance, autocorrelation) do not change over time, a prerequisite for fitting ARIMA models.
+\item[\textbf{Stochastic Gradient Descent (SGD)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Optimization]}]: An optimization algorithm updating weights using a single randomly selected sample per iteration: $\mathbf{w} \leftarrow \mathbf{w} - \eta \nabla \mathcal{L}_i(\mathbf{w})$.
+\item[\textbf{Stratified Sampling}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: A dataset partitioning strategy ensuring each split (train, validation, test) contains the exact same percentage proportion of target classes as the full dataset.
+\item[\textbf{Student's t-Distribution}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Statistics]}]: A continuous symmetric probability distribution used when estimating the population mean from small samples ($N < 30$) with unknown population variance.
+\item[\textbf{Supervised Learning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: The machine learning paradigm where models are trained on labeled pairs $(\mathbf{x}_i, y_i)$ to learn an optimal mapping function $f: \mathbf{x} \to y$.
+\item[\textbf{Support Vector Machine (SVM)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: A supervised algorithm finding the maximum-margin hyperplane separating classes in feature space, supported by boundary instances called support vectors.
+\item[\textbf{Symmetric Quantization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: Uniform integer quantization fixing the zero-point to zero ($Z = 0$), mapping floating ranges symmetrically around zero to signed integers ($[-127, +127]$).
+\end{description}
+
+\section*{T}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Target Encoding}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: Replacing categorical values with the mean of the continuous target variable for that category across the training set, requiring out-of-fold regularization.
+\item[\textbf{Temperature (Softmax)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A scalar $T$ scaling logits before Softmax: $\text{softmax}(z_i / T)$. Lower $T < 1$ sharpens predictions; higher $T > 1$ softens distributions toward uniform entropy.
+\item[\textbf{Tensor}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: A multi-dimensional geometric array of numerical values generalizing scalars (rank 0), vectors (rank 1), and matrices (rank 2) to arbitrary ranks.
+\item[\textbf{Tensor Arena}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: A contiguous, statically allocated byte buffer in microcontroller SRAM reserved by TFLM to hold intermediate activations and runtime scratch tensors.
+\item[\textbf{TensorFlow Lite (TFLite)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML Tools]}]: Google's lightweight runtime framework executing quantized, optimized neural network models on mobile and edge devices.
+\item[\textbf{TensorFlow Lite for Microcontrollers (TFLM)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML Tools]}]: A bare-metal C++ port of TFLite executing models in tens of kilobytes of SRAM on microcontrollers without dynamic memory allocation or operating systems.
+\item[\textbf{Time-Series Forecasting}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Time Series]}]: The machine learning task of analyzing historical chronological sensor telemetry to predict future numeric values across a forward time horizon.
+\item[\textbf{TinyML}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: The engineering discipline of executing machine learning models on resource-constrained microcontrollers operating under milliwatt power and sub-megabyte memory limits.
+\item[\textbf{Tokenization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[NLP]}]: Segmenting raw text into discrete linguistic units (tokens) such as words or subwords and mapping them to integer IDs for neural model ingestion.
+\item[\textbf{Transfer Learning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: Fine-tuning representations learned by a neural network trained on a massive source dataset (e.g., ImageNet) to solve a smaller target task.
+\item[\textbf{Transformer}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A neural network architecture based entirely on self-attention mechanisms and feedforward layers, processing sequence tokens in parallel without recurrence.
+\item[\textbf{True Negative (TN)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A classification outcome where a model correctly predicts the negative class for an evaluation instance whose true label is negative.
+\item[\textbf{True Positive (TP)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A classification outcome where a model correctly predicts the positive class for an evaluation instance whose true label is positive.
+\item[\textbf{Two-Phase Transfer Learning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A transfer learning training regimen initially training only the new classification head with a frozen backbone (Phase 1), followed by unfreezing top backbone layers with a low learning rate (Phase 2).
+\end{description}
+
+\section*{U}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{UART}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: Universal Asynchronous Receiver-Transmitter: a simple hardware serial communication protocol operating over TX/RX lines without a shared clock line, standard for flashing firmware.
+\item[\textbf{U-Net}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: An encoder-decoder convolutional architecture with horizontal skip connections between contracting and expanding paths, standard for semantic image segmentation.
+\item[\textbf{Underfitting}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: A modeling failure where an algorithm is too simplistic to capture the underlying structure of data, resulting in poor training and validation accuracy.
+\item[\textbf{Uniform Distribution}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Probability]}]: A probability distribution where every possible outcome in an interval $[a, b]$ has equal likelihood of occurrence: $f(x) = \frac{1}{b - a}$.
+\item[\textbf{Unit Testing}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Software Engineering]}]: Writing automated, isolated tests (e.g., with \code{pytest}) to verify that individual modular functions, transforms, and tensor shapes execute correctly.
+\item[\textbf{Unsupervised Learning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Machine Learning]}]: A machine learning paradigm discovering patterns, structures, and groupings from unlabeled data without human target supervision.
+\item[\textbf{Uvicorn}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[MLOps]}]: A fast, lightweight Asynchronous Server Gateway Interface (ASGI) web server implementation in Python, standard for serving FastAPI model microservices.
+\end{description}
+
+\section*{V}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Validation Set}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: A data partition separate from the training set used iteratively during development to tune hyperparameters and detect overfitting.
+\item[\textbf{Vanishing Gradient Problem}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A training failure in deep networks where backpropagated gradients shrink exponentially through layers, leaving early layer weights unable to update.
+\item[\textbf{Variance}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Statistics]}]: The expected squared deviation of a random variable from its arithmetic mean: $\sigma^2 = \mathbb{E}[(X - \mu)^2]$, measuring statistical dispersion.
+\item[\textbf{Vector}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Mathematics]}]: A one-dimensional ordered array of numerical values representing a geometric magnitude and direction in space: $\mathbf{x} \in \mathbb{R}^d$.
+\item[\textbf{Vectorization (SIMD)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Software Engineering]}]: Replacing scalar iterative loops with single vector instructions processing multiple data elements simultaneously using hardware SIMD registers.
+\item[\textbf{Virtual Environment}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Software Engineering]}]: An isolated directory tree containing a specific Python interpreter and installed packages, preventing cross-project dependency conflicts.
+\item[\textbf{Volatile Memory}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: Computer memory (such as SRAM or DRAM) requiring continuous electrical power to retain data; all contents are lost when power is disconnected.
+\end{description}
+
+\section*{W}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Weight Decay}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A regularization technique shrinking weights toward zero during gradient descent: $\mathbf{w}_{t+1} = (1 - \eta \lambda) \mathbf{w}_t - \eta \nabla \mathcal{L}$, mathematically equivalent to L2 regularization.
+\item[\textbf{Weighted Sum Model (WSM)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Decision Analysis]}]: A multi-criteria decision analysis method scoring alternative choices across weighted criteria to compute overall utility: $U = \mathbf{w}^T \mathbf{r}$.
+\item[\textbf{Weights (W)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The primary learnable parameter tensors in a neural network multiplying input activations, representing learned connection strengths between neurons.
+\item[\textbf{Windowing}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Signal Processing]}]: Segmenting continuous temporal sensor streams into fixed-length discrete time slices (e.g., 128 samples with $50\%$ stride) for feature extraction.
+\item[\textbf{Word Embedding}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[NLP]}]: A dense, low-dimensional continuous vector representation of words where semantically similar words are positioned in close geometric proximity.
+\item[\textbf{Word2Vec}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[NLP]}]: An unsupervised algorithm learning word embeddings by predicting context words from a target word (Skip-gram) or predicting a target from context (CBOW).
+\end{description}
+
+\section*{X}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Xavier Initialization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: A parameter initialization setting weight variance inversely proportional to input and output neurons: $\text{Var}(W) = \frac{2}{n_{\text{in}} + n_{\text{out}}}$, preventing signal saturation.
+\item[\textbf{XGBoost}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Classical ML]}]: Extreme Gradient Boosting: an industry-standard, scalable gradient boosted decision tree library featuring parallel tree construction and cache awareness.
+\item[\textbf{Xtensa Architecture}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: A 32-bit RISC microprocessor architecture by Tensilica utilized as the dual-core CPU engine inside Espressif ESP32 microcontrollers.
+\end{description}
+
+\section*{Y}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{YOLO (You Only Look Once)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Computer Vision]}]: A single-stage real-time object detection architecture predicting bounding boxes and class probabilities directly from full images in a single forward pass.
+\item[\textbf{Youden's J Statistic}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Evaluation]}]: An evaluation index selecting optimal classification thresholds from a ROC curve: $J = \text{Sensitivity} + \text{Specificity} - 1$, balancing false alarms and missed detections.
+\item[\textbf{Yield}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[IoT \& Hardware]}]: The percentage of fully functional semiconductor silicon dies obtained from a manufacturing silicon wafer, determining microcontroller production cost.
+\end{description}
+
+\section*{Z}
+\begin{description}[leftmargin=!,labelwidth=4.5cm,itemsep=1.5ex]
+\item[\textbf{Zero-Point (Z)}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[TinyML]}]: An integer constant in affine quantization mapping floating-point zero ($0.0$) directly to an integer value, ensuring zero-padding is distortion-free.
+\item[\textbf{Zero-Shot Learning}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Deep Learning]}]: The capability of a model to accurately classify novel classes never observed during training, relying on multimodal semantic embeddings.
+\item[\textbf{Zotero}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Research Tools]}]: An open-source reference manager organizing academic papers, extracting PDF metadata, and integrating with \LaTeX{} via the Better BibTeX plugin.
+\item[\textbf{Z-Score Standardization}\hfill \textnormal{\sffamily\scriptsize\color{keyideablue}[Data Engineering]}]: A feature scaling transformation centering data at zero with unit variance by subtracting mean and dividing by standard deviation: $z = \frac{x - \mu}{\sigma}$.
+\end{description}

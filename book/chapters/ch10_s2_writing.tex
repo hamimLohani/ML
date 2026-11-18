@@ -1,0 +1,620 @@
+% FILE: chapters/ch10_s2_writing.tex
+\section{Writing Up Research}\label{sec:writing_research}
+
+Throughout this book, you have journeyed across the entire landscape of machine learning and TinyML. You have derived backpropagation algorithms from first principles, engineered feature pipelines for messy sensor streams, compressed deep convolutional autoencoders down to 8-bit integer tensors, and flashed compiled firmware onto physical microcontrollers operating in milliwatt power regimes.
+
+Yet, a profound reality governs scientific and engineering progress: \textbf{an experiment that is not clearly documented and publicly communicated does not exist for the scientific community}. 
+
+In academic laboratories, corporate research centers, and open-source ecosystems, your technical breakthroughs are judged not by how brilliant they seemed when they executed on your local workbench, but by how rigorously, transparently, and reproducibly they are articulated in written form. 
+
+Whether you are preparing a paper for a premier machine learning conference (such as NeurIPS, ICML, or TinyML Research Symposium), drafting an industrial white paper for engineering executives, or submitting a master's thesis, you must master the specialized craft of \textbf{scientific technical writing}.
+
+In this section, we study how to write up machine learning and TinyML research. We break down the universal anatomy of an experimental paper, analyze the mathematical and statistical rigor demanded by peer review, master the fundamentals of professional publishing in \LaTeX{}, and establish an automated, lifelong citation workflow using Zotero and Bib\TeX{}.
+
+% ==============================================================================
+% 1. THE IMPERATIVE OF SCIENTIFIC COMMUNICATION & ANALOGY
+% ==============================================================================
+\subsection{The Imperative of Scientific Communication}\label{subsec:comm_imperative}
+
+\begin{analogy}[The Master Chef's Secret Recipe]
+Imagine an extraordinary pastry chef who invents a revolutionary souffl\'e that rises twice as high as traditional pastries, uses half the butter, and never collapses when removed from the oven.
+
+If the chef simply invites patrons into their restaurant to taste the souffl\'e, the dish is a localized culinary marvel. But if the chef dies without writing down the technique, the discovery vanishes forever.
+
+Now imagine two ways the chef might record their invention:
+\begin{itemize}
+    \item \textbf{Approach A (The Casual Diary)}: The chef writes on a napkin: \emph{``Add eggs, flour, and chocolate. Beat until fluffy. Bake in a very hot oven until it looks amazing.''} A baker following this napkin will produce a charred, collapsed mess. Which flour? How many grams of egg white? What oven temperature? How long?
+    \item \textbf{Approach B (The Codified Culinary Codex)}: The chef writes a standardized scientific treatise. They specify the exact mass of egg whites ($120.0\,\text{g} \pm 0.5\,\text{g}$), the exact whisking velocity and duration ($4\,\text{minutes}$ at $200\,\text{RPM}$ to form stiff peaks with cell diameters of $0.2\,\text{mm}$), the chemical rationale behind using cream of tartar to stabilize the albumen foam, the thermal gradient curve of the oven ($190^\circ\text{C}$ for $12\,\text{minutes}$), and a troubleshooting table detailing what occurs if humidity exceeds $65\%$.
+\end{itemize}
+Approach B enables any pastry chef on Earth to reliably replicate the miracle souffl\'e. That is the essence of an academic research paper: it is not a casual diary of what you tried on a Tuesday; it is an \textbf{unambiguous, reproducible blueprint} that allows an engineer in Tokyo, Zurich, or S\~ao Paulo to replicate your experimental results to the final decimal place.
+\end{analogy}
+
+\begin{keyidea}[The Scientific Publication Contract]
+A scientific paper is an empirical contract with the reader. It must answer four fundamental questions with absolute clarity:
+\begin{enumerate}
+    \item \textbf{What problem} did you investigate, and why does it matter?
+    \item \textbf{What did you build or test}, and how does it fundamentally differ from existing solutions?
+    \item \textbf{What happened} when you evaluated it, measured with statistical rigor?
+    \item \textbf{What do the results mean}, where does the system fail, and what should be investigated next?
+\end{enumerate}
+\end{keyidea}
+
+% ==============================================================================
+% 2. THE ANATOMY OF AN EXPERIMENTAL MACHINE LEARNING PAPER
+% ==============================================================================
+\subsection{The Anatomy of an Experimental Machine Learning Paper}\label{subsec:paper_anatomy}
+
+Scientific writing follows a standardized structural paradigm known in classical science as the \textbf{IMRaD format}: \textbf{I}ntroduction, \textbf{M}ethods, \textbf{R}esults, \textbf{a}nd \textbf{D}iscussion. In machine learning and TinyML, this paradigm is adapted into six tightly coupled modules:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.90,
+    sectionbox/.style={rectangle, draw=keyideablue, fill=keyideablue!10, rounded corners=1.5mm, thick, text width=11.5cm, minimum height=0.8cm, font=\small\sffamily},
+    detailbox/.style={rectangle, draw=gray!60, fill=white, rounded corners=1.5mm, thick, text width=11.5cm, font=\scriptsize\rmfamily, inner sep=2.5mm}
+]
+    % Title & Abstract
+    \node[sectionbox, fill=keyideablue!20] (sec0) {\textbf{1. Title \& Abstract: The Compressed Elevator Pitch}};
+    \node[detailbox, below=0.15cm of sec0] (det0) {Synthesizes the entire paper into $\le 250$ words: Context $\to$ Failure of prior art $\to$ Core technical innovation $\to$ Key quantitative metric $\to$ Real-world significance.};
+
+    % Introduction
+    \node[sectionbox, below=0.35cm of det0] (sec1) {\textbf{2. Introduction: The Funnel of Scientific Motivation}};
+    \node[detailbox, below=0.15cm of sec1] (det1) {Broad context $\to$ Specific technological bottleneck $\to$ Deficiencies of current baselines $\to$ Explicit bulleted list of technical contributions (using bold action verbs).};
+
+    % Related Work
+    \node[sectionbox, below=0.35cm of det1] (sec2) {\textbf{3. Related Work: Academic Positioning}};
+    \node[detailbox, below=0.15cm of sec2] (det2) {Taxonomic organization of prior literature. Explains why existing methods are insufficient and clearly highlights your unique technological delta.};
+
+    % Methodology
+    \node[sectionbox, below=0.35cm of det2] (sec3) {\textbf{4. Methodology \& System Architecture}};
+    \node[detailbox, below=0.15cm of sec3] (det3) {Formal mathematical formulation, loss functions, network architecture diagrams, quantization pipelines, and explicit engineering assumptions.};
+
+    % Experiments & Results
+    \node[sectionbox, below=0.35cm of det3] (sec4) {\textbf{5. Experimental Evaluation \& Results}};
+    \node[detailbox, below=0.15cm of sec4] (det4) {Datasets, hardware testbeds, baseline models, Pareto frontiers, ablation studies isolating each component, and statistical confidence intervals across multiple random seeds.};
+
+    % Discussion & Limitations
+    \node[sectionbox, below=0.35cm of det4] (sec5) {\textbf{6. Discussion, Limitations, \& Future Work}};
+    \node[detailbox, below=0.15cm of sec5] (det5) {Honest post-mortem of failure modes, edge cases, thermal/memory bottlenecks, ethical implications, and direct directions for subsequent inquiry.};
+\end{tikzpicture}
+\caption{The modular architecture of an experimental machine learning paper.}\label{fig:paper_architecture}
+\end{figure}
+
+Let us examine each structural element in granular detail:
+
+\paragraph{1. The Title and Abstract}
+The title must be precise, concise, and informative. Avoid clickbait or vague titles such as \emph{``A Novel Deep Learning Approach for Sensors.''} Instead, specify the exact domain, technique, and key benefit: \emph{``Sub-Milliwatt Anomaly Detection on Microcontrollers Using 8-Bit Quantized 1D Convolutional Autoencoders.''}
+
+The abstract is a standalone miniature paper of exactly 150 to 250 words. Follow this battle-tested five-sentence formula:
+\begin{enumerate}
+    \item \textbf{Context}: Establish the broad technological setting and why the domain is critical (\emph{``Deploying deep learning on edge microcontrollers enables real-time condition monitoring without reliance on cloud connectivity.''})
+    \item \textbf{Problem / Gap}: Identify the exact friction point preventing progress (\emph{``However, complex deep neural networks exceed the tens of kilobytes of SRAM available on resource-constrained embedded systems.''})
+    \item \textbf{Proposed Method}: Introduce your system with clear naming and mechanical focus (\emph{``In this paper, we propose MicroVibe, an end-to-end 1D convolutional autoencoder architecture optimized via post-training integer quantization and integer-arithmetic kernels.''})
+    \item \textbf{Key Empirical Results}: State the primary quantitative findings with hard numbers and confidence intervals (\emph{``Benchmarked on an ESP32 operating at 240\,MHz, MicroVibe achieves a 0.985 ROC-AUC on industrial bearing telemetry while consuming only 18.4\,KB of SRAM and executing in 14.2\,ms.''})
+    \item \textbf{Significance / Impact}: Close with the practical engineering consequence (\emph{``This design slashes wireless transmission power by 98.4\%, extending continuous battery lifetime from 14 hours to over 80 days.''})
+\end{enumerate}
+
+\paragraph{2. The Introduction: The Funnel Model}
+A great introduction is shaped like a funnel: broad at the top, narrowing down to a razor-sharp technical point.
+\begin{itemize}
+    \item \textbf{Paragraph 1 (The Hook)}: Why is this domain important to the world? (e.g., billions of industrial electric motors drive global manufacturing).
+    \item \textbf{Paragraph 2 (The Barrier)}: Why cannot we simply use off-the-shelf cloud models? (Latency, intermittent Wi-Fi, bandwidth costs, battery depletion).
+    \item \textbf{Paragraph 3 (The Existing Solutions and Their Shortcomings)}: What have previous researchers attempted, and where do their methods fall short? (Prior edge models require megabytes of external PSRAM, or heuristic thresholding yields excessive false alarm rates).
+    \item \textbf{Paragraph 4 (Our Insight)}: What is the core conceptual breakthrough that enables our solution?
+    \item \textbf{Paragraph 5 (Bulleted Contributions)}: Conclude with an explicit, bulleted list of 3 to 4 technical contributions. Never write passive statements like \emph{``We study edge models.''} Use active, definitive verbs:
+    \begin{itemize}
+        \item \emph{``We design and open-source a lightweight 1D convolutional autoencoder tailored for 6-axis vibration telemetry.''}
+        \item \emph{``We formulate a hardware-aware calibration scheme that preserves 99.6\% of full-precision reconstruction fidelity under 8-bit integer quantization.''}
+        \item \emph{``We empirically validate our system on physical ESP32 hardware, providing comprehensive latency, memory, and current consumption benchmarks.''}
+    \end{itemize}
+\end{itemize}
+
+\paragraph{3. Methodology: Mathematical and Mechanical Rigor}
+The methodology section must provide sufficient detail that a competent engineer can reimplement your system from scratch without inspecting your code.
+\begin{itemize}
+    \item Define all mathematical notation formally before using it ($x \in \mathbb{R}^{T \times C}$ denotes a sensor window of $T$ time steps across $C$ physical channels).
+    \item Provide an architectural block diagram showing tensor dimensions at every layer (e.g., input $\mathbb{R}^{128 \times 6} \to$ Conv1D $\mathbb{R}^{64 \times 16} \to \dots$).
+    \item Explicitly formulate loss functions, regularizers, and optimization objectives with complete equations.
+    \item Detail all preprocessing steps: normalization constants, filtering cutoff frequencies, windowing strides, and calibration procedures.
+\end{itemize}
+
+\paragraph{4. Experimental Setup, Results, and Ablation Studies}
+Inexperienced writers often present a single table showing that their proposed model beats an arbitrary baseline. Reviewers will immediately reject such superficial evaluations. A rigorous experimental section demands:
+\begin{itemize}
+    \item \textbf{Baselines}: Fair comparisons against standard, competitive models (e.g., linear SVM, Random Forest, standard MobileNetV2, heuristic thresholds), all tuned with equal optimization effort.
+    \item \textbf{Hardware Testbed}: Exact specifications of physical hardware (microcontroller model, clock frequency, operating voltage, sensor sampling rate, compiler optimization flags).
+    \item \textbf{The Ablation Study}: An ablation study systematically removes or disables individual components of your proposed system one by one to prove that every piece contributes to the final performance. If your system incorporates three tricks (e.g., data augmentation, a custom loss function, and integer quantization), you must evaluate: (1) baseline, (2) baseline + augmentation, (3) baseline + augmentation + custom loss, and (4) full proposed pipeline.
+\end{itemize}
+
+\paragraph{5. Discussion and Limitations}
+Reviewers do not expect your model to be flawless in every operating condition. Attempting to conceal flaws destroys your credibility. An insightful discussion openly analyzes:
+\begin{itemize}
+    \item Under what environmental conditions does the system fail? (e.g., temperatures exceeding $60^\circ\text{C}$ causing sensor drift).
+    \item What is the computational and memory bottleneck?
+    \item What trade-offs were made between accuracy and energy consumption?
+\end{itemize}
+
+% ==============================================================================
+% 3. STATISTICAL RIGOR: MOVING BEYOND POINT ESTIMATES
+% ==============================================================================
+\subsection{Statistical Rigor: Moving Beyond Point Estimates}\label{subsec:statistical_rigor}
+
+A pervasive defect in amateur technical writing is the reporting of \textbf{unreplicated point estimates}. Writing that \emph{``The proposed model achieved an inference latency of $14.2\,\text{ms}$ and an accuracy of $94.6\%$''} is scientifically meaningless without reporting experimental variance.
+
+Neural network training is fundamentally stochastic: weight initialization, mini-batch shuffling, and data augmentation involve pseudo-random number generators. Similarly, hardware execution involves cache misses, interrupt handling, operating system scheduling jitter, and voltage fluctuations.
+
+\begin{keyidea}[The Principle of Repeated Trials]
+In machine learning research, never report a single evaluation metric. Always report the \textbf{sample mean} ($\bar{x}$) alongside a measure of dispersion: either the \textbf{sample standard deviation} ($s$) across $K$ independent random seeds, or a formal \textbf{$95\%$ Student's $t$-confidence interval}:
+\begin{equation}
+\bar{x} \pm t_{\alpha/2, \, N-1} \cdot \frac{s}{\sqrt{N}}\label{eq:ci_formula}
+\end{equation}
+\end{keyidea}
+
+Let us work through the exact mathematics of reporting experimental hardware latency measurements.
+
+\begin{example}[Hand Calculation: Student's $t$-Confidence Interval on Latency]
+Suppose you flash an Int8 quantized model onto an ESP32 microcontroller. To measure inference latency accurately, you record the execution time across $N = 5$ independent measurement runs under varying thermal operating states.
+
+\paragraph{Recorded Observations (in milliseconds):}
+\begin{equation*}
+x_1 = 14.2\,\text{ms}, \quad x_2 = 14.8\,\text{ms}, \quad x_3 = 14.1\,\text{ms}, \quad x_4 = 14.6\,\text{ms}, \quad x_5 = 14.3\,\text{ms}
+\end{equation*}
+
+Let us calculate the sample mean, sample variance, sample standard deviation, standard error, and the exact $95\%$ confidence interval by hand.
+
+\paragraph{Step 1: Compute the Sample Mean ($\bar{x}$)}
+\begin{align*}
+\bar{x} &= \frac{1}{N} \sum_{i=1}^{N} x_i = \frac{14.2 + 14.8 + 14.1 + 14.6 + 14.3}{5} \\
+&= \frac{72.0}{5} = \mathbf{14.40\,\text{ms}}
+\end{align*}
+
+\paragraph{Step 2: Calculate Deviations from the Mean $(x_i - \bar{x})$ and Their Squares}
+\begin{itemize}
+    \item $x_1 - \bar{x} = 14.2 - 14.4 = -0.2 \implies (-0.2)^2 = \mathbf{0.04}$
+    \item $x_2 - \bar{x} = 14.8 - 14.4 = +0.4 \implies (+0.4)^2 = \mathbf{0.16}$
+    \item $x_3 - \bar{x} = 14.1 - 14.4 = -0.3 \implies (-0.3)^2 = \mathbf{0.09}$
+    \item $x_4 - \bar{x} = 14.6 - 14.4 = +0.2 \implies (+0.2)^2 = \mathbf{0.04}$
+    \item $x_5 - \bar{x} = 14.3 - 14.4 = -0.1 \implies (-0.1)^2 = \mathbf{0.01}$
+\end{itemize}
+Sum of squared deviations:
+\begin{equation*}
+\sum_{i=1}^{5} (x_i - \bar{x})^2 = 0.04 + 0.16 + 0.09 + 0.04 + 0.01 = \mathbf{0.34\,\text{ms}^2}
+\end{equation*}
+
+\paragraph{Step 3: Compute Sample Variance ($s^2$) with Bessel's Correction}
+Because we are estimating the population variance from a small sample, we divide by the degrees of freedom $\nu = N - 1 = 4$:
+\begin{equation*}
+s^2 = \frac{1}{N - 1} \sum_{i=1}^{N} (x_i - \bar{x})^2 = \frac{0.34}{4} = \mathbf{0.085\,\text{ms}^2}
+\end{equation*}
+Taking the square root gives the sample standard deviation ($s$):
+\begin{equation*}
+s = \sqrt{0.085} \approx \mathbf{0.2915\,\text{ms}}
+\end{equation*}
+
+\paragraph{Step 4: Compute the Standard Error of the Mean ($SE$)}
+The standard error quantifies the uncertainty in our estimate of the true population mean:
+\begin{equation*}
+SE = \frac{s}{\sqrt{N}} = \frac{0.2915}{\sqrt{5}} = \frac{0.2915}{2.2361} \approx \mathbf{0.1304\,\text{ms}}
+\end{equation*}
+
+\paragraph{Step 5: Determine the Critical $t$-Value ($t_{\alpha/2, \, N-1}$)}
+For a two-tailed $95\%$ confidence level, the significance level is $\alpha = 1 - 0.95 = 0.05$, so $\alpha/2 = 0.025$. With degrees of freedom $\nu = N - 1 = 4$, we consult the Student's $t$-distribution table:
+\begin{equation*}
+t_{0.025, \, 4} = \mathbf{2.776}
+\end{equation*}
+
+\paragraph{Step 6: Compute the Margin of Error ($ME$) and Confidence Interval}
+\begin{align*}
+ME &= t_{0.025, \, 4} \times SE = 2.776 \times 0.1304 \approx \mathbf{0.36\,\text{ms}} \\
+\text{CI}_{95\%} &= \bar{x} \pm ME = 14.40 \pm 0.36\,\text{ms} = [\mathbf{14.04\,\text{ms}}, \, \mathbf{14.76\,\text{ms}}]
+\end{align*}
+
+\paragraph{Step 7: Professional Reporting in Your Paper}
+In your results table or body text, report this rigorously as:
+\begin{center}
+\emph{``Inference latency on the ESP32 was $14.40 \pm 0.29\,\text{ms}$ (mean $\pm$ standard deviation across $N=5$ runs; $95\%$ CI: $[14.04, 14.76]\,\text{ms}$).''}
+\end{center}
+This level of transparency gives reviewers immediate confidence in your experimental integrity.
+\end{example}
+
+The following short Python snippet demonstrates how to compute and format these statistical summaries automatically for your research papers:
+
+\begin{lstlisting}[style=pythonstyle, caption={Automated Statistical Summaries for Research Reporting.}, label={lst:stat_calc}]
+import numpy as np
+from scipy import stats
+
+def compute_research_stats(measurements: np.ndarray, confidence: float = 0.95):
+    """Computes mean, std, and two-tailed Student-t confidence interval."""
+    n = len(measurements)
+    mean = np.mean(measurements)
+    std_err = stats.sem(measurements)  # Standard error of the mean: s / sqrt(n)
+    sample_std = np.std(measurements, ddof=1)  # Bessel's corrected sample std
+    
+    # Critical t-value for two-tailed interval
+    t_crit = stats.t.ppf((1 + confidence) / 2.0, df=n - 1)
+    margin_of_error = t_crit * std_err
+    ci_lower = mean - margin_of_error
+    ci_upper = mean + margin_of_error
+    
+    return {
+        "mean": mean,
+        "std": sample_std,
+        "ci_lower": ci_lower,
+        "ci_upper": ci_upper,
+        "ci_margin": margin_of_error
+    }
+
+# ESP32 latency measurements (ms)
+latencies = np.array([14.2, 14.8, 14.1, 14.6, 14.3])
+res = compute_research_stats(latencies)
+
+print(f"Mean Latency: {res['mean']:.2f} ms")
+print(f"Sample Std:   {res['std']:.3f} ms")
+print(f"95% CI:       [{res['ci_lower']:.2f}, {res['ci_upper']:.2f}] ms")
+print(f"LaTeX Output: ${res['mean']:.2f} \\pm {res['std']:.2f}$~ms")
+\end{lstlisting}
+
+% ==============================================================================
+% 4. LATEX ESSENTIALS FOR TECHNICAL PUBLISHING
+% ==============================================================================
+\subsection{\LaTeX{} Essentials for Technical Publishing}\label{subsec:latex_publishing}
+
+Why do virtually all serious machine learning conferences (NeurIPS, ICML, ICLR, CVPR, TinyML Foundation) require submissions prepared in \LaTeX{} rather than Microsoft Word or Google Docs?
+\begin{itemize}
+    \item \textbf{Mathematical Perfection}: \LaTeX{} was designed by Donald Knuth specifically for mathematical typography. Formulas like Equation~\eqref{eq:ci_formula} render with micro-typographical balance, identical spacing, and precise font sizing.
+    \item \textbf{Deterministic Cross-Referencing}: Sections, equations, figures, tables, and algorithms are labeled symbolically (\code{\\label\{...\}}). When you reorder sections or insert a new figure, \LaTeX{} automatically renumbers every reference throughout the document, eliminating broken links.
+    \item \textbf{Programmatic Layout}: Separation of content and presentation. If a conference changes from single-column to double-column format, you simply swap the class file (\code{\\documentclass\{neurips\_2024\}} to \code{\\documentclass\{ieeeconf\}}), and your document reflows deterministically.
+\end{itemize}
+
+\paragraph{1. Document Structure and Hierarchy}
+A research paper is organized into a clean semantic hierarchy:
+\begin{itemize}
+    \item \code{\\section\{...\}}: Major paper headings (Introduction, Methodology, Experiments).
+    \item \code{\\subsection\{...\}}: Secondary sub-modules (Network Architecture, Quantization).
+    \item \code{\\subsubsection\{...\}} or \code{\\paragraph\{...\}}: Focused sub-topics.
+\end{itemize}
+
+\paragraph{2. Mathematical Environments}
+Never format equations in plain text (e.g., writing \code{y = wx + b}). Always use standard mathematical environments:
+\begin{itemize}
+    \item \textbf{Inline Math}: Enclosed in single dollar signs: \code{\$x \\in \\mathbb\{R\}\^D\$} yields $x \in \mathbb{R}^D$.
+    \item \textbf{Numbered Equations}: Used for all key formulations that you reference in the text:
+\begin{lstlisting}[style=pythonstyle]
+\begin{equation}
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{MSE}}(\hat{y}, y) + \lambda \|\mathbf{W}\|_2^2\label{eq:total_loss}
+\end{equation}
+\end{lstlisting}
+    \item \textbf{Multi-line Aligned Derivations}: Use \code{align} or \code{align*} (from the \code{amsmath} package) with the ampersand (\code{\&}) marking the alignment anchor:
+\begin{lstlisting}[style=pythonstyle]
+\begin{align}
+\nabla_{\mathbf{W}} \mathcal{L} &= \frac{\partial \mathcal{L}}{\partial \hat{y}} \cdot \frac{\partial \hat{y}}{\partial \mathbf{z}} \cdot \frac{\partial \mathbf{z}}{\partial \mathbf{W}} \label{eq:chain_rule} \\
+&= (\hat{y} - y) \cdot \sigma'(\mathbf{z}) \cdot \mathbf{x}^T
+\end{align}
+\end{lstlisting}
+\end{itemize}
+
+\paragraph{3. Floating Environments: Figures and Tables}
+In \LaTeX{}, figures and tables are \textbf{floats}. \LaTeX{} determines their exact placement dynamically to prevent awkward page breaks and empty space.
+
+\begin{warning}[The Dreaded Float Placement Error]
+A common rookie mistake is forcing a figure to appear at an exact text location using \code{[H]} from the \code{float} package. This often creates huge gaps of white space at the bottom of pages!
+
+Always provide flexible float placement specifiers: \code{[htbp]} (which instructs \LaTeX{} to try: \textbf{h}ere, \textbf{t}op of page, \textbf{b}ottom of page, or on a separate \textbf{p}age of floats).
+
+Crucially, in every float, \textbf{the \code{\\caption} must always precede the \code{\\label}}! If you place \code{\\label} before \code{\\caption}, the label attaches to the preceding section number rather than the figure or table, causing references to output incorrect numbers!
+\end{warning}
+
+\paragraph{4. Designing Professional Tables with \code{booktabs}}
+Never produce tables with vertical lines or double horizontal borders; they look amateurish and clutter the visual field. Modern academic papers use the \code{booktabs} package with three core commands:
+\begin{itemize}
+    \item \code{\\toprule}: The heavy line at the top of the table.
+    \item \code{\\midrule}: The light divider separating column headers from data rows.
+    \item \code{\\bottomrule}: The heavy line closing the table.
+\end{itemize}
+
+Listing~\ref{lst:minimal_paper_tex} provides a complete, self-contained \LaTeX{} template for an experimental machine learning workshop paper:
+
+\begin{lstlisting}[style=pythonstyle, caption={Complete Minimal \LaTeX{} Template for an Experimental TinyML Paper.}, label={lst:minimal_paper_tex}]
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cite}
+
+\title{MicroVibe: Sub-Milliwatt Anomaly Detection on ESP32 Using Quantized 1D CNNs}
+\author{\IEEEauthorblockN{First Author, Second Author, and Senior Advisor}
+\IEEEauthorblockA{\textit{Department of Electrical and Computer Engineering} \\
+\textit{University of Engineering and Technology}\\
+Email: \{f.author, s.author, advisor\}@university.edu}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Condition monitoring of industrial machinery requires continuous vibration analysis. However, transmitting high-frequency raw telemetry over Wi-Fi rapidly depletes battery reserves. In this paper, we propose MicroVibe, an 8-bit quantized 1D Convolutional Autoencoder tailored for microcontrollers. Tested on an ESP32 at 240 MHz, MicroVibe achieves a 0.985 ROC-AUC while consuming 18.4 KB of SRAM and executing in 14.2 ms. This edge deployment slashes wireless communication power by 98.4%, enabling over 80 days of autonomous battery operation.
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+Predictive maintenance prevents catastrophic failures in industrial rotating machinery. Traditional supervisory control systems stream raw accelerometer telemetry to central cloud servers... As detailed in Section~\ref{sec:method}, our key technical contributions are:
+\begin{itemize}
+    \item We design a compressed 1D Convolutional Autoencoder for edge anomaly detection.
+    \item We deploy the quantized model on an ESP32 using TensorFlow Lite for Microcontrollers.
+\end{itemize}
+
+\section{Methodology}\label{sec:method}
+Let $\mathbf{x} \in \mathbb{R}^{T \times C}$ denote a standardized window of sensor telemetry. The autoencoder reconstructs the signal as $\hat{\mathbf{x}} = f_\theta(\mathbf{x})$. The reconstruction loss is:
+\begin{equation}
+\mathcal{L}_{\text{MSE}}(\mathbf{x}, \hat{\mathbf{x}}) = \frac{1}{TC} \sum_{t=1}^{T} \sum_{c=1}^{C} (x_{t,c} - \hat{x}_{t,c})^2\label{eq:mse}
+\end{equation}
+
+\section{Experimental Evaluation}\label{sec:experiments}
+We evaluated MicroVibe across 500 test windows on physical hardware. Table~\ref{tab:benchmarks} presents the comparison with baseline architectures.
+
+\begin{table}[htbp]
+\centering
+\caption{Hardware Performance Comparison on ESP32}\label{tab:benchmarks}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Model Variant} & \textbf{ROC-AUC} & \textbf{SRAM (KB)} & \textbf{Latency (ms)} \\ \midrule
+Baseline Thresholding & 0.812 & 0.5 & $0.2 \pm 0.02$ \\
+Float32 Autoencoder   & 0.989 & 74.2 & $38.4 \pm 0.85$ \\
+\textbf{MicroVibe (Int8)} & \textbf{0.985} & \textbf{18.4} & $\mathbf{14.2 \pm 0.29}$ \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\section{Conclusion}\label{sec:conclusion}
+MicroVibe proves that deep neural anomaly detection can execute within strict microcontroller resource envelopes with negligible loss in detection accuracy.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+\end{document}
+\end{lstlisting}
+
+% ==============================================================================
+% 5. CITATION MANAGEMENT WITH ZOTERO AND BIBTEX
+% ==============================================================================
+\subsection{Citation Management with Zotero and Bib\TeX{}}\label{subsec:zotero_bibtex}
+
+Citing prior literature is not merely an academic formality; it is the mechanism by which you contextualize your contributions, acknowledge intellectual forebears, and provide readers with pathways to verify foundational claims.
+
+\begin{warning}[The Peril of Manual Citations]
+Never format citations manually in your document (e.g., typing \emph{``[1] Warden and Situnayake, TinyML, 2019''}). If you insert a new citation in Section~1, you will be forced to manually renumber dozens of citations and your entire bibliography!
+
+Even worse, copying random Bib\TeX{} snippets directly from web searches often yields entries with missing DOIs, misspelled author names, and uncapitalized acronyms that corrupt your paper's bibliography.
+\end{warning}
+
+\paragraph{1. The Zotero Ecosystem}
+\textbf{Zotero} is an open-source, non-profit reference management platform that operates locally on your machine. Combined with the official \textbf{Zotero Connector} browser extension, it enables one-click ingestion of academic papers directly from arXiv, IEEE Xplore, ACM Digital Library, Google Scholar, and publisher repositories. Zotero automatically extracts metadata, downloads the associated PDF, and organizes papers into collections.
+
+\paragraph{2. The Better Bib\TeX{} (BBT) Plugin}
+To connect Zotero with \LaTeX{}, install the indispensable \textbf{Better Bib\TeX{} for Zotero} (BBT) extension. BBT solves the three most frustrating problems in academic citation management:
+\begin{enumerate}
+    \item \textbf{Deterministic Citation Keys}: BBT automatically generates clean, predictable citation keys based on a standardized formula, such as \code{[auth:lower]_[year]_[shorttitle:lower]} (e.g., \code{warden_2019_tinyml} or \code{he_2016_deep}).
+    \item \textbf{Automatic Background Synchronization}: BBT allows you to right-click a collection in Zotero, select \emph{``Export Collection as Better Bib\LaTeX{}/Bib\TeX{}''}, and check \textbf{``Keep updated''}. Whenever you add or edit a paper in Zotero, your local \code{references.bib} file is re-exported on disk instantaneously!
+    \item \textbf{Title Casing Preservation}: In standard Bib\TeX{}, words in paper titles are automatically down-cased to lowercase unless protected. BBT wraps proper nouns and technical acronyms in double braces (\code{\{\{IoT\}\}}, \code{\{\{ESP32\}\}}), ensuring that capitalization is preserved in the compiled PDF.
+\end{enumerate}
+
+\paragraph{3. Anatomy of a Clean Bib\TeX{} Entry}
+Every entry in your \code{references.bib} file has a specific type, a unique citation key, and key-value fields. Listing~\ref{lst:bib_examples} shows the three most common academic entry types:
+
+\begin{lstlisting}[style=pythonstyle, caption={Standard Bib\TeX{} Entries for Conference, Journal, and Preprint Sources.}, label={lst:bib_examples}]
+% 1. Conference Paper (inproceedings)
+@inproceedings{warden_2021_tinyml_benchmark,
+  author    = {Warden, Pete and Situnayake, Daniel and Stewart, Matthew},
+  title     = {TinyML: Machine Learning on Microcontrollers},
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2021},
+  pages     = {1024--1032},
+  doi       = {10.1109/CVPR.2021.00102}
+}
+
+% 2. Journal Article (article)
+@article{vaswani_2017_attention,
+  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob},
+  title     = {Attention Is All You Need},
+  journal   = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {30},
+  pages     = {5998--6008},
+  year      = {2017}
+}
+
+% 3. ArXiv Preprint (misc)
+@misc{chowdhery_2022_palm,
+  author        = {Chowdhery, Aakanksha and Narang, Sharan and Devlin, Jacob},
+  title         = {{{PaLM}}: Scaling Language Modeling with Pathways},
+  year          = {2022},
+  eprint        = {2204.02311},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL}
+}
+\end{lstlisting}
+
+\paragraph{4. Citation Mechanics in Text}
+In your \LaTeX{} body, cite entries using standard macros:
+\begin{itemize}
+    \item \code{\\cite\{key\}}: Standard numerical citation, yielding \emph{``[1]''} in IEEE style.
+    \item Multiple citations: Group them inside a single command: \code{\\cite\{key1, key2, key3\}}, which automatically compresses to \emph{``[1]--[3]''}.
+    \item When using author-year packages like \code{natbib}:
+    \begin{itemize}
+        \item \code{\\citet\{warden_2019\}}: Textual citation, rendering as \emph{``Warden et al. (2019) demonstrated that...''}
+        \item \code{\\citep\{warden_2019\}}: Parenthetical citation, rendering as \emph{``...on microcontrollers (Warden et al., 2019).''}
+    \end{itemize}
+\end{itemize}
+
+% ==============================================================================
+% 6. IOT & TINYML CONNECTION
+% ==============================================================================
+\begin{iotbox}[The TinyML Hardware Specification Triad]
+What distinguishes an outstanding TinyML research paper from a generic computer science paper?
+
+In cloud-based deep learning, papers predominantly report accuracy, F1 score, and theoretical FLOPs (Floating-Point Operations). However, in embedded and TinyML systems, \textbf{theoretical FLOPs correlate poorly with actual execution efficiency}. An architecture with low theoretical FLOPs can execute slower on an ARM Cortex-M or Xtensa core if its memory access patterns cause severe cache thrashing or lack hardware vector SIMD support!
+
+When writing an experimental TinyML paper, you must report the \textbf{Hardware Triad}:
+\begin{enumerate}
+    \item \textbf{Memory Footprint (Static vs.\ Dynamic)}:
+    \begin{itemize}
+        \item \textbf{Peak SRAM}: The maximum runtime memory allocated for tensor arenas, activations, and buffers (must fit within internal microcontroller RAM, e.g., $< 300\,\text{KB}$).
+        \item \textbf{Flash / ROM Footprint}: The non-volatile storage occupied by quantized model weights and firmware executable code (e.g., $< 2\,\text{MB}$).
+    \end{itemize}
+    \item \textbf{Inference Latency on Physical Hardware}:
+    Always report real measurements on the target silicon (e.g., ESP32 at $240\,\text{MHz}$ or STM32F4 at $168\,\text{MHz}$) using cycle-accurate microsecond hardware timers (such as \code{esp\_timer\_get\_time()}), accompanied by standard deviations across $\ge 100$ invocations.
+    \item \textbf{Energy and Power Dissipation}:
+    Do not guess energy consumption. Measure physical current draw using hardware power profilers (such as a Nordic Power Profiler Kit II, Otii Arc, or a precision shunt resistor with an oscilloscope). Report average active current ($\text{mA}$), supply voltage ($3.3\,\text{V}$), total energy per inference ($\text{mJ}$), and projected battery lifetime on a standard cell (e.g., $2500\,\text{mAh}$ LiPo).
+\end{enumerate}
+\end{iotbox}
+
+% ==============================================================================
+% 7. COMMON MISTAKES AND SCIENTIFIC PITFALLS
+% ==============================================================================
+\subsection{Common Mistakes and Scientific Pitfalls}\label{subsec:writing_pitfalls}
+
+\begin{warning}[Common Traps in Scientific ML Writing]
+\begin{itemize}
+    \item \textbf{The Novelty Hyperbole Trap}:
+    Writing phrases like \emph{``To the best of our knowledge, we are the first to ever apply machine learning to vibration.''} Reviewers find such grandiose claims offensive and will immediately point out literature from 1985 that did exactly that. Instead, be precise about your specific technical delta: \emph{``While vibration anomaly detection is well-studied, our contribution is achieving sub-20\,ms execution on a bare-metal ESP32 without external PSRAM.''}
+    \item \textbf{The Ablation-Free Paper}:
+    Proposing a complex pipeline containing four distinct modifications (e.g., a custom data augmentation, a spatial attention module, a hybrid loss function, and quantization) and only showing the final result. Without ablation studies isolating the contribution of each modification, reviewers will conclude that the system's performance is driven entirely by trivial tuning.
+    \item \textbf{The Uncapitalized Bib\TeX{} Acronym Trap}:
+    Bib\TeX{} downcases titles by default. If your \code{.bib} entry has \code{title = \{Edge Anomaly Detection on ESP32 Microcontrollers\}}, Bib\TeX{} renders it in the bibliography as \emph{``Edge anomaly detection on esp32 microcontrollers''}. Always wrap proper nouns and acronyms in double curly braces: \code{title = \{Edge Anomaly Detection on \{\{ESP32\}\} Microcontrollers\}}.
+    \item \textbf{Floating Figure Disconnect}:
+    Writing \emph{``As seen in the figure below...''} In \LaTeX{}, floats move dynamically! A figure might land on the subsequent page. Always reference figures symbolically by their label: \emph{``As illustrated in Figure~\\ref\{fig:system\_pipeline\}...''}
+    \item \textbf{Hiding Failure Modes}:
+    Omitting conditions under which your model produces false alarms or collapses. A paper that documents where and why a model fails is vastly more valuable and trustworthy to the scientific community than one that claims uniform perfection.
+\end{itemize}
+\end{warning}
+
+% ==============================================================================
+% 8. KEY TAKEAWAYS
+% ==============================================================================
+\begin{takeaways}
+\begin{itemize}
+    \item \textbf{The IMRaD Blueprint}: Academic research papers follow a standardized narrative structure: Introduction (the funnel), Methodology (formal math and architecture), Experiments (reproducible testbeds and ablations), and Discussion (limitations and failure modes).
+    \item \textbf{Statistical Rigor}: Never report single point estimates. Always present the sample mean ($\bar{x}$) along with the sample standard deviation ($s$) or a $95\%$ Student's $t$-confidence interval across repeated runs or random seeds.
+    \item \textbf{\LaTeX{} Cross-Referencing}: Decouple formatting from content. Use \code{\\label} after \code{\\caption} in floats to prevent broken references, and use \code{booktabs} without vertical lines for clean tables.
+    \item \textbf{Automated Citation Workflows}: Utilize Zotero paired with the Better Bib\TeX{} plugin to maintain deterministic citation keys and auto-syncing \code{.bib} files with protected acronym capitalizations.
+    \item \textbf{The TinyML Hardware Triad}: Experimental embedded papers must report the complete resource triad: SRAM vs.\ Flash memory consumption, measured on-chip latency in milliseconds, and physical current/energy dissipation.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 9. CHECK YOURSELF
+% ==============================================================================
+\begin{checkyourself}
+\begin{enumerate}
+    \item \textbf{Structure and Ablations}: Explain why an ablation study is essential in an empirical machine learning paper. What conclusion would a peer reviewer draw if an author introduced three algorithmic modifications simultaneously but omitted an ablation table?
+    \item \textbf{Hardware Energy Hand Calculation}: To characterize the deep sleep power profile of a newly designed TinyML sensor node, an engineer measures the quiescent current draw of $N = 4$ identical prototype boards:
+    \begin{equation*}
+    I_1 = 14.8\,\mu\text{A}, \quad I_2 = 15.6\,\mu\text{A}, \quad I_3 = 14.4\,\mu\text{A}, \quad I_4 = 15.2\,\mu\text{A}
+    \end{equation*}
+    \begin{enumerate}
+        \item Compute the sample mean $\bar{I}$ and sample variance $s^2$ using Bessel's correction.
+        \item Calculate the sample standard deviation $s$ and standard error of the mean $SE$.
+        \item Given that the two-tailed critical Student's $t$-value for $\nu = 3$ degrees of freedom at $95\%$ confidence is $t_{0.025, \, 3} = 3.182$, calculate the exact $95\%$ confidence interval for the quiescent sleep current.
+        \item State how this result should be formatted in the results section of an academic paper.
+    \end{enumerate}
+    \item \textbf{\LaTeX{} Mechanics}: Identify two major syntax errors in the following \LaTeX{} snippet and write the corrected code:
+\begin{lstlisting}[style=pythonstyle]
+\begin{figure}[H]
+\label{fig:pipeline}
+\includegraphics[width=0.8\textwidth]{diagram.png}
+\caption{System architecture of our edge pipeline.}
+\end{figure}
+As shown in the figure above...
+\end{lstlisting}
+    \item \textbf{Bib\TeX{} Casing}: Why does the Bib\TeX{} entry \code{title = \{A Survey of IoT Security on ARM Microcontrollers\}} compile as \emph{``A survey of iot security on arm microcontrollers''} in standard IEEE style, and how must the entry be modified to ensure proper rendering?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 10. ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{The Necessity of Ablation Studies}:
+    An ablation study systematically isolates and verifies the individual contribution of each proposed component by evaluating the system with that specific component removed or disabled. 
+    
+    If an author introduces three modifications simultaneously (e.g., custom data augmentation, a novel loss function, and architectural pruning) without an ablation study, a peer reviewer cannot determine which modification actually caused the performance gain. It is entirely possible that the custom loss function actually degraded performance, but its negative impact was masked by the data augmentation. Omitting an ablation study forces reviewers to conclude that the authors do not understand their own system's mechanics, leading to immediate rejection.
+
+    \item \textbf{Step-by-Step Current Calculation}:
+    \begin{enumerate}
+        \item \textbf{Sample Mean and Variance}:
+        Sum of observations:
+        \begin{equation*}
+        \sum_{i=1}^{4} I_i = 14.8 + 15.6 + 14.4 + 15.2 = 60.0\,\mu\text{A}
+        \end{equation*}
+        Sample mean:
+        \begin{equation*}
+        \bar{I} = \frac{60.0}{4} = \mathbf{15.00\,\mu\text{A}}
+        \end{equation*}
+        Deviations $(I_i - \bar{I})$ and squared deviations:
+        \begin{itemize}
+            \item $14.8 - 15.0 = -0.2 \implies (-0.2)^2 = 0.04$
+            \item $15.6 - 15.0 = +0.6 \implies (+0.6)^2 = 0.36$
+            \item $14.4 - 15.0 = -0.6 \implies (-0.6)^2 = 0.36$
+            \item $15.2 - 15.0 = +0.2 \implies (+0.2)^2 = 0.04$
+        \end{itemize}
+        Sum of squared deviations:
+        \begin{equation*}
+        \sum_{i=1}^{4} (I_i - \bar{I})^2 = 0.04 + 0.36 + 0.36 + 0.04 = \mathbf{0.80\,\mu\text{A}^2}
+        \end{equation*}
+        Sample variance with Bessel's correction ($\nu = N - 1 = 3$):
+        \begin{equation*}
+        s^2 = \frac{0.80}{3} \approx \mathbf{0.2667\,\mu\text{A}^2}
+        \end{equation*}
+
+        \item \textbf{Standard Deviation and Standard Error}:
+        Sample standard deviation:
+        \begin{equation*}
+        s = \sqrt{0.26667} \approx \mathbf{0.5164\,\mu\text{A}}
+        \end{equation*}
+        Standard error of the mean:
+        \begin{equation*}
+        SE = \frac{s}{\sqrt{N}} = \frac{0.5164}{\sqrt{4}} = \frac{0.5164}{2} = \mathbf{0.2582\,\mu\text{A}}
+        \end{equation*}
+
+        \item \textbf{Student's $t$-Confidence Interval}:
+        With $t_{0.025, \, 3} = 3.182$, the margin of error ($ME$) is:
+        \begin{equation*}
+        ME = t_{0.025, \, 3} \times SE = 3.182 \times 0.2582 \approx \mathbf{0.8216\,\mu\text{A}} \approx \mathbf{0.82\,\mu\text{A}}
+        \end{equation*}
+        The $95\%$ confidence interval is:
+        \begin{equation*}
+        \text{CI}_{95\%} = \bar{I} \pm ME = 15.00 \pm 0.82\,\mu\text{A} = [\mathbf{14.18\,\mu\text{A}}, \, \mathbf{15.82\,\mu\text{A}}]
+        \end{equation*}
+
+        \item \textbf{Scientific Reporting Format}:
+        \emph{``The quiescent deep-sleep current draw of the sensor node was $15.00 \pm 0.52\,\mu\text{A}$ (mean $\pm$ standard deviation across $N=4$ hardware prototypes; $95\%$ CI: $[14.18, 15.82]\,\mu\text{A}$).''}
+    \end{enumerate}
+
+    \item \textbf{\LaTeX{} Errors and Corrected Snippet}:
+    \textbf{Identified Errors}:
+    \begin{enumerate}
+        \item \textbf{\code{\\label} Placed Before \code{\\caption}}: In \LaTeX{}, the caption counter is stepped by \code{\\caption}. Placing \code{\\label\{fig:pipeline\}} before \code{\\caption} causes the label to bind to the current section or chapter number instead of the figure number, producing incorrect cross-references (e.g., ``Figure 10'' instead of ``Figure 1'').
+        \item \textbf{Rigid Float Specifier \code{[H]}}: Using \code{[H]} disables \LaTeX{}'s automated page-budgeting algorithm, frequently resulting in massive blank gaps at the bottom of pages. Use \code{[htbp]}.
+        \item \textbf{Hardcoded Positional Reference}: Writing \emph{``As shown in the figure above...''} violates float semantics because the figure may float to the top of the next page. It must use symbolic referencing: \code{Figure~\\ref\{fig:pipeline\}}.
+    \end{enumerate}
+
+    \textbf{Corrected \LaTeX{} Snippet}:
+\begin{lstlisting}[style=pythonstyle]
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{diagram.png}
+\caption{System architecture of our edge pipeline.}\label{fig:pipeline}
+\end{figure}
+As illustrated in Figure~\ref{fig:pipeline}...
+\end{lstlisting}
+
+    \item \textbf{Bib\TeX{} Acronym Protection}:
+    Standard Bib\TeX{} styles enforce sentence capitalization rules across titles, converting all characters to lowercase except the first letter. Because the parser cannot recognize domain-specific acronyms, proper nouns such as \code{IoT} and \code{ARM} are down-cased to \code{iot} and \code{arm}.
+    
+    To preserve exact capitalization, the letters or words must be enclosed in curly braces to tell the Bib\TeX{} tokenizer to treat them as protected literal strings:
+\begin{lstlisting}[style=pythonstyle]
+title = {A Survey of {{IoT}} Security on {{ARM}} Microcontrollers}
+\end{lstlisting}
+    or:
+\begin{lstlisting}[style=pythonstyle]
+title = {A Survey of {IoT} Security on {ARM} Microcontrollers}
+\end{lstlisting}
+\end{enumerate}

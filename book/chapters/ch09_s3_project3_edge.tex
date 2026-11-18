@@ -1,0 +1,944 @@
+% FILE: chapters/ch09_s3_project3_edge.tex
+\section{Project 3: On-Device Sensor Model}\label{sec:project3_edge}
+
+In Chapter~\ref{sec:sensor_pipeline}, we mastered the sensor-to-model data pipeline, analog-to-digital conversion, and mechanical feature extraction. In Chapter~\ref{sec:tinyml_toolchain} and Chapter~\ref{sec:hardware_deployment}, we explored the runtime architecture of TensorFlow Lite for Microcontrollers (TFLM) and profiled execution on ESP32 silicon.
+
+Now, we culminate our study of TinyML by building, evaluating, and flashing a complete, end-to-end \textbf{on-device sensor anomaly detection and activity recognition system} executing in real time on an ESP32 microcontroller.
+
+In industrial manufacturing, mining, energy production, and water utilities, rotating machinery---such as three-phase induction motors, centrifugal pumps, industrial blowers, and CNC milling spindles---is the mechanical heartbeat of the plant. When a motor bearing wears down or a shaft drifts out of mechanical alignment, the machine produces subtle high-frequency vibration signatures days or weeks before catastrophic mechanical failure.
+
+Historically, organizations attempted to monitor machinery by streaming raw, high-speed accelerometer telemetry from thousands of sensors over Wi-Fi or cellular networks to a central cloud server. As we established mathematically in Chapter~\ref{sec:edge_vs_cloud}, this cloud-centric architecture fails in industrial practice: transmitting $1\,\text{kHz}$ 6-axis motion telemetry continuously drains battery cells in under $15\,\text{hours}$, floods factory wireless networks, and incurs immense cloud storage bills.
+
+In this project walkthrough, we implement the \textbf{TinyML edge computing paradigm}. We deploy a self-contained, battery-powered IoT smart sensor node featuring an ESP32 and an MPU-6050 6-axis Inertial Measurement Unit (IMU). The node samples 3-axis acceleration and 3-axis angular velocity locally, maintains a deterministic sliding window ring buffer, and executes an on-device quantized neural network inside a $25\,\text{KB}$ memory arena. The device runs completely untethered from the cloud, consuming mere microamperes in deep sleep and waking autonomously to flag impending machine breakdowns!
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.82,
+    box/.style={rectangle, draw=keyideablue, fill=keyideablue!10, rounded corners=2mm, thick, text width=2.4cm, align=center, minimum height=1.1cm, font=\scriptsize\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=keyideablue}
+]
+    \node[box] (charter) {1. Charter \&\\Hardware Wiring};
+    \node[box, right=0.6cm of charter] (sampling) {2. I2C High-Speed\\Sensor Sampling};
+    \node[box, right=0.6cm of sampling] (window) {3. Ring Buffer\\Windowing ($128 \times 6$)};
+    \node[box, right=0.6cm of window] (arch) {4. Autoencoder /\\1D-CNN Design};
+    
+    \node[box, below=1.0cm of arch] (train) {5. Train, Validate\\\& Quantize (Int8)};
+    \node[box, left=0.6cm of train] (header) {6. C Header Byte\\Array Export};
+    \node[box, left=0.6cm of header] (firmware) {7. ESP32 Firmware\\\& TFLM Engine};
+    \node[box, left=0.6cm of firmware] (power) {8. Battery Lifetime\\Optimization};
+
+    \draw[arrow] (charter) -- (sampling);
+    \draw[arrow] (sampling) -- (window);
+    \draw[arrow] (window) -- (arch);
+    \draw[arrow] (arch) -- (train);
+    \draw[arrow] (train) -- (header);
+    \draw[arrow] (header) -- (firmware);
+    \draw[arrow] (firmware) -- (power);
+\end{tikzpicture}
+\caption{The end-to-end engineering workflow of Project 3: from physical I2C wiring and deterministic sampling to 8-bit quantization, embedded C++ TFLM firmware, and battery duty-cycling.}\label{fig:project3_workflow}
+\end{figure}
+
+% ==============================================================================
+% 1. PROJECT CHARTER & HARDWARE ARCHITECTURE
+% ==============================================================================
+\subsection{Project Charter and Operational Architecture}\label{subsec:p3_charter}
+
+\begin{keyidea}[Project Charter: Industrial Vibration Anomaly Monitor]
+\begin{itemize}
+    \item \textbf{Operational Goal}: Build an autonomous edge sensor node that mounts directly onto an industrial motor housing, continually monitoring 6-axis vibration telemetry to detect early-stage mechanical anomalies (bearing spalling, unbalance, and structural looseness) without transmitting raw data over the network.
+    \item \textbf{Hardware Platform}: Espressif ESP32-WROOM-32 ($240\,\text{MHz}$ dual-core Xtensa LX6, $520\,\text{KB}$ SRAM, $4\,\text{MB}$ SPI Flash) interfaced with an InvenSense MPU-6050 6-axis IMU via an I2C bus operating at $400\,\text{kHz}$ (Fast Mode).
+    \item \textbf{Quantitative Success Criteria}:
+    \begin{itemize}
+        \item Anomaly Detection Area Under ROC Curve (ROC-AUC): $\ge 0.98$ on real-world validation vibration logs.
+        \item False Alarm Rate (FAR): $< 1.0\%$ under normal variable motor operational speeds.
+        \item On-Device Model Memory Footprint: Flash binary size $\le 40\,\text{KB}$, Tensor Arena RAM footprint $\le 25\,\text{KB}$.
+        \item Inference Latency: $\le 20\,\text{ms}$ per window on an ESP32 clocked at $240\,\text{MHz}$.
+        \item Field Battery Autonomy: $\ge 180\,\text{days}$ on a single $2{,}500\,\text{mAh}$ Lithium Polymer (LiPo) battery using duty-cycled deep sleep.
+    \end{itemize}
+\end{itemize}
+\end{keyidea}
+
+% ==============================================================================
+% 2. EVERYDAY ANALOGY
+% ==============================================================================
+\subsection{Everyday Analogy: The Seasoned Mechanic vs.\ The Recording Studio}\label{subsec:p3_analogy}
+
+\begin{analogy}[The Master Mechanic in the Passenger Seat]
+Imagine that you manage a fleet of delivery vans and suspect that several vehicles have developing gearbox and transmission faults. You must design a diagnostic strategy to protect your vehicles.
+
+\textbf{Strategy A (The Cloud Recording Studio)}:
+You mount high-definition studio microphones and accelerometers under the chassis of each van. You connect these microphones to a cellular transmitter that continuously streams uncompressed audio ($44.1\,\text{kHz}$) over 4G networks to an acoustics laboratory across the country. 
+
+The consequences are economically ruinous: each van consumes $50\,\text{GB}$ of cellular data daily, your cellular data bill reaches thousands of dollars per vehicle, the van's battery drains dead whenever parked for a single weekend, and the moment a van drives into an underground tunnel or a rural dead zone, your monitoring system goes completely blind!
+
+\textbf{Strategy B (The TinyML Master Mechanic)}:
+Instead of streaming raw sound, you seat a veteran automotive mechanic in the passenger seat. The mechanic does not record audio or write down notes; their brain continuously listens to the hum of the engine and transmission. 
+
+When the vehicle accelerates smoothly, the mechanic sits quietly, expending negligible mental energy. The microsecond a distinctive metallic chattering or bearing whine emerges, the mechanic instantly taps the driver's shoulder: \emph{``Fourth gear synchronizer ring is slipping; head to the workshop.''}
+
+TinyML transforms the ESP32 microcontroller into that seasoned mechanic! By executing an 8-bit neural network locally inside its internal memory, the microcontroller continuously analyzes motion physics at the sensor head. It discards normal operational noise and transmits a transmission alert only when physical damage is genuinely imminent!
+\end{analogy}
+
+% ==============================================================================
+% 3. HARDWARE WIRING & DETERMINISTIC SAMPLING
+% ==============================================================================
+\subsection{Hardware Wiring and Deterministic Signal Acquisition}\label{subsec:p3_hardware}
+
+\paragraph{Physical Circuit Interfacing}
+The MPU-6050 contains a 3-axis MEMS accelerometer, a 3-axis MEMS gyroscope, and an internal 16-bit analog-to-digital converter (ADC) per channel. The module communicates with the ESP32 over the \textbf{Inter-Integrated Circuit (I2C)} protocol:
+\begin{itemize}
+    \item \textbf{VCC}: Connected to the ESP32's regulated $3.3\,\text{V}$ rail.
+    \item \textbf{GND}: Connected to common system ground.
+    \item \textbf{SDA (Serial Data)}: Connected to ESP32 \textbf{GPIO 21}. A $4.7\,\text{k}\Omega$ pull-up resistor tied to $3.3\,\text{V}$ is mandatory to ensure crisp digital rise times on high-speed I2C buses.
+    \item \textbf{SCL (Serial Clock)}: Connected to ESP32 \textbf{GPIO 22}. Tied to $3.3\,\text{V}$ via a $4.7\,\text{k}\Omega$ pull-up resistor.
+    \item \textbf{INT (Hardware Interrupt)}: Connected to ESP32 \textbf{GPIO 19}. The MPU-6050 asserts this pin high whenever a new sensor conversion completes in its internal register buffer.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.90,
+    mcu/.style={rectangle, draw=keyideablue, fill=keyideablue!12, rounded corners=3mm, thick, minimum width=3.8cm, minimum height=4.2cm, align=center},
+    sensor/.style={rectangle, draw=analogygreen, fill=analogygreen!12, rounded corners=3mm, thick, minimum width=3.8cm, minimum height=4.2cm, align=center},
+    pin/.style={font=\scriptsize\ttfamily\bfseries},
+    resistor/.style={rectangle, draw=gray!70, fill=white, minimum width=0.7cm, minimum height=0.35cm, font=\tiny\sffamily}
+]
+    % ESP32 MCU Box
+    \node[mcu] (esp32) at (0, 0) {};
+    \node[font=\small\bfseries, text=keyideablue] at (0, 1.7) {ESP32 Microcontroller};
+    
+    \node[pin, anchor=east] (p3v3) at (1.7, 1.0) {3V3};
+    \node[pin, anchor=east] (pgnd) at (1.7, 0.3) {GND};
+    \node[pin, anchor=east] (psda) at (1.7, -0.4) {GPIO 21 (SDA)};
+    \node[pin, anchor=east] (pscl) at (1.7, -1.1) {GPIO 22 (SCL)};
+    \node[pin, anchor=east] (pint) at (1.7, -1.7) {GPIO 19 (INT)};
+
+    % MPU-6050 Sensor Box
+    \node[sensor] (mpu) at (7.0, 0) {};
+    \node[font=\small\bfseries, text=analogygreen] at (7.0, 1.7) {MPU-6050 6-Axis IMU};
+    
+    \node[pin, anchor=west] (mvcc) at (5.3, 1.0) {VCC};
+    \node[pin, anchor=west] (mgnd) at (5.3, 0.3) {GND};
+    \node[pin, anchor=west] (msda) at (5.3, -0.4) {SDA};
+    \node[pin, anchor=west] (mscl) at (5.3, -1.1) {SCL};
+    \node[pin, anchor=west] (mint) at (5.3, -1.7) {INT};
+
+    % Wiring Connections
+    \draw[thick, draw=warningred] (p3v3.east) -- (mvcc.west);
+    \draw[thick, draw=black] (pgnd.east) -- (mgnd.west);
+    \draw[thick, draw=codeblue] (psda.east) -- (msda.west);
+    \draw[thick, draw=codegreen] (pscl.east) -- (mscl.west);
+    \draw[thick, draw=iotpurple] (pint.east) -- (mint.west);
+
+    % Pull-up Resistors
+    \draw[thick, draw=warningred] (3.5, 1.0) -- (3.5, 0.3);
+    \node[resistor] (r1) at (3.5, 0.0) {4.7k};
+    \node[resistor] (r2) at (4.3, 0.0) {4.7k};
+    \draw[thick, draw=codeblue] (r1.south) -- (3.5, -0.4);
+    \draw[thick, draw=warningred] (3.5, 0.3) -| (4.3, 0.175);
+    \draw[thick, draw=codegreen] (r2.south) |- (4.3, -1.1);
+\end{tikzpicture}
+\caption{Hardware wiring schematic: Interfacing the ESP32 with an MPU-6050 6-axis IMU over an I2C bus equipped with mandatory $4.7\,\text{k}\Omega$ bus pull-up resistors.}\label{fig:mpu6050_wiring}
+\end{figure}
+
+\paragraph{Vibration Physics and the Nyquist-Shannon Sampling Theorem}
+In rotating industrial equipment, vibration frequencies correlate directly with motor shaft rotation speed. Consider a standard 4-pole AC induction motor operating on a $60\,\text{Hz}$ electrical grid:
+\begin{equation}
+\text{Rotational Speed} = \frac{120 \times f_{\text{grid}}}{P_{\text{poles}}} = \frac{120 \times 60}{4} = 1{,}800\,\text{RPM} = 30\,\text{Hz}
+\end{equation}
+Mechanical unbalance and shaft misalignment produce dominant vibration peaks at the fundamental rotational frequency ($1\times = 30\,\text{Hz}$) and its second harmonic ($2\times = 60\,\text{Hz}$). Bearing race defects produce high-frequency impacts between $80\,\text{Hz}$ and $200\,\text{Hz}$.
+
+According to the \textbf{Nyquist-Shannon Sampling Theorem}, to capture a physical frequency component $f_{\text{signal}}$ without aliasing distortion, the sampling frequency $f_s$ must satisfy:
+\begin{equation}
+f_s > 2 \cdot f_{\text{signal\_max}}
+\end{equation}
+For our general condition monitoring node, we configure the MPU-6050 to sample at $f_s = 50\,\text{Hz}$ ($T_s = 20\,\text{ms}$), enabling alias-free monitoring of rotational harmonics up to $25\,\text{Hz}$. For high-speed bearing diagnostics, the sampling rate can be scaled to $f_s = 200\,\text{Hz}$ ($T_s = 5\,\text{ms}$) via the MPU-6050's internal sample rate divider register (\code{SMPLRT_DIV}).
+
+\paragraph{Eliminating Timing Jitter via Hardware Timers}
+A fatal bug in embedded signal acquisition is using software delay loops to pace sensor sampling:
+\begin{lstlisting}[style=pythonstyle, numbers=none]
+// BAD PRACTICE: NEVER DO THIS FOR MACHINE LEARNING SAMPLING!
+void loop() {
+    read_mpu6050();
+    delay(20); // Software delay suffers from severe milliseconds jitter!
+}
+\end{lstlisting}
+Because I2C communication transactions, background Wi-Fi interrupts, and FreeRTOS task context switches consume variable time, calling \code{delay(20)} causes the actual sampling interval to fluctuate between $21\,\text{ms}$ and $28\,\text{ms}$. This timing variation---known as \textbf{sampling jitter}---distorts the temporal frequency spectra, rendering time-series machine learning models ineffective!
+
+The professional engineering solution is \textbf{Hardware Timer Interrupts} or FreeRTOS deterministic delays:
+\begin{lstlisting}[style=pythonstyle, numbers=none]
+// PROFESSIONAL PRACTICE: Deterministic FreeRTOS Task Delay
+void sensor_task(void *pvParameters) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xFrequency = pdMS_TO_TICKS(20); // Exactly 50 Hz (20 ms)
+
+    for (;;) {
+        vTaskDelayUntil(&xLastWakeTime, xFrequency); // Guaranteed jitter-free!
+        read_mpu6050_sample();
+    }
+}
+\end{lstlisting}
+
+% ==============================================================================
+% 4. SIGNAL PROCESSING & SLIDING WINDOWS
+% ==============================================================================
+\subsection{Signal Processing: Sliding Windowing Pipeline}\label{subsec:p3_preprocessing}
+
+Raw instantaneous sensor readings ($1$ single measurement of $[a_x, a_y, a_z]$) carry zero diagnostic context: a momentary acceleration spike of $+2.5\,\text{g}$ could be a dangerous motor fault, or it could simply be a forklift driving past the concrete floor. 
+
+To evaluate physical machinery, we must analyze time-series dynamics over a duration that spans multiple full motor shaft revolutions. We employ a \textbf{Sliding Window Ring Buffer}:
+\begin{itemize}
+    \item \textbf{Window Size ($W$)}: $128$ consecutive samples. At $f_s = 50\,\text{Hz}$, $128$ samples span exactly:
+    \begin{equation}
+    T_{\text{window}} = \frac{128}{50\,\text{Hz}} = 2.56\,\text{seconds}
+    \end{equation}
+    During $2.56\,\text{seconds}$, an $1{,}800\,\text{RPM}$ motor completes over $76$ full mechanical rotations, capturing repeatable harmonic patterns.
+    \item \textbf{Hop Size / Stride ($S$)}: $64$ samples ($50\%$ overlap, occurring every $1.28\,\text{seconds}$). Overlapping windows ensure that transient shock events spanning window boundaries are never missed.
+    \item \textbf{Input Tensor Dimensions}: Each window forms a 2D matrix of shape $(128, 6)$, representing $128$ time steps across $6$ sensor channels:
+    \begin{equation}
+    X_{\text{window}} \in \mathbb{R}^{128 \times 6} = \begin{bmatrix}
+    a_{x,1} & a_{y,1} & a_{z,1} & g_{x,1} & g_{y,1} & g_{z,1} \\
+    a_{x,2} & a_{y,2} & a_{z,2} & g_{x,2} & g_{y,2} & g_{z,2} \\
+    \vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+    a_{x,128} & a_{y,128} & a_{z,128} & g_{x,128} & g_{y,128} & g_{z,128}
+    \end{bmatrix}
+    \end{equation}
+\end{itemize}
+
+% ==============================================================================
+% 5. MODEL ARCHITECTURE: CONVOLUTIONAL AUTOENCODER
+% ==============================================================================
+\subsection{Model Architecture: Deep 1D Convolutional Autoencoder}\label{subsec:p3_architecture}
+
+\paragraph{Why Unsupervised Anomaly Detection?}
+In real-world industrial plants, healthy operational data is abundant: machines run smoothly for months. However, \textbf{fault data is exceptionally rare and diverse}. Bearing damage can manifest as inner-race flaking, ball spalling, cage fracture, or lubricant contamination. 
+
+If an engineer trains a standard supervised classifier (e.g., predicting ``Healthy'' vs.\ ``Broken''), the classifier will fail whenever the machine experiences an unfamiliar failure mode not present in the training set!
+
+To achieve bulletproof reliability, we deploy an \textbf{Unsupervised 1D Convolutional Autoencoder}. 
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88,
+    box/.style={rectangle, draw=keyideablue, fill=keyideablue!12, rounded corners=2mm, thick, align=center, font=\scriptsize\sffamily},
+    enc/.style={rectangle, draw=keyideablue, fill=keyideablue!25, rounded corners=2mm, thick, align=center, font=\scriptsize\sffamily},
+    latent/.style={rectangle, draw=warningred, fill=warningred!20, rounded corners=2mm, thick, align=center, font=\scriptsize\bfseries},
+    dec/.style={rectangle, draw=analogygreen, fill=analogygreen!25, rounded corners=2mm, thick, align=center, font=\scriptsize\sffamily},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
+]
+    % Encoder Layers
+    \node[box, minimum width=3.2cm, minimum height=0.75cm] (in) at (0, 0) {Input Window: $(128, 6)$};
+    \node[enc, minimum width=2.8cm, minimum height=0.75cm] (e1) at (3.4, 0) {Conv1D + Pool\\$(64, 16)$};
+    \node[enc, minimum width=2.4cm, minimum height=0.75cm] (e2) at (6.6, 0) {Conv1D + Pool\\$(32, 8)$};
+    
+    % Bottleneck
+    \node[latent, minimum width=1.8cm, minimum height=1.2cm] (z) at (9.2, 0) {Latent\\Space\\$z \in \mathbb{R}^{16}$};
+    
+    % Decoder Layers
+    \node[dec, minimum width=2.4cm, minimum height=0.75cm] (d1) at (11.8, 0) {Conv1D + Up\\$(64, 8)$};
+    \node[dec, minimum width=2.8cm, minimum height=0.75cm] (d2) at (15.0, 0) {Conv1D + Up\\$(128, 16)$};
+    \node[box, fill=analogygreen!12, minimum width=3.2cm, minimum height=0.75cm] (out) at (18.4, 0) {Reconstruction: $(128, 6)$};
+
+    \draw[arrow] (in) -- (e1);
+    \draw[arrow] (e1) -- (e2);
+    \draw[arrow] (e2) -- (z);
+    \draw[arrow] (z) -- (d1);
+    \draw[arrow] (d1) -- (d2);
+    \draw[arrow] (d2) -- (out);
+
+    % Labels
+    \node[font=\footnotesize\bfseries, text=keyideablue] at (3.4, 0.9) {Encoder ($f_\theta$)};
+    \node[font=\footnotesize\bfseries, text=analogygreen] at (15.0, 0.9) {Decoder ($g_\phi$)};
+\end{tikzpicture}
+\caption{The 1D Convolutional Autoencoder architecture: Compressing high-dimensional multi-axis vibration signals into a 16-dimensional bottleneck before reconstructing the baseline waveform.}\label{fig:autoencoder_arch}
+\end{figure}
+
+\paragraph{How the Autoencoder Detects Anomalies}
+\begin{enumerate}
+    \item \textbf{Training on Healthy Baselines Only}: The autoencoder is trained exclusively on vibration collected while the machine is operating in a verified healthy state. The model learns the normal harmonic frequencies, rotational speeds, and baseline amplitudes.
+    \item \textbf{Information Bottleneck}: The encoder compresses the $128 \times 6 = 768$ raw floating-point measurements through 1D convolutional layers into a tiny $16$-dimensional latent vector $z$.
+    \item \textbf{Reconstruction}: The decoder expands the latent code back into the original shape: $\hat{X} \in \mathbb{R}^{128 \times 6}$.
+    \item \textbf{The Failure to Reconstruct}: When a physical fault emerges (e.g., a chipped gear tooth creating transient shock impulses), the encoder encounters patterns it has never seen. The compressed latent bottleneck cannot represent these novel shock physics. Consequently, the decoder outputs a blurry, erroneous reconstruction, causing the \textbf{Reconstruction Mean Squared Error (MSE)} to spike!
+\end{enumerate}
+
+\paragraph{Mathematical Anomaly Decision Rule}
+For a test window $X$ and its reconstruction $\hat{X}$, the window reconstruction error $e$ is:
+\begin{equation}
+e(X, \hat{X}) = \frac{1}{W \cdot C} \sum_{i=1}^{W} \sum_{c=1}^{C} \left( X_{i,c} - \hat{X}_{i,c} \right)^2\label{eq:reconstruction_error}
+\end{equation}
+We establish an automated anomaly detection threshold $\tau$ using the mean $\mu_{\text{train}}$ and standard deviation $\sigma_{\text{train}}$ of the reconstruction errors measured across the healthy validation dataset:
+\begin{equation}
+\tau = \mu_{\text{train}} + k \cdot \sigma_{\text{train}}\label{eq:anomaly_threshold}
+\end{equation}
+Setting $k = 3.0$ establishes a $3\sigma$ confidence bound ($99.73\%$ Gaussian coverage):
+\begin{equation}
+\text{Diagnosis}(X) = \begin{cases}
+\textbf{HEALTHY}, & \text{if } e(X, \hat{X}) \le \tau \\
+\textbf{ANOMALY DETECTED}, & \text{if } e(X, \hat{X}) > \tau
+\end{cases}
+\end{equation}
+
+% ==============================================================================
+% 6. WORKED HAND CALCULATION
+% ==============================================================================
+\subsection{Worked Hand Calculation: Anomaly Scoring}\label{subsec:p3_worked_example}
+
+\begin{example}[Hand Calculation: Evaluating Autoencoder Anomaly Scoring]
+Let us trace the exact mathematical anomaly scoring executed by the ESP32 on a miniature window of $W = 4$ time steps across $C = 2$ channels (Channel 0: $a_x$, Channel 1: $a_z$).
+
+\paragraph{Given Values:}
+\begin{itemize}
+    \item Input Window Matrix $X \in \mathbb{R}^{4 \times 2}$:
+    \begin{equation*}
+    X = \begin{bmatrix}
+    +1.00 & -0.50 \\
+    +1.20 & -0.40 \\
+    +2.80 & -0.60 \\
+    +1.10 & -0.50
+    \end{bmatrix}
+    \end{equation*}
+    Notice that at time step $i = 3$, Channel 0 experiences an abrupt shock spike of $+2.80\,\text{g}$ due to a cracked ball bearing!
+    \item Autoencoder Reconstruction Output $\hat{X} \in \mathbb{R}^{4 \times 2}$:
+    \begin{equation*}
+    \hat{X} = \begin{bmatrix}
+    +0.95 & -0.45 \\
+    +1.10 & -0.42 \\
+    +1.30 & -0.52 \\
+    +1.05 & -0.48
+    \end{bmatrix}
+    \end{equation*}
+    Notice that the autoencoder, having only been trained on smooth sinusoidal baselines ($0.9$ to $1.2\,\text{g}$), completely fails to reconstruct the $2.80\,\text{g}$ impact, outputting only $1.30\,\text{g}$!
+    \item Baseline Calibration Parameters (from 1,000 healthy validation windows):
+    \begin{align*}
+    \mu_{\text{train}} &= 0.0150\,\text{g}^2 \\
+    \sigma_{\text{train}} &= 0.0080\,\text{g}^2
+    \end{align*}
+\end{itemize}
+
+\paragraph{Step 1: Compute Pointwise Residual Differences $(X_{i,c} - \hat{X}_{i,c})$}
+\begin{align*}
+\Delta_{1,0} &= 1.00 - 0.95 = +0.05, & \Delta_{1,1} &= -0.50 - (-0.45) = -0.05 \\
+\Delta_{2,0} &= 1.20 - 1.10 = +0.10, & \Delta_{2,1} &= -0.40 - (-0.42) = +0.02 \\
+\Delta_{3,0} &= 2.80 - 1.30 = \mathbf{+1.50}, & \Delta_{3,1} &= -0.60 - (-0.52) = -0.08 \\
+\Delta_{4,0} &= 1.10 - 1.05 = +0.05, & \Delta_{4,1} &= -0.50 - (-0.48) = -0.02
+\end{align*}
+
+\paragraph{Step 2: Compute Squared Residuals $(X_{i,c} - \hat{X}_{i,c})^2$}
+\begin{align*}
+\Delta_{1,0}^2 &= (0.05)^2 = 0.0025, & \Delta_{1,1}^2 &= (-0.05)^2 = 0.0025 \\
+\Delta_{2,0}^2 &= (0.10)^2 = 0.0100, & \Delta_{2,1}^2 &= (0.02)^2 = 0.0004 \\
+\Delta_{3,0}^2 &= (1.50)^2 = \mathbf{2.2500}, & \Delta_{3,1}^2 &= (-0.08)^2 = 0.0064 \\
+\Delta_{4,0}^2 &= (0.05)^2 = 0.0025, & \Delta_{4,1}^2 &= (-0.02)^2 = 0.0004
+\end{align*}
+
+\paragraph{Step 3: Sum Squared Errors across All $W \times C = 8$ Elements}
+\begin{align*}
+\text{SSE} &= 0.0025 + 0.0025 + 0.0100 + 0.0004 + 2.2500 + 0.0064 + 0.0025 + 0.0004 \\
+&= \mathbf{2.2747}
+\end{align*}
+
+\paragraph{Step 4: Compute Window Mean Squared Error ($e$)}
+\begin{equation*}
+e = \frac{\text{SSE}}{W \cdot C} = \frac{2.2747}{4 \times 2} = \frac{2.2747}{8} = \mathbf{0.28434\,\text{g}^2}
+\end{equation*}
+
+\paragraph{Step 5: Compute Statistical Threshold ($\tau$) and Execute Decision}
+Using the $3\sigma$ decision boundary (Equation~\eqref{eq:anomaly_threshold}):
+\begin{equation*}
+\tau = \mu_{\text{train}} + 3 \cdot \sigma_{\text{train}} = 0.0150 + 3(0.0080) = 0.0150 + 0.0240 = \mathbf{0.0390\,\text{g}^2}
+\end{equation*}
+We compare the observed error against the threshold:
+\begin{equation*}
+e = 0.28434\,\text{g}^2 \quad \gg \quad \tau = 0.0390\,\text{g}^2
+\end{equation*}
+\textbf{Diagnostic Decision}: The observed error exceeds the threshold by more than $7\times$ ($729\%$). The ESP32 immediately trips the anomaly alarm, lights the red fault LED, and registers an emergency event for maintenance dispatch!
+\end{example}
+
+% ==============================================================================
+% 7. COMPLETE PYTHON IMPLEMENTATION
+% ==============================================================================
+\subsection{Complete Python Pipeline: Simulation, Training, and Int8 Quantization}\label{subsec:p3_python_code}
+
+Listing~\ref{lst:autoencoder_pipeline} presents the full Python script to generate synthetic industrial vibration telemetry, construct the 1D Convolutional Autoencoder, train on healthy baselines, calibrate the anomaly threshold, quantize to Int8 TFLite, and generate the C byte array header.
+
+\begin{lstlisting}[style=pythonstyle, caption={Complete Autoencoder Training, Threshold Calibration, and Int8 Quantization Pipeline.}, label={lst:autoencoder_pipeline}]
+import os
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
+# ------------------------------------------------------------------------------
+# 1. Configuration & Hyperparameters
+# ------------------------------------------------------------------------------
+WINDOW_SIZE = 128    # 128 samples (2.56 seconds at 50 Hz)
+NUM_CHANNELS = 6     # ax, ay, az, gx, gy, gz
+BATCH_SIZE = 32
+EPOCHS = 20
+LATENT_DIM = 16
+
+np.random.seed(42)
+tf.random.set_seed(42)
+
+# ------------------------------------------------------------------------------
+# 2. Physics-Informed Synthetic Vibration Data Generator
+# ------------------------------------------------------------------------------
+def generate_vibration_dataset(num_windows=1000, is_anomaly=False):
+    """
+    Generates synthetic industrial motor vibration.
+    Normal: 30 Hz fundamental rotational harmonic + 60 Hz harmonic + sensor noise.
+    Anomaly: Adds high-amplitude transient shock pulses (bearing spall impacts).
+    """
+    t = np.linspace(0, 2.56, WINDOW_SIZE)
+    dataset = np.zeros((num_windows, WINDOW_SIZE, NUM_CHANNELS), dtype=np.float32)
+
+    for i in range(num_windows):
+        # Normal 30 Hz rotation + noise
+        base_ax = 1.0 * np.sin(2 * np.pi * 30 * t) + np.random.normal(0, 0.15, WINDOW_SIZE)
+        base_ay = 0.8 * np.cos(2 * np.pi * 30 * t) + np.random.normal(0, 0.15, WINDOW_SIZE)
+        base_az = 0.5 * np.sin(2 * np.pi * 60 * t) + 1.0 + np.random.normal(0, 0.10, WINDOW_SIZE) # 1g DC gravity
+        
+        base_gx = np.random.normal(0, 0.05, WINDOW_SIZE)
+        base_gy = np.random.normal(0, 0.05, WINDOW_SIZE)
+        base_gz = 0.2 * np.sin(2 * np.pi * 30 * t) + np.random.normal(0, 0.05, WINDOW_SIZE)
+
+        if is_anomaly:
+            # Inject mechanical impact spikes at random intervals
+            spike_idx = np.random.randint(10, WINDOW_SIZE - 10, size=3)
+            base_ax[spike_idx] += np.random.choice([+3.5, -3.5], size=3)
+            base_az[spike_idx] += np.random.choice([+2.8, -2.8], size=3)
+
+        dataset[i, :, 0] = base_ax
+        dataset[i, :, 1] = base_ay
+        dataset[i, :, 2] = base_az
+        dataset[i, :, 3] = base_gx
+        dataset[i, :, 4] = base_gy
+        dataset[i, :, 5] = base_gz
+
+    return dataset
+
+# Generate datasets: Autoencoder trains ONLY on healthy data!
+X_train_healthy = generate_vibration_dataset(num_windows=1200, is_anomaly=False)
+X_val_healthy = generate_vibration_dataset(num_windows=300, is_anomaly=False)
+X_test_faulty = generate_vibration_dataset(num_windows=200, is_anomaly=True)
+
+# ------------------------------------------------------------------------------
+# 3. Model Architecture: 1D Convolutional Autoencoder
+# ------------------------------------------------------------------------------
+def build_conv_autoencoder():
+    inputs = layers.Input(shape=(WINDOW_SIZE, NUM_CHANNELS), name="sensor_window")
+
+    # --- Encoder ---
+    x = layers.Conv1D(16, kernel_size=3, padding="same", activation="relu")(inputs)
+    x = layers.MaxPooling1D(pool_size=2, padding="same")(x)  # Shape: (64, 16)
+    x = layers.Conv1D(8, kernel_size=3, padding="same", activation="relu")(x)
+    x = layers.MaxPooling1D(pool_size=2, padding="same")(x)  # Shape: (32, 8)
+    
+    # Flatten to Latent Bottleneck
+    x = layers.Flatten()(x)
+    latent = layers.Dense(LATENT_DIM, activation="relu", name="latent_bottleneck")(x)
+
+    # --- Decoder ---
+    x = layers.Dense(32 * 8, activation="relu")(latent)
+    x = layers.Reshape((32, 8))(x)
+    x = layers.Conv1D(8, kernel_size=3, padding="same", activation="relu")(x)
+    x = layers.UpSampling1D(size=2)(x)  # Shape: (64, 8)
+    x = layers.Conv1D(16, kernel_size=3, padding="same", activation="relu")(x)
+    x = layers.UpSampling1D(size=2)(x)  # Shape: (128, 16)
+    outputs = layers.Conv1D(NUM_CHANNELS, kernel_size=3, padding="same", activation="linear")(x)
+
+    model = keras.Model(inputs=inputs, outputs=outputs, name="Vibration_Autoencoder")
+    return model
+
+autoencoder = build_conv_autoencoder()
+autoencoder.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-3), loss="mse")
+autoencoder.summary()
+
+# ------------------------------------------------------------------------------
+# 4. Train Autoencoder on Normal Data
+# ------------------------------------------------------------------------------
+history = autoencoder.fit(
+    X_train_healthy, X_train_healthy,
+    validation_data=(X_val_healthy, X_val_healthy),
+    epochs=EPOCHS,
+    batch_size=BATCH_SIZE,
+    verbose=1
+)
+
+# ------------------------------------------------------------------------------
+# 5. Statistical Anomaly Threshold Calibration
+# ------------------------------------------------------------------------------
+# Compute reconstruction MSE across the healthy validation set
+reconstructions_val = autoencoder.predict(X_val_healthy)
+val_mse = np.mean(np.square(X_val_healthy - reconstructions_val), axis=(1, 2))
+
+mu_train = float(np.mean(val_mse))
+sigma_train = float(np.std(val_mse))
+threshold = mu_train + 3.0 * sigma_train
+
+print(f"\n>>> CALIBRATION RESULTS:")
+print(f"Healthy Validation MSE Mean (mu):  {mu_train:.5f}")
+print(f"Healthy Validation MSE Std (sigma): {sigma_train:.5f}")
+print(f"Calculated 3-Sigma Threshold (tau): {threshold:.5f}")
+
+# Evaluate on anomalous test data
+reconstructions_fault = autoencoder.predict(X_test_faulty)
+fault_mse = np.mean(np.square(X_test_faulty - reconstructions_fault), axis=(1, 2))
+detected_anomalies = np.sum(fault_mse > threshold)
+print(f"Fault Detection Accuracy: {detected_anomalies}/{len(fault_mse)} ({detected_anomalies/len(fault_mse)*100:.1f}%)")
+
+# ------------------------------------------------------------------------------
+# 6. Int8 Post-Training Quantization for ESP32
+# ------------------------------------------------------------------------------
+def representative_data_gen():
+    for i in range(100):
+        yield [X_train_healthy[i:i+1]]
+
+converter = tf.lite.TFLiteConverter.from_keras_model(autoencoder)
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+converter.representative_dataset = representative_data_gen
+converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+converter.inference_input_type = tf.int8
+converter.inference_output_type = tf.int8
+
+tflite_quant_model = converter.convert()
+
+with open("vibration_autoencoder_int8.tflite", "wb") as f:
+    f.write(tflite_quant_model)
+
+# ------------------------------------------------------------------------------
+# 7. Convert TFLite Binary to C Source Array (model_data.h)
+# ------------------------------------------------------------------------------
+model_size_bytes = len(tflite_quant_model)
+print(f"\nQuantized Int8 Model Size: {model_size_bytes / 1024.0:.2f} KB")
+
+# Generate C header file
+with open("model_data.h", "w") as f:
+    f.write("#ifndef VIBRATION_MODEL_DATA_H\n")
+    f.write("#define VIBRATION_MODEL_DATA_H\n\n")
+    f.write(f"const float ANOMALY_THRESHOLD = {threshold:.5f}f;\n")
+    f.write(f"const unsigned int g_model_len = {model_size_bytes};\n")
+    f.write("const unsigned char g_model[] = {\n    ")
+    for i, byte in enumerate(tflite_quant_model):
+        f.write(f"0x{byte:02x}, ")
+        if (i + 1) % 12 == 0:
+            f.write("\n    ")
+    f.write("\n};\n\n#endif // VIBRATION_MODEL_DATA_H\n")
+
+print("[SYSTEM] Embedded C Header 'model_data.h' generated successfully.")
+\end{lstlisting}
+
+\begin{lstlisting}[style=outputstyle, caption={Terminal output and model quantization metrics.}]
+Epoch 20/20 - loss: 0.0142 - val_loss: 0.0148
+
+>>> CALIBRATION RESULTS:
+Healthy Validation MSE Mean (mu):  0.01482
+Healthy Validation MSE Std (sigma): 0.00312
+Calculated 3-Sigma Threshold (tau): 0.02418
+Fault Detection Accuracy: 198/200 (99.0%)
+
+Quantized Int8 Model Size: 18.42 KB
+[SYSTEM] Embedded C Header 'model_data.h' generated successfully.
+\end{lstlisting}
+
+% ==============================================================================
+% 8. EMBEDDED C++ FIRMWARE (ESP32)
+% ==============================================================================
+\subsection{Production Embedded Firmware: ESP32 Implementation}\label{subsec:p3_embedded_cpp}
+
+Listing~\ref{lst:esp32_firmware} presents the complete, production-grade C++ sketch for the ESP32 under the Arduino / ESP-IDF framework. It maintains an in-memory ring buffer, samples the MPU-6050 deterministically, executes TFLM inference, and drives an alert LED when an anomaly is detected.
+
+\begin{lstlisting}[style=pythonstyle, caption={Production ESP32 C++ Anomaly Detection Firmware with TFLM.}, label={lst:esp32_firmware}]
+#include <Wire.h>
+#include "tensorflow/lite/micro/all_ops_resolver.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/schema/schema_generated.h"
+#include "model_data.h" // Contains g_model array and ANOMALY_THRESHOLD
+
+// --- Hardware Pin Definitions ---
+#define LED_ALERT_PIN    2   // Onboard Blue/Red Alert LED
+#define MPU_ADDR         0x68 // I2C address of MPU-6050
+
+// --- Sliding Window Configuration ---
+#define WINDOW_SIZE      128
+#define NUM_CHANNELS     6
+#define STRIDE           64
+
+// Static circular ring buffer (zero dynamic heap allocation!)
+float ring_buffer[WINDOW_SIZE][NUM_CHANNELS];
+int sample_count = 0;
+
+// --- TensorFlow Lite Micro Variables ---
+const tflite::Model* tflite_model = nullptr;
+tflite::MicroInterpreter* interpreter = nullptr;
+TfLiteTensor* input_tensor = nullptr;
+TfLiteTensor* output_tensor = nullptr;
+
+// Allocate 20 KB Tensor Arena statically in internal SRAM
+constexpr int kTensorArenaSize = 20 * 1024;
+uint8_t tensor_arena[kTensorArenaSize];
+
+// --- MPU-6050 Register Initialization ---
+void init_mpu6050() {
+    Wire.begin(21, 22, 400000); // SDA=21, SCL=22, 400 kHz Fast I2C
+    
+    // Wake up MPU-6050 (write 0 to PWR_MGMT_1 register)
+    Wire.beginTransmission(MPU_ADDR);
+    Wire.write(0x6B);
+    Wire.write(0x00);
+    Wire.endTransmission(true);
+
+    // Set Accelerometer full-scale to +/- 4g (AFS_SEL=1 -> 0x08)
+    Wire.beginTransmission(MPU_ADDR);
+    Wire.write(0x1C);
+    Wire.write(0x08);
+    Wire.endTransmission(true);
+}
+
+// Read raw 14 bytes from MPU-6050 and convert to physical units (g and deg/s)
+void read_sensor(float* out_channels) {
+    Wire.beginTransmission(MPU_ADDR);
+    Wire.write(0x3B); // Start reading at ACCEL_XOUT_H
+    Wire.endTransmission(false);
+    Wire.requestFrom(MPU_ADDR, 14, true);
+
+    int16_t ax_raw = (Wire.read() << 8) | Wire.read();
+    int16_t ay_raw = (Wire.read() << 8) | Wire.read();
+    int16_t az_raw = (Wire.read() << 8) | Wire.read();
+    Wire.read(); Wire.read(); // Skip internal temperature sensor
+    int16_t gx_raw = (Wire.read() << 8) | Wire.read();
+    int16_t gy_raw = (Wire.read() << 8) | Wire.read();
+    int16_t gz_raw = (Wire.read() << 8) | Wire.read();
+
+    // Scale factors: +/- 4g -> 8192 LSB/g, +/- 500 deg/s -> 65.5 LSB/(deg/s)
+    out_channels[0] = (float)ax_raw / 8192.0f;
+    out_channels[1] = (float)ay_raw / 8192.0f;
+    out_channels[2] = (float)az_raw / 8192.0f;
+    out_channels[3] = (float)gx_raw / 65.5f;
+    out_channels[4] = (float)gy_raw / 65.5f;
+    out_channels[5] = (float)gz_raw / 65.5f;
+}
+
+void setup() {
+    Serial.begin(115200);
+    pinMode(LED_ALERT_PIN, OUTPUT);
+    digitalWrite(LED_ALERT_PIN, LOW);
+
+    init_mpu6050();
+
+    // 1. Map Model
+    tflite_model = tflite::GetModel(g_model);
+    if (tflite_model->version() != TFLITE_SCHEMA_VERSION) {
+        Serial.println("[ERROR] Schema version mismatch!");
+        while (1);
+    }
+
+    // 2. Resolve Micro Ops
+    static tflite::AllOpsResolver resolver;
+
+    // 3. Instantiate Interpreter
+    static tflite::MicroInterpreter static_interpreter(
+        tflite_model, resolver, tensor_arena, kTensorArenaSize
+    );
+    interpreter = &static_interpreter;
+    interpreter->AllocateTensors();
+
+    input_tensor = interpreter->input(0);
+    output_tensor = interpreter->output(0);
+    Serial.println("[SYSTEM] ESP32 TinyML Anomaly Detector Armed.");
+}
+
+void loop() {
+    static unsigned long last_sample_time = 0;
+    
+    // Deterministic 50 Hz sampling (20 ms period)
+    if (millis() - last_sample_time >= 20) {
+        last_sample_time = millis();
+
+        // 1. Read current sample into circular ring buffer
+        int current_idx = sample_count % WINDOW_SIZE;
+        read_sensor(ring_buffer[current_idx]);
+        sample_count++;
+
+        // 2. Execute inference every STRIDE (64 samples = 1.28 s)
+        if (sample_count >= WINDOW_SIZE && (sample_count % STRIDE == 0)) {
+            // Quantize and copy ordered window into input_tensor
+            int8_t* in_data = input_tensor->data.int8;
+            float in_scale = input_tensor->params.scale;
+            int32_t in_zero = input_tensor->params.zero_point;
+            
+            int tensor_idx = 0;
+            for (int i = 0; i < WINDOW_SIZE; i++) {
+                // Re-align circular buffer into sequential temporal order
+                int buf_idx = (sample_count - WINDOW_SIZE + i) % WINDOW_SIZE;
+                for (int c = 0; c < NUM_CHANNELS; c++) {
+                    float val = ring_buffer[buf_idx][c];
+                    // Quantize: q = round(val / scale) + zero_point
+                    in_data[tensor_idx++] = (int8_t)constrain(round(val / in_scale) + in_zero, -128, 127);
+                }
+            }
+
+            // 3. Execute Model Inference
+            int64_t t_start = esp_timer_get_time();
+            TfLiteStatus status = interpreter->Invoke();
+            int64_t latency_us = esp_timer_get_time() - t_start;
+
+            if (status != kTfLiteOk) {
+                Serial.println("[ERROR] TFLM Invoke Failed!");
+                return;
+            }
+
+            // 4. Compute Reconstruction Mean Squared Error (MSE)
+            int8_t* out_data = output_tensor->data.int8;
+            float out_scale = output_tensor->params.scale;
+            int32_t out_zero = output_tensor->params.zero_point;
+
+            float total_sse = 0.0f;
+            for (int i = 0; i < WINDOW_SIZE * NUM_CHANNELS; i++) {
+                float reconstructed_val = (out_data[i] - out_zero) * out_scale;
+                float original_val = (in_data[i] - in_zero) * in_scale;
+                float diff = original_val - reconstructed_val;
+                total_sse += diff * diff;
+            }
+            float window_mse = total_sse / (WINDOW_SIZE * NUM_CHANNELS);
+
+            // 5. Threshold Decision Logic
+            bool is_anomaly = (window_mse > ANOMALY_THRESHOLD);
+            digitalWrite(LED_ALERT_PIN, is_anomaly ? HIGH : LOW);
+
+            Serial.printf("MSE: %.5f | Threshold: %.5f | Status: %s | Latency: %lld us\n",
+                          window_mse, ANOMALY_THRESHOLD,
+                          is_anomaly ? "ANOMALY ALARM!" : "NORMAL", latency_us);
+        }
+    }
+}
+\end{lstlisting}
+
+% ==============================================================================
+% 9. ENERGY BUDGETING & BATTERY OPTIMIZATION
+% ==============================================================================
+\subsection{Energy Budgeting and Ultra-Low-Power Battery Optimization}\label{subsec:p3_energy}
+
+\paragraph{Power Consumption by Operational State}
+To achieve months of autonomous battery lifetime on an industrial asset, the ESP32 must not execute continuously. We partition operation into four distinct hardware power states:
+\begin{enumerate}
+    \item \textbf{Continuous Wi-Fi Transmission ($I_{\text{wifi}} \approx 180\,\text{mA}$ at $3.3\,\text{V}$)}: Power amplifier actively driving the RF antenna ($594\,\text{mW}$).
+    \item \textbf{Active Dual-Core Inference ($I_{\text{active}} \approx 50\,\text{mA}$)}: Dual Xtensa cores running at $240\,\text{MHz}$ ($165\,\text{mW}$).
+    \item \textbf{Sensor Acquisition ($I_{\text{sample}} \approx 28.9\,\text{mA}$)}: CPU running at $80\,\text{MHz}$ ($25\,\text{mA}$) + MPU-6050 active conversion ($3.9\,\text{mA}$).
+    \item \textbf{Deep Sleep ($I_{\text{deep}} \approx 15\,\mu\text{A} = 0.015\,\text{mA}$)}: Main CPU cores, high-speed clocks, and peripherals powered off; only the Ultra-Low-Power (ULP) co-processor and Real-Time Clock (RTC) timer remain active ($0.0495\,\text{mW}$).
+\end{enumerate}
+
+\begin{example}[Hand Calculation: Cloud Streaming vs.\ TinyML Battery Longevity]
+Let us calculate the exact operational lifetime of an industrial node powered by a standard $2{,}500\,\text{mAh}$ Lithium-Polymer (LiPo) battery pack ($3.7\,\text{V}$ nominal).
+
+\paragraph{Architecture A: Cloud Streaming Node (Continuous Wi-Fi)}
+The sensor continuously samples and transmits raw $50\,\text{Hz}$ telemetry over Wi-Fi. Average current draw is:
+\begin{equation*}
+I_{\text{avg\_cloud}} = 180.0\,\text{mA}
+\end{equation*}
+Operational battery lifetime:
+\begin{equation*}
+T_{\text{cloud\_hours}} = \frac{\text{Battery Capacity}}{I_{\text{avg\_cloud}}} = \frac{2{,}500\,\text{mAh}}{180.0\,\text{mA}} \approx \mathbf{13.89\,\text{hours}} \quad (\approx \mathbf{0.58\,\text{days}})
+\end{equation*}
+\textbf{Verdict}: The battery is dead before the second work shift finishes! Continuous wireless streaming is unfeasible for untethered industrial sensors.
+
+\paragraph{Architecture B: TinyML Duty-Cycled Edge Node}
+The TinyML node operates on a $60$-second duty cycle ($T_{\text{cycle}} = 60.0\,\text{seconds}$):
+\begin{itemize}
+    \item \textbf{Phase 1 (Sensor Sampling)}: Node wakes up, samples $128$ samples at $50\,\text{Hz}$ ($t_{\text{sample}} = 2.56\,\text{s}$) at $I_{\text{sample}} = 28.9\,\text{mA}$.
+    \item \textbf{Phase 2 (On-Device Inference)}: Node boosts CPU to $240\,\text{MHz}$, executes TFLM inference in $10\,\text{ms}$ ($t_{\text{inf}} = 0.010\,\text{s}$) at $I_{\text{inf}} = 50.0\,\text{mA}$.
+    \item \textbf{Phase 3 (Deep Sleep)}: Machine is normal ($99.9\%$ of the time). Node enters Deep Sleep for the remainder of the cycle:
+    \begin{equation*}
+    t_{\text{sleep}} = 60.0 - (2.56 + 0.010) = \mathbf{57.43\,\text{seconds}} \quad \text{at } I_{\text{sleep}} = 0.015\,\text{mA}
+    \end{equation*}
+\end{itemize}
+
+\paragraph{Step 1: Compute Total Electrical Charge Consumed per 60-Second Cycle ($Q_{\text{cycle}}$)}
+\begin{align*}
+Q_{\text{sample}} &= 2.56\,\text{s} \times 28.9\,\text{mA} = 73.984\,\text{mA}\cdot\text{s} \\
+Q_{\text{inf}} &= 0.010\,\text{s} \times 50.0\,\text{mA} = 0.500\,\text{mA}\cdot\text{s} \\
+Q_{\text{sleep}} &= 57.43\,\text{s} \times 0.015\,\text{mA} = 0.86145\,\text{mA}\cdot\text{s}
+\end{align*}
+Summing the charge components:
+\begin{equation*}
+Q_{\text{cycle}} = 73.984 + 0.500 + 0.86145 = \mathbf{75.345\,\text{mA}\cdot\text{s}}
+\end{equation*}
+
+\paragraph{Step 2: Compute Average Operating Current ($I_{\text{avg\_tinyml}}$)}
+\begin{equation*}
+I_{\text{avg\_tinyml}} = \frac{Q_{\text{cycle}}}{T_{\text{cycle}}} = \frac{75.345\,\text{mA}\cdot\text{s}}{60.0\,\text{s}} \approx \mathbf{1.2558\,\text{mA}}
+\end{equation*}
+
+\paragraph{Step 3: Compute Operating Battery Longevity}
+\begin{equation*}
+T_{\text{tinyml\_hours}} = \frac{2{,}500\,\text{mAh}}{1.2558\,\text{mA}} \approx \mathbf{1{,}990.8\,\text{hours}}
+\end{equation*}
+Converting to calendar days:
+\begin{equation*}
+T_{\text{tinyml\_days}} = \frac{1{,}990.8\,\text{hours}}{24\,\text{hours/day}} \approx \mathbf{82.95\,\text{days}} \quad (\approx \mathbf{2.7\,\text{months}})
+\end{equation*}
+If the sampling interval is extended from 1 minute to 5 minutes ($300\,\text{seconds}$), average current drops to $0.263\,\text{mA}$, extending field battery lifetime to over $\mathbf{396\,\text{days}}$ ($> \mathbf{1.08\,\text{years}}$) on a single battery charge!
+\end{example}
+
+% ==============================================================================
+% 10. COMMON MISTAKES AND FIELD PITFALLS
+% ==============================================================================
+\subsection{Common Mistakes and Field Pitfalls}\label{subsec:p3_pitfalls}
+
+\begin{warning}[Embedded Sensor ML Pitfalls]
+\begin{itemize}
+    \item \textbf{Omitting I2C Bus Pull-Up Resistors}:
+    Relying on the ESP32's internal microcontroller pull-ups ($\approx 45\,\text{k}\Omega$). At $400\,\text{kHz}$ I2C speeds, internal pull-ups are far too weak to overcome bus line capacitance, resulting in rounded clock edges, bus timeouts, and corrupted \code{0x00} or \code{0xFF} register reads. Always install physical $2.2\,\text{k}\Omega$ to $4.7\,\text{k}\Omega$ external resistors.
+    \item \textbf{Neglecting Mechanical Coupling and Sensor Resonant Frequencies}:
+    Attaching the IMU sensor to a motor housing using flexible double-sided foam tape. Foam tape acts as a mechanical dampener, attenuating high-frequency vibration signals above $40\,\text{Hz}$ by up to $90\%$! Industrial accelerometers must be rigidly fastened using metal mounting studs, cyanoacrylate adhesive, or strong neodymium magnetic bases.
+    \item \textbf{Ignoring Earth's Static Gravitational DC Offset}:
+    Earth's gravity exerts a constant $1.0\,\text{g}$ ($9.81\,\text{m/s}^2$) downward acceleration. Depending on whether the sensor is mounted horizontally, vertically, or inverted, this $+1.0\,\text{g}$ offset lands on $a_z$, $a_x$, or $a_y$. If an autoencoder is trained with horizontal sensor orientation, mounting it vertically in the field causes an immediate catastrophic false alarm! Normalize signals by subtracting the running DC mean or applying high-pass filtering.
+    \item \textbf{Dynamic Memory Heap Fragmentation in Embedded Loops}:
+    Calling \code{malloc()}, \code{new}, or instantiating dynamic C++ \code{String} objects inside the sensor sampling loop. Over hours of continuous operation, dynamic heap allocations cause memory fragmentation on microcontrollers, culminating in unexplained crashes and kernel panics. All ring buffers, tensor arenas, and sensor arrays must be allocated statically at compile time.
+    \item \textbf{Quantization Saturation on High-Impact Shock Peaks}:
+    Configuring the accelerometer to a narrow sensitivity range ($\pm 2\,\text{g}$) when monitoring heavy machinery. Mechanical impacts frequently exceed $+6\,\text{g}$, causing sensor register clipping. When mapped to 8-bit integers, clipped values saturate at $+127$, distorting reconstruction waveforms. Always profile the maximum physical shock range before fixing sensor ADC registers.
+\end{itemize}
+\end{warning}
+
+% ==============================================================================
+% 11. KEY TAKEAWAYS
+% ==============================================================================
+\begin{takeaways}
+\begin{itemize}
+    \item \textbf{TinyML Efficiency Paradigm}: On-device inference transforms dumb sensors into autonomous diagnostic nodes, slashing wireless energy consumption by $99\%$ and extending battery life from hours to months.
+    \item \textbf{Unsupervised Anomaly Detection}: Convolutional Autoencoders train exclusively on healthy baseline vibration, compressing multi-axis signals through an information bottleneck. Novel mechanical faults fail reconstruction, causing MSE to exceed calibrated $3\sigma$ thresholds.
+    \item \textbf{Deterministic Sampling}: High-frequency vibration requires jitter-free hardware timer interrupts or FreeRTOS delay primitives; naive software delay loops corrupt temporal frequency features.
+    \item \textbf{Static Ring Buffering}: Real-time sliding windowing ($W = 128, S = 64$) must be implemented using static circular memory buffers to eliminate heap fragmentation risks in embedded C++.
+    \item \textbf{Duty-Cycled Longevity}: Combining sub-$20\,\text{ms}$ Int8 TFLM inference with ultra-low-power deep sleep ($15\,\mu\text{A}$) enables over a year of field autonomy on standard LiPo battery packs.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 12. CHECK YOURSELF
+% ==============================================================================
+\begin{checkyourself}
+\begin{enumerate}
+    \item \textbf{Sampling Mathematics}: An electrical engineer is tasked with monitoring a high-speed CNC spindle operating at $12{,}000\,\text{RPM}$. Bearing defect frequencies can manifest up to the 4th rotational harmonic.
+    \begin{enumerate}
+        \item What is the fundamental rotational frequency of the spindle in Hertz ($\text{Hz}$)?
+        \item What is the maximum frequency of the 4th harmonic?
+        \item According to the Nyquist-Shannon sampling theorem, what is the minimum sampling frequency required to capture this 4th harmonic without aliasing?
+    \end{enumerate}
+    \item \textbf{Anomaly Scoring Calculation}: A miniature edge autoencoder monitors a $W = 4$ sample window across $C = 1$ accelerometer axis. 
+    \begin{itemize}
+        \item Observed Sensor Window: $x = [0.80,\, 1.50,\, -1.20,\, 0.40]^T$.
+        \item Autoencoder Reconstruction: $\hat{x} = [0.70,\, 1.30,\, -1.00,\, 0.50]^T$.
+        \item Baseline Healthy Calibration: $\mu_{\text{train}} = 0.0120\,\text{g}^2, \sigma_{\text{train}} = 0.0040\,\text{g}^2$.
+    \end{itemize}
+    \begin{enumerate}
+        \item Calculate the residual difference and squared residual for each time step.
+        \item Compute the overall window Mean Squared Error ($e$).
+        \item Compute the $3\sigma$ anomaly threshold $\tau$.
+        \item Determine whether the window represents a healthy state or an anomaly.
+    \end{enumerate}
+    \item \textbf{Battery Life Optimization}: A remote industrial vibration sensor node is powered by a $2{,}000\,\text{mAh}$ battery. It executes on a $120$-second duty cycle:
+    \begin{itemize}
+        \item Sampling: $t_{\text{sample}} = 2.0\,\text{seconds}$ at $I_{\text{sample}} = 30.0\,\text{mA}$.
+        \item Inference: $t_{\text{inf}} = 20\,\text{milliseconds}$ ($0.020\,\text{s}$) at $I_{\text{inf}} = 50.0\,\text{mA}$.
+        \item Deep Sleep: Remainder of the 120-second cycle at $I_{\text{sleep}} = 20\,\mu\text{A}$ ($0.020\,\text{mA}$).
+    \end{itemize}
+    \begin{enumerate}
+        \item Calculate the electrical charge in $\text{mA}\cdot\text{s}$ consumed during each 120-second cycle.
+        \item Compute the average current consumption ($I_{\text{avg}}$).
+        \item Calculate the expected operational battery longevity in days.
+        \item If the device streamed raw data continuously over Wi-Fi ($150\,\text{mA}$), how long would the battery last?
+    \end{enumerate}
+    \item \textbf{Embedded Firmware Design}: Why must circular ring buffers and TFLM tensor arenas be defined as static arrays in global memory rather than dynamically allocated via \code{malloc()} inside the loop of an embedded microcontroller?
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 13. ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{CNC Spindle Nyquist Sampling Calculations}:
+    \begin{enumerate}
+        \item \textbf{Fundamental Rotational Frequency}:
+        \begin{equation*}
+        f_{\text{fund}} = \frac{12{,}000\,\text{RPM}}{60\,\text{seconds/minute}} = \mathbf{200\,\text{Hz}}
+        \end{equation*}
+        \item \textbf{4th Harmonic Frequency}:
+        \begin{equation*}
+        f_{\text{4th}} = 4 \times 200\,\text{Hz} = \mathbf{800\,\text{Hz}}
+        \end{equation*}
+        \item \textbf{Minimum Nyquist Sampling Rate}:
+        \begin{equation*}
+        f_{s} > 2 \cdot f_{\text{4th}} = 2 \times 800\,\text{Hz} = \mathbf{1{,}600\,\text{Hz}} \quad (\text{Samples/second})
+        \end{equation*}
+        The engineer must configure the ADC and accelerometer to sample at a minimum of $1.6\,\text{kHz}$ (or ideally $2.0\,\text{kHz}$ to accommodate anti-aliasing filter rolloff).
+    \end{enumerate}
+
+    \item \textbf{Step-by-Step Anomaly Calculation}:
+    \begin{enumerate}
+        \item \textbf{Residual Differences and Squared Errors}:
+        \begin{itemize}
+            \item $i=1$: $\Delta_1 = 0.80 - 0.70 = +0.10 \implies \Delta_1^2 = (0.10)^2 = \mathbf{0.0100}$
+            \item $i=2$: $\Delta_2 = 1.50 - 1.30 = +0.20 \implies \Delta_2^2 = (0.20)^2 = \mathbf{0.0400}$
+            \item $i=3$: $\Delta_3 = -1.20 - (-1.00) = -0.20 \implies \Delta_3^2 = (-0.20)^2 = \mathbf{0.0400}$
+            \item $i=4$: $\Delta_4 = 0.40 - 0.50 = -0.10 \implies \Delta_4^2 = (-0.10)^2 = \mathbf{0.0100}$
+        \end{itemize}
+        Sum of Squared Errors:
+        \begin{equation*}
+        \text{SSE} = 0.0100 + 0.0400 + 0.0400 + 0.0100 = \mathbf{0.1000\,\text{g}^2}
+        \end{equation*}
+
+        \item \textbf{Window Mean Squared Error ($e$)}:
+        \begin{equation*}
+        e = \frac{\text{SSE}}{W} = \frac{0.1000}{4} = \mathbf{0.0250\,\text{g}^2}
+        \end{equation*}
+
+        \item \textbf{Statistical $3\sigma$ Threshold ($\tau$)}:
+        \begin{equation*}
+        \tau = \mu_{\text{train}} + 3 \cdot \sigma_{\text{train}} = 0.0120 + 3(0.0040) = 0.0120 + 0.0120 = \mathbf{0.0240\,\text{g}^2}
+        \end{equation*}
+
+        \item \textbf{Diagnostic Decision}:
+        \begin{equation*}
+        e = 0.0250\,\text{g}^2 > \tau = 0.0240\,\text{g}^2
+        \end{equation*}
+        Because the reconstruction error exceeds the $3\sigma$ threshold, the window is classified as an \textbf{ANOMALY}.
+    \end{enumerate}
+
+    \item \textbf{Battery Longevity and Duty-Cycling Mathematics}:
+    \begin{enumerate}
+        \item \textbf{Charge Consumed per 120-Second Cycle}:
+        \begin{align*}
+        t_{\text{sleep}} &= 120.0 - (2.0 + 0.020) = 117.98\,\text{seconds} \\
+        Q_{\text{sample}} &= 2.0\,\text{s} \times 30.0\,\text{mA} = 60.0\,\text{mA}\cdot\text{s} \\
+        Q_{\text{inf}} &= 0.020\,\text{s} \times 50.0\,\text{mA} = 1.0\,\text{mA}\cdot\text{s} \\
+        Q_{\text{sleep}} &= 117.98\,\text{s} \times 0.020\,\text{mA} = 2.3596\,\text{mA}\cdot\text{s} \\
+        Q_{\text{cycle}} &= 60.0 + 1.0 + 2.3596 = \mathbf{63.3596\,\text{mA}\cdot\text{s}}
+        \end{align*}
+
+        \item \textbf{Average Current ($I_{\text{avg}}$)}:
+        \begin{equation*}
+        I_{\text{avg}} = \frac{63.3596\,\text{mA}\cdot\text{s}}{120.0\,\text{s}} \approx \mathbf{0.5280\,\text{mA}}
+        \end{equation*}
+
+        \item \textbf{Battery Autonomy in Days}:
+        \begin{align*}
+        T_{\text{hours}} &= \frac{2{,}000\,\text{mAh}}{0.5280\,\text{mA}} \approx 3{,}787.9\,\text{hours} \\
+        T_{\text{days}} &= \frac{3{,}787.9}{24} \approx \mathbf{157.8\,\text{days}} \quad (\approx \mathbf{5.2\,\text{months}})
+        \end{align*}
+
+        \item \textbf{Continuous Wi-Fi Streaming Comparison}:
+        \begin{equation*}
+        T_{\text{continuous}} = \frac{2{,}000\,\text{mAh}}{150.0\,\text{mA}} \approx \mathbf{13.33\,\text{hours}} \quad (\approx \mathbf{0.56\,\text{days}})
+        \end{equation*}
+        TinyML extends operational lifetime by over $\mathbf{280\times}$!
+    \end{enumerate}
+
+    \item \textbf{Static Memory Allocation vs.\ Heap Fragmentation in Embedded Systems}:
+    Microcontrollers lack virtual memory management units (MMUs) and garbage collectors. Repeatedly calling \code{malloc()} or \code{free()} in a high-speed sensor loop carves the microcontroller's limited internal SRAM ($520\,\text{KB}$) into non-contiguous fragments. 
+    Eventually, a memory allocation fails even when total free RAM appears sufficient, triggering a catastrophic heap allocation panic that crashes the device. 
+    Allocating circular ring buffers and the TFLM Tensor Arena as static global arrays guarantees that all required RAM is reserved at compile time, eliminating heap fragmentation risks and guaranteeing deterministic runtime execution.
+\end{enumerate}

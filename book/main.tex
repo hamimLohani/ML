@@ -220,6 +220,10 @@
     \input{chapters/ch08_s2_serving.tex}
 }{}
 
+\IfFileExists{chapters/ch08_s3_operations.tex}{
+    \input{chapters/ch08_s3_operations.tex}
+}{}
+
 % ==============================================================================
 % PART IV: PRACTICE AND RESEARCH
 % ==============================================================================
@@ -232,12 +236,30 @@
     \chapter{Projects}\label{ch:projects}
 }
 
+\IfFileExists{chapters/ch09_s2_project2_image.tex}{
+    \input{chapters/ch09_s2_project2_image.tex}
+}{}
+
+\IfFileExists{chapters/ch09_s3_project3_edge.tex}{
+    \input{chapters/ch09_s3_project3_edge.tex}
+}{}
+
+\IfFileExists{chapters/ch09_s4_kaggle_portfolio.tex}{
+    \input{chapters/ch09_s4_kaggle_portfolio.tex}
+}{}
+
 % --- CHAPTER 10: Research Skills ---
 \IfFileExists{chapters/ch10_s1_reading_reproducing.tex}{
     \input{chapters/ch10_s1_reading_reproducing.tex}
 }{
     \chapter{Research Skills}\label{ch:research_skills}
 }
+\IfFileExists{chapters/ch10_s2_writing.tex}{
+    \input{chapters/ch10_s2_writing.tex}
+}{}
+\IfFileExists{chapters/ch10_s3_direction.tex}{
+    \input{chapters/ch10_s3_direction.tex}
+}{}
 
 % ------------------------------------------------------------------------------
 % Back Matter & Appendices
@@ -245,9 +267,23 @@
 \backmatter
 \appendix
 
-\chapter{Glossary of Machine Learning Terms}\label{app:glossary}
+\IfFileExists{chapters/appA_glossary.tex}{
+    \input{chapters/appA_glossary.tex}
+}{
+    \chapter{Glossary of Machine Learning Terms}\label{app:glossary}
+}
 
-\chapter{Syntax and Command Cheat Sheets}\label{app:cheatsheets}
+\IfFileExists{chapters/appB_courses_books.tex}{
+    \input{chapters/appB_courses_books.tex}
+}{
+    \chapter{Courses and Books}\label{app:courses_books}
+}
+
+\IfFileExists{chapters/appC_cheat_sheets.tex}{
+    \input{chapters/appC_cheat_sheets.tex}
+}{
+    \chapter{Syntax and Command Cheat Sheets}\label{app:cheatsheets}
+}
 
 \chapter{Answers to Check Yourself Exercises}\label{app:answers}
 

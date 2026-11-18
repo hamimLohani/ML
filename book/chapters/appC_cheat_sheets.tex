@@ -1,0 +1,417 @@
+% FILE: chapters/appC_cheat_sheets.tex
+\chapter{Cheat Sheets}\label{app:cheatsheets}
+
+In production engineering, competitive data science, and academic research, speed and precision are paramount. While conceptual understanding and mathematical derivation form the bedrock of machine learning, day-to-day implementation requires rapid lookup of decision criteria, evaluation formulas, code patterns, and syntax.
+
+When you are debugging a training loop at 2:00~AM or optimizing a quantized model to fit inside an ESP32's internal SRAM, you do not want to reread three chapters to find a specific loss formula or PyTorch idiom. You need an immediate, authoritative desktop reference.
+
+This appendix provides four production-grade cheat sheets:
+\begin{enumerate}
+    \item \textbf{Cheat Sheet 1: Algorithm Selection Matrix}: A visual decision architecture and comparative criteria table to select the right algorithm based on data type, latency, and sample size.
+    \item \textbf{Cheat Sheet 2: Universal Evaluation Metrics}: Mathematical formulas, ideal use cases, and fatal failure modes for classification, regression, and anomaly detection.
+    \item \textbf{Cheat Sheet 3: Production PyTorch Training Pipeline}: A battle-tested, modular template featuring device-agnostic execution, mixed precision, gradient clipping, early stopping, and checkpointing.
+    \item \textbf{Cheat Sheet 4: Essential NumPy and Pandas Syntax}: High-frequency data manipulation commands, broadcasting idioms, groupby aggregations, and sliding window operations.
+\end{enumerate}
+
+\begin{keyidea}[The Desktop Companion Principle]
+A cheat sheet is not a substitute for understanding; it is an external cache for your working memory. Print these pages or keep them bookmarked on a secondary monitor while developing models.
+\end{keyidea}
+
+% ==============================================================================
+% CHEAT SHEET 1: ALGORITHM SELECTION MATRIX
+% ==============================================================================
+\section{Cheat Sheet 1: Algorithm Selection Matrix}\label{sec:cs_algorithms}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.86,
+    decision/.style={diamond, draw=keyideablue, fill=keyideablue!12, thick, align=center, font=\scriptsize\sffamily, aspect=1.8, inner sep=1.5pt},
+    block/.style={rectangle, draw=gray!70, fill=white, rounded corners=1.5mm, thick, align=center, font=\scriptsize\sffamily, minimum height=0.7cm, inner sep=2mm},
+    model/.style={rectangle, draw=analogygreen, fill=analogygreen!15, rounded corners=1.5mm, thick, align=center, font=\scriptsize\bfseries\sffamily, minimum height=0.75cm, inner sep=2.5mm},
+    arrow/.style={-{Stealth[length=2mm]}, thick, draw=gray!80}
+]
+    % Root
+    \node[decision] (root) at (5.5, 9.0) {What is your\\primary data type?};
+
+    % Level 1: Data Type Branches
+    \node[decision] (tab) at (1.5, 7.0) {Task type on\\Tabular Data?};
+    \node[decision] (seq) at (5.5, 7.0) {Time-Series or\\Sensor Stream?};
+    \node[decision] (img) at (9.5, 7.0) {Spatial Vision\\or Raw Audio?};
+
+    \draw[arrow] (root) -| (tab) node[pos=0.25, above, font=\tiny] {Tabular / CSV};
+    \draw[arrow] (root) -- (seq) node[pos=0.4, right, font=\tiny] {Temporal};
+    \draw[arrow] (root) -| (img) node[pos=0.25, above, font=\tiny] {Images / Audio};
+
+    % Level 2: Tabular Branches
+    \node[decision] (tab_task) at (0.0, 5.0) {Explainability\\required?};
+    \node[model] (cluster) at (2.8, 5.0) {K-Means /\\DBSCAN};
+
+    \draw[arrow] (tab) -| (tab_task) node[pos=0.25, above, font=\tiny] {Supervised};
+    \draw[arrow] (tab) -| (cluster) node[pos=0.25, above, font=\tiny] {Unlabeled};
+
+    \node[model] (linear) at (-1.2, 3.2) {Ridge / Lasso /\\Logistic Reg.};
+    \node[model] (trees) at (1.2, 3.2) {LightGBM /\\XGBoost};
+
+    \draw[arrow] (tab_task) -| (linear) node[pos=0.25, above, font=\tiny] {Yes};
+    \draw[arrow] (tab_task) -| (trees) node[pos=0.25, above, font=\tiny] {No (Max Acc)};
+
+    % Level 2: Temporal Branches
+    \node[decision] (seq_goal) at (5.5, 5.0) {Inference\\Target Platform?};
+
+    \draw[arrow] (seq) -- (seq_goal);
+
+    \node[model] (tinyml_seq) at (4.2, 3.2) {1D CNN Autoencoder\\(TFLM / Int8)};
+    \node[model] (cloud_seq) at (6.8, 3.2) {LSTM / GRU /\\Temporal Transformer};
+
+    \draw[arrow] (seq_goal) -| (tinyml_seq) node[pos=0.25, above, font=\tiny] {ESP32 / MCU};
+    \draw[arrow] (seq_goal) -| (cloud_seq) node[pos=0.25, above, font=\tiny] {Server / GPU};
+
+    % Level 2: Vision Branches
+    \node[decision] (img_res) at (9.5, 5.0) {Hardware\\Resource Budget?};
+
+    \draw[arrow] (img) -- (img_res);
+
+    \node[model] (mobile) at (8.2, 3.2) {MobileNetV2 / V3\\(Quantized Int8)};
+    \node[model] (heavy_cv) at (10.8, 3.2) {ResNet / YOLO /\\Vision Transformer};
+
+    \draw[arrow] (img_res) -| (mobile) node[pos=0.25, above, font=\tiny] {$< 2\,\text{MB}$ RAM};
+    \draw[arrow] (img_res) -| (heavy_cv) node[pos=0.25, above, font=\tiny] {Server / Edge GPU};
+\end{tikzpicture}
+\caption{Systematic decision tree for machine learning algorithm selection.}\label{fig:algo_decision_tree}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Comprehensive Engineering Trade-Off Matrix for Machine Learning Algorithms}\label{tab:algo_tradeoffs}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+\textbf{Algorithm Family} & \textbf{Training Speed} & \textbf{Inference Latency} & \textbf{RAM Footprint} & \textbf{Interpretability} & \textbf{Data Needed} & \textbf{Best Suited For} \\ \midrule
+Linear / Ridge / Lasso & Instant ($< 1\,\text{s}$) & Microseconds & $< 1\,\text{KB}$ & High (Weights) & Small ($> 50$) & Baseline, linear features \\
+Logistic Regression & Instant ($< 1\,\text{s}$) & Microseconds & $< 1\,\text{KB}$ & High (Odds Ratios) & Small ($> 50$) & Fast probabilistic binary classification \\
+Decision Tree (CART) & Very Fast & Microseconds & $< 10\,\text{KB}$ & High (If depth $\le 4$) & Moderate & Simple rule-based logic \\
+Random Forest & Moderate & Fast ($< 5\,\text{ms}$) & $100\,\text{KB}$--$10\,\text{MB}$ & Moderate (Feature Imp.) & Moderate & Robust tabular data, no tuning \\
+\textbf{LightGBM / XGBoost} & Fast & Fast ($< 2\,\text{ms}$) & $50\,\text{KB}$--$5\,\text{MB}$ & Moderate (SHAP values) & Moderate--Large & \textbf{Gold standard for tabular datasets} \\
+Linear / RBF SVM & Moderate--Slow & Fast & $10\,\text{KB}$--$1\,\text{MB}$ & Low & Small--Moderate & High-dimensional small samples \\
+K-Means Clustering & Fast & Very Fast & $< 5\,\text{KB}$ & High (Centroids) & Small--Large & Customer segmentation, vector quantization \\
+1D CNN (Autoencoder) & Moderate & Very Fast ($10$--$20\,\text{ms}$) & \textbf{$10$--$50\,\text{KB}$ (Int8)} & Low--Moderate & Moderate & \textbf{On-device MCU sensor anomalies} \\
+2D CNN (MobileNetV2) & Moderate & Fast ($50$--$120\,\text{ms}$) & \textbf{$250\,\text{KB}$--$2\,\text{MB}$} & Low (Grad-CAM) & Large (Transfer) & \textbf{Edge camera vision (ESP32-CAM)} \\
+Transformer / LLM & Very Slow & Moderate--Slow & Large ($> 1\,\text{GB}$) & Low & Massive & NLP, multimodal foundation systems \\ \bottomrule
+\end{tabular}
+\end{table}
+
+% ==============================================================================
+% CHEAT SHEET 2: UNIVERSAL EVALUATION METRICS
+% ==============================================================================
+\section{Cheat Sheet 2: Universal Evaluation Metrics}\label{sec:cs_metrics}
+
+\subsection*{1. Classification Metrics (Discrete Outputs)}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Classification Evaluation Metrics: Mathematical Formulas and Application Guidelines}\label{tab:metrics_classification}
+\begin{tabular}{@{}p{2.8cm}p{4.2cm}p{4.2cm}p{3.2cm}@{}}
+\toprule
+\textbf{Metric Name} & \textbf{Mathematical Formula} & \textbf{When to Use (Best Suited)} & \textbf{Fatal Failure Mode (Avoid When)} \\ \midrule
+\textbf{Accuracy} & 
+$\frac{TP + TN}{TP + TN + FP + FN}$ & 
+Balanced classes with equal cost for false positives and false negatives. & 
+\textbf{Imbalanced datasets}! Predicting $99\%$ majority class yields deceptive $0.99$ accuracy. \\ \addlinespace
+
+\textbf{Precision} (Positive Predictive Value) & 
+$\frac{TP}{TP + FP}$ & 
+When the cost of a \textbf{False Positive} is high (e.g., spam filtering, expensive invasive biopsy). & 
+When missing positive cases (False Negatives) is dangerous or catastrophic. \\ \addlinespace
+
+\textbf{Recall / Sensitivity} (True Positive Rate) & 
+$\frac{TP}{TP + FN}$ & 
+When the cost of a \textbf{False Negative} is high (e.g., disease diagnosis, factory machine failure). & 
+Trivially gamed by predicting positive for every sample (yields $1.0$ recall with zero precision). \\ \addlinespace
+
+\textbf{F1 Score} (Balanced Harmonic Mean) & 
+$2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}$ & 
+Imbalanced binary datasets where both false alarms and missed detections carry consequences. & 
+When true negatives are the primary metric of interest (F1 completely ignores $TN$). \\ \addlinespace
+
+\textbf{Macro-F1 Score} & 
+$\frac{1}{K} \sum_{k=1}^K \text{F1}_k$ & 
+\textbf{Multi-class imbalanced datasets}. Treats rare and frequent classes with equal weight. & 
+When small sample size in rare classes causes high statistical variance. \\ \addlinespace
+
+\textbf{ROC-AUC} & 
+$\int_0^1 \text{TPR}(\text{FPR}^{-1}(t)) \, dt$ & 
+Evaluating ranking quality across all thresholds independent of operational cutoff. & 
+Extreme class imbalance ($< 0.1\%$ positive); ROC curve presents an overly optimistic picture. \\ \addlinespace
+
+\textbf{Log Loss} (Cross-Entropy) & 
+$-\frac{1}{N} \sum_{i=1}^N [y_i \ln(\hat{p}_i) + (1-y_i)\ln(1-\hat{p}_i)]$ & 
+Probabilistic predictions where probability calibration and confidence accuracy matter. & 
+Outlier predictions with $\hat{p} \approx 0$ on true positive samples explode penalty to $\infty$. \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{2. Regression Metrics (Continuous Outputs)}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Regression Evaluation Metrics: Formulas, Units, and Sensitivity Profiles}\label{tab:metrics_regression}
+\begin{tabular}{@{}p{2.8cm}p{4.2cm}p{2.2cm}p{2.8cm}p{2.6cm}@{}}
+\toprule
+\textbf{Metric Name} & \textbf{Mathematical Formula} & \textbf{Error Units} & \textbf{Outlier Sensitivity} & \textbf{Core Interpretation} \\ \midrule
+\textbf{MAE} (Mean Absolute Error) & 
+$\frac{1}{N} \sum_{i=1}^N |y_i - \hat{y}_i|$ & 
+Same as target $y$ & 
+\textbf{Linear / Robust} & 
+Average magnitude of error; intuitive for stakeholders. \\ \addlinespace
+
+\textbf{MSE} (Mean Squared Error) & 
+$\frac{1}{N} \sum_{i=1}^N (y_i - \hat{y}_i)^2$ & 
+Squared target $y^2$ & 
+\textbf{Quadratic / Extreme} & 
+Standard optimization loss; heavily penalizes large blunders. \\ \addlinespace
+
+\textbf{RMSE} (Root Mean Squared Error) & 
+$\sqrt{\frac{1}{N} \sum_{i=1}^N (y_i - \hat{y}_i)^2}$ & 
+Same as target $y$ & 
+\textbf{High} & 
+Standard deviation of residuals; penalizes outliers more than MAE. \\ \addlinespace
+
+\textbf{RMSLE} (Root Mean Squared Log Error) & 
+$\sqrt{\frac{1}{N} \sum_{i=1}^N (\ln(\hat{y}_i+1) - \ln(y_i+1))^2}$ & 
+Unitless ratio & 
+\textbf{Log-scale / Robust} & 
+Measures \textbf{relative percentage error}; penalizes under-predictions. \\ \addlinespace
+
+\textbf{$R^2$} (Coefficient of Determination) & 
+$1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2}$ & 
+Unitless ($\le 1.0$) & 
+\textbf{High} & 
+Proportion of target variance explained by model ($1.0 = \text{perfect}$). \\ \bottomrule
+\end{tabular}
+\end{table}
+
+% ==============================================================================
+% CHEAT SHEET 3: PRODUCTION PYTORCH TRAINING PIPELINE
+% ==============================================================================
+\section{Cheat Sheet 3: Production PyTorch Training Pipeline}\label{sec:cs_pytorch}
+
+Listing~\ref{lst:pytorch_template} provides a robust, production-grade PyTorch training script featuring device-agnostic allocation, automatic mixed precision (AMP), gradient clipping, validation evaluation, learning rate scheduling, and early stopping with atomic model checkpointing.
+
+\begin{lstlisting}[style=pythonstyle, caption={Production-Grade PyTorch Training Pipeline Template.}, label={lst:pytorch_template}]
+import os
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torch.cuda.amp import GradScaler, autocast
+
+def get_compute_device() -> torch.device:
+    # Selects the optimal hardware acceleration backend
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        return torch.device("mps")  # Apple Silicon GPU acceleration
+    return torch.device("cpu")
+
+def train_one_epoch(model, loader, criterion, optimizer, scaler, device, max_norm=1.0):
+    model.train()
+    running_loss = 0.0
+    for inputs, targets in loader:
+        inputs, targets = inputs.to(device, non_blocking=True), targets.to(device, non_blocking=True)
+        optimizer.zero_grad(set_to_none=True)  # Faster than zero_grad()
+
+        # Automatic Mixed Precision (FP16 computation on Tensor Cores)
+        with autocast(enabled=(device.type == "cuda")):
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+
+        scaler.scale(loss).backward()
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_norm)  # Prevent explosion
+        scaler.step(optimizer)
+        scaler.update()
+
+        running_loss += loss.item() * inputs.size(0)
+    return running_loss / len(loader.dataset)
+
+@torch.no_grad()
+def evaluate(model, loader, criterion, device):
+    model.eval()
+    running_loss, correct, total = 0.0, 0, 0
+    for inputs, targets in loader:
+        inputs, targets = inputs.to(device, non_blocking=True), targets.to(device, non_blocking=True)
+        with autocast(enabled=(device.type == "cuda")):
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+
+        running_loss += loss.item() * inputs.size(0)
+        preds = outputs.argmax(dim=1)
+        correct += (preds == targets).sum().item()
+        total += targets.size(0)
+    return running_loss / len(loader.dataset), correct / total
+
+def run_training_pipeline(model, train_loader, val_loader, epochs=50, lr=1e-3, patience=7):
+    device = get_compute_device()
+    model = model.to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
+    scaler = GradScaler(enabled=(device.type == "cuda"))
+
+    best_val_loss = float("inf")
+    patience_counter = 0
+
+    for epoch in range(1, epochs + 1):
+        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, scaler, device)
+        val_loss, val_acc = evaluate(model, val_loader, criterion, device)
+        scheduler.step()
+
+        print(f"Epoch {epoch:02d}/{epochs:02d} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | Val Acc: {val_acc*100:.2f}%")
+
+        # Early Stopping and Atomic Checkpointing
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            patience_counter = 0
+            torch.save({"epoch": epoch, "model_state": model.state_dict(), "val_loss": val_loss}, "best_model.pt")
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"[!] Early stopping triggered at epoch {epoch}. Restoring best checkpoint.")
+                break
+
+    checkpoint = torch.load("best_model.pt")
+    model.load_state_dict(checkpoint["model_state"])
+    return model
+\end{lstlisting}
+
+% ==============================================================================
+% CHEAT SHEET 4: ESSENTIAL NUMPY AND PANDAS SYNTAX
+% ==============================================================================
+\section{Cheat Sheet 4: Essential NumPy and Pandas Syntax}\label{sec:cs_numpy_pandas}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Essential NumPy Operations for Machine Learning and Array Manipulation}\label{tab:cs_numpy}
+\begin{tabular}{@{}p{4.5cm}p{4.5cm}p{5.5cm}@{}}
+\toprule
+\textbf{Operation Category} & \textbf{NumPy Syntax} & \textbf{Description \& Memory Implication} \\ \midrule
+\textbf{Initialization} & 
+\code{np.zeros((N, C), dtype=np.float32)} & Pre-allocates contiguous zero-filled memory block. \\
+& \code{np.arange(start, stop, step)} & Generates evenly spaced values within half-open interval. \\
+& \code{np.linspace(start, stop, num)} & Generates $N$ linearly spaced samples between endpoints. \\ \addlinespace
+
+\textbf{Reshaping \& Axes} & 
+\code{arr.reshape(-1, 1)} & Converts 1D vector of length $N$ into 2D column matrix $(N, 1)$. \\
+& \code{np.squeeze(arr)} & Removes single-dimensional entries from tensor shape. \\
+& \code{np.expand_dims(arr, axis=0)} & Adds a batch dimension at axis 0: $(H, W) \to (1, H, W)$. \\
+& \code{arr.transpose(0, 2, 1)} & Permutes tensor dimensions (e.g., swapping channels and time). \\ \addlinespace
+
+\textbf{Broadcasting \& Math} & 
+\code{(arr - mean) / (std + 1e-8)} & Vectorized Z-score standardization across broadcasting axes. \\
+& \code{A @ B} or \code{np.matmul(A, B)} & True mathematical matrix multiplication ($\mathcal{O}(N^3)$). \\
+& \code{A * B} & Element-wise Hadamard product (requires compatible shapes). \\
+& \code{np.clip(arr, a_min, a_max)} & Bounds numerical values to prevent float overflow / underflow. \\ \addlinespace
+
+\textbf{Reductions \& Logic} & 
+\code{np.mean(arr, axis=0)} & Computes arithmetic mean down columns (collapsing row axis). \\
+& \code{np.argmax(arr, axis=-1)} & Returns index of maximum probability along final class axis. \\
+& \code{np.where(arr > 0.5, 1, 0)} & Vectorized conditional ternary selection operator. \\
+& \code{np.allclose(a, b, atol=1e-5)} & Tests float equality within absolute numerical tolerance. \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Essential Pandas Operations for Feature Engineering and Pipeline Preprocessing}\label{tab:cs_pandas}
+\begin{tabular}{@{}p{4.5cm}p{4.5cm}p{5.5cm}@{}}
+\toprule
+\textbf{Operation Category} & \textbf{Pandas Syntax} & \textbf{Description \& Best Practice} \\ \midrule
+\textbf{Indexing \& Selection} & 
+\code{df.loc[df['temp'] > 60, 'status']} & Label-based indexing and conditional row masking. \\
+& \code{df.iloc[0:10, 0:4]} & Pure integer position-based slicing (rows $0$--$9$, cols $0$--$3$). \\
+& \code{df.query("temp > 60 and rpm < 1800")} & Fast, readable boolean filtering using string expressions. \\ \addlinespace
+
+\textbf{Missing Data Handling} & 
+\code{df.isna().sum()} & Counts missing values per column across DataFrame. \\
+& \code{df['age'].fillna(df['age'].median())} & Imputes missing continuous entries with robust median statistic. \\
+& \code{df.dropna(subset=['target'])} & Removes rows where the critical target variable is missing. \\ \addlinespace
+
+\textbf{Aggregation \& Groupby} & 
+\code{df.groupby('machine_id').agg(...)} & Aggregates statistics per group (e.g., \code{\{'vib': ['mean', 'std']\}}). \\
+& \code{df.groupby('dept')['salary'].transform('mean')} & Calculates group mean and broadcasts back to original DataFrame length. \\
+& \code{pd.pivot_table(df, values=..., index=...)} & Reshapes multidimensional tabular summaries into matrix format. \\ \addlinespace
+
+\textbf{Time Series \& Rolling} & 
+\code{df['vib'].rolling(window=50).mean()} & Computes a 50-sample sliding window rolling moving average. \\
+& \code{df['signal'].shift(1)} & Creates a lag feature ($y_{t-1}$) shifted by one time step. \\
+& \code{df.resample('10s').mean()} & Downsamples continuous time-series telemetry to 10-second means. \\ \addlinespace
+
+\textbf{Serialization \& Storage} & 
+\code{df.to_parquet("data.parquet", index=False)} & Compact, columnar binary storage ($10\times$ faster/smaller than CSV). \\
+& \code{pd.read_parquet("data.parquet")} & Fast zero-copy schema-preserving dataset loading. \\ \bottomrule
+\end{tabular}
+\end{table}
+
+% ==============================================================================
+% IOT & TINYML CHEAT SHEET
+% ==============================================================================
+\section{Cheat Sheet 5: The TinyML Microcontroller Deployment Checklist}\label{sec:cs_tinyml}
+
+\begin{iotbox}[The Embedded Hardware Deployment Formula Checklist]
+Before flashing a quantized machine learning model to a microcontroller (e.g., ESP32, STM32), verify the following hardware constraints:
+\begin{enumerate}
+    \item \textbf{Peak SRAM Verification (Tensor Arena Budget)}:
+    \begin{equation}
+    \text{SRAM}_{\text{total}} \ge \text{Size}(\text{Tensor Arena}) + \text{Heap}_{\text{OS}} + \text{Stack}_{\text{ISR}}
+    \end{equation}
+    For an ESP32, internal SRAM available for the tensor arena must not exceed $\approx 200\,\text{KB}$ without utilizing external PSRAM.
+    \item \textbf{Battery Lifetime Calculation}:
+    Given battery capacity $C_{\text{bat}}$ ($2500\,\text{mAh}$), active duration $t_{\text{active}}$ ($0.02\,\text{s}$ at $120\,\text{mA}$), sleep duration $t_{\text{sleep}}$ ($60\,\text{s}$ at $0.015\,\text{mA}$):
+    \begin{equation}
+    I_{\text{avg}} = \frac{t_{\text{active}} I_{\text{active}} + t_{\text{sleep}} I_{\text{sleep}}}{t_{\text{active}} + t_{\text{sleep}}}, \quad \text{Lifetime (Days)} = \frac{C_{\text{bat}}}{I_{\text{avg}} \times 24}
+    \end{equation}
+    \item \textbf{Quantization Verification}: Confirm that all operators in the TFLite flatbuffer are resolved by \code{tflite::AllOpsResolver} and operate entirely in signed 8-bit integer arithmetic (\code{kTfLiteInt8}).
+\end{enumerate}
+\end{iotbox}
+
+% ==============================================================================
+% CHECK YOURSELF
+% ==============================================================================
+\begin{checkyourself}
+\begin{enumerate}
+    \item \textbf{Metric Decision}: A medical sensor detects epileptic seizures from EEG signals. Seizure events account for $0.2\%$ of all readings. Which two evaluation metrics should the engineering team prioritize, and which common metric must be strictly avoided?
+    \item \textbf{Algorithm Selection}: A manufacturing engineer needs an anomaly detection model running on an unpowered, battery-operated vibration sensor node based on an ESP32 ($240\,\text{MHz}$, $520\,\text{KB}$ RAM). What algorithm family should be chosen according to the decision matrix?
+    \item \textbf{PyTorch Mechanics}: In the production training loop in Listing~\ref{lst:pytorch_template}, why is \code{optimizer.zero_grad(set_to_none=True)} preferred over standard \code{optimizer.zero_grad()}?
+    \item \textbf{NumPy Dimensionality}: If an input image tensor has shape $(224, 224, 3)$, write the exact NumPy command to add a leading batch dimension to format it as a valid model input tensor of shape $(1, 224, 224, 3)$.
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{Medical Sensor Metric Selection}:
+    \begin{itemize}
+        \item \textbf{Prioritize}: \textbf{Recall (Sensitivity)} to guarantee that life-threatening seizures are not missed, and \textbf{Precision} (or \textbf{PR-AUC} / \textbf{F1 Score}) to ensure patients are not overwhelmed by false alarms.
+        \item \textbf{Strictly Avoid}: Standard \textbf{Accuracy}, because a trivial model predicting ``no seizure'' continuously achieves $99.8\%$ accuracy while providing zero clinical value.
+    \end{itemize}
+
+    \item \textbf{Embedded Anomaly Algorithm Selection}:
+    According to the decision matrix in Figure~\ref{fig:algo_decision_tree} and Table~\ref{tab:algo_tradeoffs}, the engineer should select a \textbf{1D Convolutional Autoencoder quantized to Int8} using TensorFlow Lite for Microcontrollers. It fits within the $20\,\text{KB}$ internal SRAM arena, executes in $< 15\,\text{ms}$, and runs autonomously on-device without cloud connectivity.
+
+    \item \textbf{\code{set_to_none=True} Optimization}:
+    Standard \code{zero_grad()} overwrites every gradient tensor memory buffer with floating-point zeros, requiring explicit memory writes. Setting \code{set_to_none=True} deallocates the gradient buffer pointers entirely, allowing memory to be assigned during backpropagation and eliminating unnecessary memory bandwidth writes, yielding a $5\%$ to $10\%$ training speedup.
+
+    \item \textbf{NumPy Batch Expansion}:
+    \begin{lstlisting}[style=pythonstyle]
+batch_tensor = np.expand_dims(img_tensor, axis=0)
+# Or equivalently:
+batch_tensor = img_tensor[np.newaxis, ...]
+    \end{lstlisting}
+\end{enumerate}

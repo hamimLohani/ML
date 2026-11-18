@@ -1,0 +1,419 @@
+% FILE: chapters/ch09_s4_kaggle_portfolio.tex
+\section{Kaggle and Your Portfolio}\label{sec:kaggle_portfolio}
+
+Throughout this book, you have mastered the foundational mathematics of machine learning, engineered robust data preprocessing pipelines, trained classical and deep neural architectures, and built end-to-end industrial applications spanning computer vision, MLOps, and on-device TinyML.
+
+However, an uncomfortable truth exists in the global engineering marketplace: \textbf{unseen code delivers zero career utility}. If your implementations remain trapped in fragmented Jupyter notebooks titled \code{Untitled3.ipynb} on your personal laptop, you are functionally invisible to hiring managers, research laboratories, and prospective clients.
+
+Machine learning engineering is fundamentally an empirical, proof-of-work discipline. Advanced degrees and course certificates may open doors, but what secures job offers, research grants, and consulting contracts is \textbf{public, reproducible evidence of problem-solving capability}. 
+
+In this final section of Chapter~\ref{ch:projects}, we study how to package your engineering skills into high-impact public assets: mastering the three classic Kaggle benchmark milestones, architecting production-grade GitHub repository READMEs, and transforming raw code into quantitative resume bullets using Google's XYZ formula.
+
+% ==============================================================================
+% 1. THE PROOF-OF-WORK IMPERATIVE & ANALOGY
+% ==============================================================================
+\subsection{The Proof-of-Work Imperative}\label{subsec:proof_of_work}
+
+\begin{analogy}[The Master Carpenter's Exhibition Table]
+Imagine two carpenters seeking a contract to build custom architectural furniture for a luxury hotel.
+
+\textbf{Carpenter A} arrives with an impressive binder full of course certificates. They speak eloquently about timber grain densities, Japanese chiseling techniques, and dovetail angles. However, when asked to show examples of their work, they explain that their projects are locked in their workshop and cannot be inspected.
+
+\textbf{Carpenter B} speaks fewer words. Instead, they invite the client into their showroom. In the center rests a walnut dining table. The joints are cut with sub-millimeter precision, the surface is finished with hand-rubbed tung oil, and on the table sits an open portfolio containing structural blueprints, shear-load stress calculations, and a video showing the timber being planed and assembled.
+
+Which carpenter wins the contract?
+
+Your GitHub repositories and Kaggle competitive rankings are your walnut dining table! A hiring manager or tech lead does not want to read about your passion for artificial intelligence; they want to open your repository, inspect your clean code architecture, run \code{docker run}, and watch your model produce predictions in seconds.
+\end{analogy}
+
+\begin{keyidea}[The Proof-of-Work Principle]
+In machine learning, your portfolio is your true curriculum vitae. A single well-documented, reproducible end-to-end project hosted publicly on GitHub---complete with unit tests, CI/CD validation, and an interactive demo---carries ten times more weight than ten passive course certificates!
+\end{keyidea}
+
+% ==============================================================================
+% 2. THE THREE KAGGLE BENCHMARKS
+% ==============================================================================
+\subsection{The 3-Dataset Kaggle Benchmark Progression}\label{subsec:kaggle_progression}
+
+\textbf{Kaggle} (founded in 2010 by Anthony Goldbloom and acquired by Google in 2017) is the global proving ground for data scientists. While commercial competitions often feature cash prizes exceeding $\$100{,}000$, Kaggle's permanent \textbf{Getting Started} competitions offer the ideal arena for building foundational competence.
+
+Every aspiring machine learning engineer should complete and publish documented solutions to three milestone benchmarks:
+
+\paragraph{1. Milestone 1: Titanic: Machine Learning from Disaster (Binary Classification)}
+The Titanic competition serves as the global ``Hello World'' of tabular data science. The challenge is predicting whether a passenger survived ($y \in \{0, 1\}$) based on ticket class, age, gender, sibling counts, and fare.
+\begin{itemize}
+    \item \textbf{Core Skills Mastered}: Handling missing data (imputing ages using title-grouped medians), encoding categorical variables, and detecting feature interactions.
+    \item \textbf{Feature Engineering Breakthroughs}: Extracting social status titles from passenger names (\code{Mr.}, \code{Mrs.}, \code{Master}, \code{Dr.}), extracting cabin deck letters (\code{C}, \code{D}, \code{E}), and creating family size metrics:
+    \begin{equation}
+    \text{FamilySize} = \text{SibSp} + \text{Parch} + 1
+    \end{equation}
+    \item \textbf{Target Accuracy}: $> 80\%$ on the public test leaderboard.
+\end{itemize}
+
+\paragraph{2. Milestone 2: House Prices: Advanced Regression Techniques (Multi-Feature Regression)}
+With 79 explanatory variables describing residential homes in Ames, Iowa, this competition tests your ability to handle high-dimensional, messy real estate features.
+\begin{itemize}
+    \item \textbf{Core Skills Mastered}: Correcting target skewness via logarithmic transformations ($y = \ln(\text{SalePrice})$), target encoding high-cardinality neighborhood strings, and handling multicollinearity.
+    \item \textbf{Advanced Modeling}: Ensembling gradient-boosted decision trees (XGBoost, LightGBM, and CatBoost) with regularized linear models (Ridge and Lasso).
+    \item \textbf{Evaluation Metric}: Root Mean Squared Logarithmic Error (RMSLE). Target RMSLE: $< 0.120$ (top $10\%$ rank).
+\end{itemize}
+
+\paragraph{3. Milestone 3: Digit Recognizer (Computer Vision / Spatial Tensors)}
+Classifying $28 \times 28$ grayscale images of handwritten digits ($0$ through $9$) from the classic MNIST dataset.
+\begin{itemize}
+    \item \textbf{Core Skills Mastered}: Reshaping 1D tabular pixel arrays into 2D spatial image tensors ($28 \times 28 \times 1$), implementing convolutional layers, max pooling, batch normalization, and synthetic data augmentation (random rotations and zooms).
+    \item \textbf{Target Accuracy}: $> 99.4\%$ test accuracy using a custom CNN or transfer learning backbone.
+\end{itemize}
+
+% ==============================================================================
+% 3. COMPETITION EVALUATION METRICS
+% ==============================================================================
+\subsection{Evaluation Metrics in Competitions: Log Loss and RMSLE}\label{subsec:competition_metrics}
+
+Understanding how competitions score models mathematically is essential. Two of the most prevalent competitive metrics are \textbf{Logarithmic Loss} and \textbf{Root Mean Squared Logarithmic Error}.
+
+\paragraph{1. Logarithmic Loss (Cross-Entropy)}
+Used in probabilistic classification competitions, \textbf{Log Loss} penalizes not only incorrect predictions, but overconfident errors:
+\begin{equation}
+\text{LogLoss} = -\frac{1}{N} \sum_{i=1}^{N} \sum_{k=1}^{K} y_{i,k} \ln(\hat{p}_{i,k})\label{eq:log_loss}
+\end{equation}
+If an engineer predicts $\hat{p} = 0.99$ for Class 1, but the ground truth is Class 0, the error penalty $-\ln(1 - 0.99) = -\ln(0.01) \approx 4.605$ severely damages the model's leaderboard ranking! Calibrating prediction probabilities via Platt scaling or isotonic regression is mandatory.
+
+\paragraph{2. Root Mean Squared Logarithmic Error (RMSLE)}
+Used in regression tasks where target values span several orders of magnitude (such as housing prices ranging from $\$50{,}000$ to $\$5{,}000{,}000$):
+\begin{equation}
+\text{RMSLE} = \sqrt{\frac{1}{N} \sum_{i=1}^{N} \left( \ln(\hat{y}_i + 1) - \ln(y_i + 1) \right)^2}\label{eq:rmsle}
+\end{equation}
+where $\hat{y}_i$ is the predicted value, $y_i$ is the true value, and the $+1$ term prevents taking the logarithm of zero.
+
+\paragraph{Why RMSLE Over Standard RMSE?}
+Standard Root Mean Squared Error (RMSE) measures absolute differences in dollars ($|\hat{y} - y|$). Under RMSE, an error of $\$50{,}000$ on a $\$5{,}000{,}000$ estate ($1\%$ error) is penalized with the exact same weight as an error of $\$50{,}000$ on a $\$60{,}000$ starter home ($83\%$ error!).
+
+\textbf{RMSLE measures relative percentage error rather than absolute scale}:
+\begin{equation}
+\ln(\hat{y} + 1) - \ln(y + 1) = \ln\left( \frac{\hat{y} + 1}{y + 1} \right) \approx \ln\left( \frac{\hat{y}}{y} \right)
+\end{equation}
+Consequently, predicting $\$110{,}000$ for a $\$100{,}000$ home ($+10\%$ error) produces approximately the exact same RMSLE penalty as predicting $\$1{,}100{,}000$ for a $\$1{,}000{,}000$ estate ($+10\%$ error).
+
+% ==============================================================================
+% 4. WORKED HAND CALCULATION: RMSLE
+% ==============================================================================
+\subsection{Worked Hand Calculation: Step-by-Step RMSLE Scoring}\label{subsec:rmsle_calculation}
+
+\begin{example}[Hand Calculation: Computing RMSLE for Real Estate Predictions]
+Let us calculate the exact RMSLE score for a miniature validation set of $N = 3$ residential properties.
+
+\paragraph{Given Data:}
+\begin{itemize}
+    \item Property 1: True Price $y_1 = \$200{,}000$, Predicted Price $\hat{y}_1 = \$180{,}000$ (Under-prediction)
+    \item Property 2: True Price $y_2 = \$350{,}000$, Predicted Price $\hat{y}_2 = \$400{,}000$ (Over-prediction)
+    \item Property 3: True Price $y_3 = \$150{,}000$, Predicted Price $\hat{y}_3 = \$140{,}000$ (Under-prediction)
+\end{itemize}
+
+\paragraph{Step 1: Compute Natural Logarithms of $(y_i + 1)$ and $(\hat{y}_i + 1)$}
+\begin{align*}
+\ln(y_1 + 1) &= \ln(200{,}001) \approx \mathbf{12.20608}, & \ln(\hat{y}_1 + 1) &= \ln(180{,}001) \approx \mathbf{12.10072} \\
+\ln(y_2 + 1) &= \ln(350{,}001) \approx \mathbf{12.76569}, & \ln(\hat{y}_2 + 1) &= \ln(400{,}001) \approx \mathbf{12.89922} \\
+\ln(y_3 + 1) &= \ln(150{,}001) \approx \mathbf{11.91840}, & \ln(\hat{y}_3 + 1) &= \ln(140{,}001) \approx \mathbf{11.84940}
+\end{align*}
+
+\paragraph{Step 2: Compute Logarithmic Differences}
+\begin{align*}
+\Delta_1 &= \ln(\hat{y}_1 + 1) - \ln(y_1 + 1) = 12.10072 - 12.20608 = \mathbf{-0.10536} \\
+\Delta_2 &= \ln(\hat{y}_2 + 1) - \ln(y_2 + 1) = 12.89922 - 12.76569 = \mathbf{+0.13353} \\
+\Delta_3 &= \ln(\hat{y}_3 + 1) - \ln(y_3 + 1) = 11.84940 - 11.91840 = \mathbf{-0.06899}
+\end{align*}
+
+\paragraph{Step 3: Square Each Logarithmic Difference}
+\begin{align*}
+\Delta_1^2 &= (-0.10536)^2 \approx \mathbf{0.011101} \\
+\Delta_2^2 &= (+0.13353)^2 \approx \mathbf{0.017831} \\
+\Delta_3^2 &= (-0.06899)^2 \approx \mathbf{0.004760}
+\end{align*}
+
+\paragraph{Step 4: Compute Mean Squared Logarithmic Error (MSLE)}
+\begin{align*}
+\text{MSLE} &= \frac{1}{N} \sum_{i=1}^3 \Delta_i^2 = \frac{0.011101 + 0.017831 + 0.004760}{3} \\
+&= \frac{0.033692}{3} \approx \mathbf{0.011231}
+\end{align*}
+
+\paragraph{Step 5: Take the Square Root to Obtain RMSLE}
+\begin{equation*}
+\text{RMSLE} = \sqrt{\text{MSLE}} = \sqrt{0.011231} \approx \mathbf{0.10597}
+\end{equation*}
+\textbf{Interpretation}: The model exhibits an average relative prediction error of approximately $10.6\%$ across the evaluation properties.
+\end{example}
+
+% ==============================================================================
+% 5. ANATOMY OF A PRODUCTION GITHUB REPOSITORY
+% ==============================================================================
+\subsection{Anatomy of a Production-Grade GitHub Repository and README}\label{subsec:github_readme}
+
+When a technical recruiter or lead data scientist clicks your GitHub link, they form an impression within thirty seconds. If your repository consists of a single notebook named \code{model_final_v2.ipynb} with no explanatory text, they will close the tab immediately.
+
+A production-grade machine learning repository adheres to standard open-source software engineering conventions:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.90,
+    folder/.style={rectangle, draw=keyideablue, fill=keyideablue!12, rounded corners=1.5mm, thick, minimum width=3.4cm, minimum height=0.65cm, align=left, font=\scriptsize\ttfamily},
+    file/.style={rectangle, draw=gray!70, fill=white, rounded corners=1.5mm, thick, minimum width=3.4cm, minimum height=0.65cm, align=left, font=\scriptsize\ttfamily}
+]
+    % Root Directory
+    \node[folder, font=\scriptsize\ttfamily\bfseries] (root) at (0, 3.6) {ml-project-root/};
+    
+    % Core Folders
+    \node[folder] (src) at (2.0, 2.7) {src/ (Modular Code)};
+    \node[folder] (tests) at (2.0, 1.9) {tests/ (pytest Suites)};
+    \node[folder] (docker) at (2.0, 1.1) {docker/ (Dockerfile)};
+    \node[folder] (ci) at (2.0, 0.3) {.github/workflows/};
+    
+    % Core Files
+    \node[file] (readme) at (6.2, 2.7) {README.md (Visual Tour)};
+    \node[file] (req) at (6.2, 1.9) {requirements.txt};
+    \node[file] (dvc) at (6.2, 1.1) {dvc.yaml (Data Pipeline)};
+    \node[file] (license) at (6.2, 0.3) {LICENSE (MIT / Apache)};
+
+    \draw[thick, draw=gray!60] (root.south west) ++(0.3, 0) |- (src.west);
+    \draw[thick, draw=gray!60] (root.south west) ++(0.3, 0) |- (tests.west);
+    \draw[thick, draw=gray!60] (root.south west) ++(0.3, 0) |- (docker.west);
+    \draw[thick, draw=gray!60] (root.south west) ++(0.3, 0) |- (ci.west);
+
+    \draw[thick, draw=gray!60] (root.south west) ++(0.3, 0) |- (readme.west);
+    \draw[thick, draw=gray!60] (root.south west) ++(0.3, 0) |- (req.west);
+    \draw[thick, draw=gray!60] (root.south west) ++(0.3, 0) |- (dvc.west);
+    \draw[thick, draw=gray!60] (root.south west) ++(0.3, 0) |- (license.west);
+\end{tikzpicture}
+\caption{Standard production machine learning repository directory layout.}\label{fig:repo_layout}
+\end{figure}
+
+\paragraph{The Seven Indispensable Elements of a Portfolio README}
+Listing~\ref{lst:readme_template} provides a battle-tested Markdown template for your project repositories.
+
+\begin{lstlisting}[style=pythonstyle, caption={Production Markdown README.md Template for ML Repositories.}, label={lst:readme_template}]
+# Project Title: Real-Time Edge Condition Monitoring on ESP32
+
+[![CI Pipeline](https://github.com/username/project/actions/workflows/ci.yml/badge.svg)](actions)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](python)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+An end-to-end TinyML anomaly detection pipeline for industrial induction motors.
+Processes 6-axis vibration telemetry on an ESP32 using an 8-bit quantized 1D CNN Autoencoder.
+
+---
+
+## 1. System Architecture
+![Architecture Diagram](docs/system_architecture.png)
+- **Sensor**: MPU-6050 6-axis IMU sampled at 50 Hz over I2C.
+- **Edge Model**: 1D Convolutional Autoencoder (18.4 KB Int8 TFLite).
+- **Latency & Power**: 14 ms execution at 240 MHz; 83 days battery life on 2500 mAh cell.
+
+## 2. Key Benchmark Results
+| Model Variant | ROC-AUC | False Alarm Rate | Model Size | Inference Latency |
+| :--- | :--- | :--- | :--- | :--- |
+| Baseline Thresholding | 0.812 | 6.4% | 0.5 KB | 0.2 ms |
+| Float32 Autoencoder | 0.989 | 0.8% | 74.2 KB | 38 ms |
+| **Quantized Int8 (Ours)** | **0.985** | **0.9%** | **18.4 KB** | **14 ms** |
+
+## 3. Quickstart & Installation
+```bash
+# 1. Clone repository
+git clone https://github.com/username/tinyml-vibration-monitor.git
+cd tinyml-vibration-monitor
+
+# 2. Set up virtual environment
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 3. Train model and generate Int8 TFLite artifact
+python src/train_autoencoder.py --epochs 20 --quantize int8
+
+# 4. Run automated test suite
+pytest tests/
+```
+
+## 4. Hardware Deployment (ESP32)
+1. Open `firmware/esp32_anomaly_detector.ino` in the Arduino IDE or PlatformIO.
+2. Ensure the generated `model_data.h` is placed in the firmware directory.
+3. Flash the binary to the ESP32 via USB at 115200 baud.
+\end{lstlisting}
+
+% ==============================================================================
+% 6. TRANSLATING CODE INTO CAREER CAPITAL: THE XYZ FORMULA
+% ==============================================================================
+\subsection{Translating Code into Career Capital: The Google XYZ Formula}\label{subsec:resume_portfolio}
+
+Once your project is trained, evaluated, and published on GitHub, how do you present it on your resume and LinkedIn profile?
+
+Most applicants write passive, vague bullet points that describe tasks rather than outcomes:
+\begin{itemize}
+    \item \emph{``Trained machine learning models on Kaggle.''}
+    \item \emph{``Worked with ESP32 microcontrollers and sensors.''}
+    \item \emph{``Cleaned customer dataset using Pandas.''}
+\end{itemize}
+These bullet points communicate zero engineering competence or business impact.
+
+To stand out, we adopt \textbf{Google's XYZ Formula} for technical resumes:
+\begin{center}
+\Large\textbf{``Accomplished [X], as measured by [Y], by doing [Z].''}
+\end{center}
+\begin{itemize}
+    \item \textbf{X (The Accomplishment)}: The specific engineering objective achieved.
+    \item \textbf{Y (The Measurable Metric)}: The quantitative validation metric, speedup factor, accuracy improvement, or cost reduction.
+    \item \textbf{Z (The Action \& Technique)}: The concrete algorithms, tools, frameworks, and architectures utilized.
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Transforming Weak Resume Bullets into High-Impact Engineering Statements.}\label{tab:xyz_formula}
+\begin{tabular}{@{}p{6.5cm}p{8.5cm}@{}}
+\toprule
+\textbf{Weak Task-Based Bullet (Avoid)} & \textbf{Quantitative XYZ Engineering Bullet (Adopt)} \\ \midrule
+Built an image classifier for plant diseases on Kaggle. & 
+\textbf{Engineered an edge plant disease diagnostic system} achieving a \textbf{0.96 Macro-F1 score} across 4 classes by fine-tuning MobileNetV2 with two-phase transfer learning and deploying an 8-bit quantized TFLite model on an ESP32-CAM. \\ \addlinespace
+
+Predicted housing prices using linear regression. & 
+\textbf{Constructed a stacked ensemble regression pipeline} (XGBoost, LightGBM, Ridge) achieving \textbf{top 4\% rank (RMSLE: 0.114)} in the Kaggle House Prices competition by developing Box-Cox transformations and out-of-fold target encoding. \\ \addlinespace
+
+Connected an accelerometer to an ESP32 for vibration. & 
+\textbf{Architected an autonomous TinyML vibration anomaly detector} that slashed wireless battery consumption by \textbf{98.4\% (extending battery lifetime from 14 hours to 83 days)} by deploying an Int8 1D Convolutional Autoencoder ($18.4\,\text{KB}$ RAM) executing in $14\,\text{ms}$. \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{The Four-Project Portfolio Strategy}
+A complete, world-class machine learning portfolio does not require 20 unfinished projects. Instead, it requires \textbf{four deeply engineered flagship projects}, each demonstrating a specific pillar of modern AI engineering:
+\begin{enumerate}
+    \item \textbf{Project 1: The Tabular \& Business ML Asset}: Demonstrates Exploratory Data Analysis, missing value handling, leakage-free cross-validation, and business ROI quantification (e.g., customer churn, credit default, or manufacturing predictive maintenance).
+    \item \textbf{Project 2: The Deep Learning \& Vision/NLP Asset}: Demonstrates deep representation learning, data augmentation, transfer learning, and fine-tuning with PyTorch or TensorFlow.
+    \item \textbf{Project 3: The Production MLOps \& Serving Asset}: Demonstrates asynchronous FastAPI endpoints, Docker containerization, CI/CD automated validation gates, and cloud deployment with drift monitoring.
+    \item \textbf{Project 4: The Edge / TinyML Hardware Asset}: Demonstrates resource-constrained embedded intelligence on physical microcontrollers (ESP32, STM32, or Raspberry Pi), feature extraction, and integer quantization.
+\end{enumerate}
+
+% ==============================================================================
+% 7. IOT & TINYML CONNECTION
+% ==============================================================================
+\begin{iotbox}[The TinyML Advantage: Physical Proof of Competence]
+Why do embedded and TinyML projects stand out like gold in a sea of generic machine learning resumes?
+
+Over $95\%$ of applicants submitting machine learning resumes present identical projects: the Titanic passenger survival model, the Iris flower classification script, or an MNIST digit classifier run inside a Jupyter notebook. Recruiters have reviewed these exact notebooks thousands of times; they demonstrate nothing beyond the ability to copy-paste an online tutorial.
+
+When you present a \textbf{TinyML project}, you demonstrate multi-disciplinary systems engineering maturity:
+\begin{itemize}
+    \item You demonstrate that you understand \textbf{hardware constraints}: memory layouts, SRAM vs.\ Flash, register-level I2C protocols, and CPU clock frequencies.
+    \item You demonstrate that you understand \textbf{model compression}: integer affine quantization, pruning, and low-latency fixed-point arithmetic.
+    \item You provide \textbf{irrefutable physical evidence}: including a 15-second video in your GitHub README showing a physical breadboard, an ESP32, and an LED toggling instantly when an anomaly is introduced proves that your model works in the physical world!
+\end{itemize}
+\end{iotbox}
+
+% ==============================================================================
+% 8. COMMON MISTAKES AND PORTFOLIO TRAPS
+% ==============================================================================
+\subsection{Common Mistakes and Portfolio Traps}\label{subsec:p4_pitfalls}
+
+\begin{warning}[Common Portfolio and Repository Traps]
+\begin{itemize}
+    \item \textbf{The Tutorial Notebook Trap}:
+    Publishing raw, unedited Jupyter notebooks containing generic tutorial comments (\code{# Import libraries}, \code{# Train model}). Rewrite all logic into modular Python scripts (\code{.py}) with standard functions and classes.
+    \item \textbf{Committing Datasets and Virtual Environments to Git}:
+    Pushing a $500\,\text{MB}$ CSV dataset or an entire \code{venv/} directory to your public GitHub repository. This clutters version control history and flags you as an amateur. Always include a comprehensive \code{.gitignore} file ignoring \code{*.csv}, \code{*.parquet}, \code{*.h5}, \code{venv/}, and \code{__pycache__/}. Use DVC or download scripts for data assets.
+    \item \textbf{Accidentally Exposing API Keys and Secrets}:
+    Hardcoding private API keys (AWS credentials, Kaggle API keys, database passwords) into public source files. Automated bots scrape GitHub constantly for exposed credentials. Always load sensitive parameters from environment variables via \code{python-dotenv}.
+    \item \textbf{Unpinned Dependencies in \code{requirements.txt}}:
+    Writing bare package names (\code{tensorflow}, \code{pandas}) without pinning versions. Two years later, breaking API updates will cause your project to crash when a recruiter attempts to run it. Always pin exact versions: \code{tensorflow==2.15.0}, \code{scikit-learn==1.4.0}.
+\end{itemize}
+\end{warning}
+
+% ==============================================================================
+% 9. KEY TAKEAWAYS
+% ==============================================================================
+\begin{takeaways}
+\begin{itemize}
+    \item \textbf{Proof-of-Work Economy}: Public, reproducible code assets carry significantly more career impact than course completion certificates.
+    \item \textbf{Three Kaggle Benchmarks}: Completing Titanic (tabular classification), House Prices (tabular regression), and Digit Recognizer (computer vision) establishes foundational competitive competence.
+    \item \textbf{RMSLE Property}: Root Mean Squared Logarithmic Error measures relative percentage error, preventing high-magnitude outliers from skewing evaluation metrics.
+    \item \textbf{Professional README}: A world-class repository must feature a visual architecture diagram, clear installation commands, reproducible benchmark tables, and pinned requirements.
+    \item \textbf{Google XYZ Formula}: Transform passive resume bullets into quantifiable achievements: \emph{``Accomplished [X], as measured by [Y], by doing [Z].''}
+    \item \textbf{The 4-Project Portfolio}: Build four flagship assets covering Tabular ML, Computer Vision/NLP, Cloud MLOps, and Embedded TinyML to showcase complete full-stack machine learning competence.
+\end{itemize}
+\end{takeaways}
+
+% ==============================================================================
+% 10. CHECK YOURSELF
+% ==============================================================================
+\begin{checkyourself}
+\begin{enumerate}
+    \item \textbf{Metric Conceptualization}: In a real estate price prediction challenge, why is Root Mean Squared Logarithmic Error (RMSLE) preferred over standard Root Mean Squared Error (RMSE)? Give a concrete numeric scenario illustrating the difference.
+    \item \textbf{RMSLE Calculation}: A validation set contains $N = 2$ properties:
+    \begin{itemize}
+        \item Property A: True Price $y_A = \$100{,}000$, Predicted Price $\hat{y}_A = \$110{,}000$.
+        \item Property B: True Price $y_B = \$500{,}000$, Predicted Price $\hat{y}_B = \$450{,}000$.
+    \end{itemize}
+    \begin{enumerate}
+        \item Calculate $\ln(y + 1)$ and $\ln(\hat{y} + 1)$ for both properties.
+        \item Compute the squared logarithmic differences.
+        \item Calculate the final RMSLE score.
+        \item Compare the percentage errors of both properties.
+    \end{enumerate}
+    \item \textbf{Resume Transformation}: Transform the following weak resume bullet into a high-impact engineering statement adhering to the Google XYZ formula: \emph{``Trained an image classifier to detect plant leaf disease using deep learning.''}
+    \item \textbf{Repository Architecture}: Name four specific file or directory types that must be excluded from Git tracking via a \code{.gitignore} file in a professional machine learning project.
+\end{enumerate}
+\end{checkyourself}
+
+% ==============================================================================
+% 11. ANSWERS
+% ==============================================================================
+\subsection*{Answers}
+
+\begin{enumerate}
+    \item \textbf{RMSLE vs.\ RMSE in Real Estate Modeling}:
+    Standard RMSE calculates absolute dollar differences $(y - \hat{y})^2$. Under RMSE, an error of $\$50{,}000$ on a $\$5{,}000{,}000$ mansion ($1\%$ relative error) produces a squared penalty of $(\$50{,}000)^2 = 2.5 \times 10^9$. An error of $\$20{,}000$ on a $\$100{,}000$ home ($20\%$ relative error) produces a squared penalty of $(\$20{,}000)^2 = 4.0 \times 10^8$. RMSE penalizes the mansion error more than $6\times$ higher, even though the model was $99\%$ accurate on the mansion and made a severe $20\%$ blunder on the smaller home.
+    
+    RMSLE transforms prices to logarithms ($\ln(y + 1)$), measuring relative percentage errors ($\ln(\hat{y}/y)$). Under RMSLE, a $10\%$ error on a $\$100\text{k}$ home produces the exact same penalty as a $10\%$ error on a $\$5\text{M}$ mansion, ensuring balanced optimization across the entire price spectrum.
+
+    \item \textbf{Step-by-Step RMSLE Calculation}:
+    \begin{enumerate}
+        \item \textbf{Natural Logarithms}:
+        \begin{itemize}
+            \item Property A:
+            \begin{align*}
+            \ln(y_A + 1) &= \ln(100{,}001) \approx \mathbf{11.51294} \\
+            \ln(\hat{y}_A + 1) &= \ln(110{,}001) \approx \mathbf{11.60824}
+            \end{align*}
+            \item Property B:
+            \begin{align*}
+            \ln(y_B + 1) &= \ln(500{,}001) \approx \mathbf{13.12237} \\
+            \ln(\hat{y}_B + 1) &= \ln(450{,}001) \approx \mathbf{13.01701}
+            \end{align*}
+        \end{itemize}
+
+        \item \textbf{Squared Logarithmic Differences}:
+        \begin{itemize}
+            \item Property A: $\Delta_A = 11.60824 - 11.51294 = +0.09530 \implies \Delta_A^2 = (0.09530)^2 \approx \mathbf{0.009082}$
+            \item Property B: $\Delta_B = 13.01701 - 13.12237 = -0.10536 \implies \Delta_B^2 = (-0.10536)^2 \approx \mathbf{0.011101}$
+        \end{itemize}
+
+        \item \textbf{Final RMSLE Score}:
+        \begin{align*}
+        \text{MSLE} &= \frac{0.009082 + 0.011101}{2} = \frac{0.020183}{2} \approx 0.0100915 \\
+        \text{RMSLE} &= \sqrt{0.0100915} \approx \mathbf{0.10046}
+        \end{align*}
+
+        \item \textbf{Relative Error Comparison}:
+        Property A was over-predicted by $+10.0\%$ ($\$110\text{k} / \$100\text{k}$). Property B was under-predicted by $-10.0\%$ ($\$450\text{k} / \$500\text{k}$). Both individual squared log errors are almost identical ($\approx 0.010$), proving that RMSLE penalizes relative proportional errors equally regardless of absolute price scale.
+    \end{enumerate}
+
+    \item \textbf{XYZ Formula Resume Transformation}:
+    \textbf{Transformed Bullet}:
+    \emph{``Architected an edge plant disease diagnostic system achieving a 0.96 Macro-F1 score across four tomato foliar pathogens by executing a two-phase transfer learning pipeline on MobileNetV2, compressing weights into an 8-bit quantized TFLite model running in 110 ms on an ESP32-CAM microcontroller.''}
+
+    \item \textbf{Excluded File Types in \code{.gitignore}}:
+    \begin{enumerate}
+        \item \textbf{Large Datasets and Serialized Weights}: Raw CSV, Parquet, or heavy \code{.h5}/\code{.pt} files ($> 100\,\text{MB}$) that bloat Git repositories (use DVC instead).
+        \item \textbf{Virtual Environment Folders}: Directories such as \code{venv/}, \code{.env/}, or \code{env/} containing machine-specific binary interpreters.
+        \item \textbf{Secrets and Private Configurations}: Files containing API keys, database credentials, or private access tokens (\code{.env}, \code{secrets.json}).
+        \item \textbf{Bytecode and Build Caches}: Python compiled bytecode folders (\code{__pycache__/}, \code{*.pyc}) and local operating system metadata files (\code{.DS_Store}, \code{Thumbs.db}).
+    \end{enumerate}
+\end{enumerate}
