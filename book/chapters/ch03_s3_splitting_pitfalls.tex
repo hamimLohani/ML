@@ -17,10 +17,10 @@ In this section, we study the science of data partitioning and examine the subtl
 \centering
 \begin{tikzpicture}[
     scale=0.92,
-    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
-    train_box/.style={rectangle, draw=keyideablue!90, fill=keyideablue!20, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
-    val_box/.style={rectangle, draw=analogygreen!90, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
-    test_box/.style={rectangle, draw=warningred!90, fill=warningred!20, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily},
+    train_box/.style={rectangle, draw=keyideablue!90, fill=keyideablue!20, thick, rounded corners=2mm, minimum height=1.0cm, align=center, font=\small\sffamily},
+    val_box/.style={rectangle, draw=analogygreen!90, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=1.0cm, align=center, font=\small\sffamily},
+    test_box/.style={rectangle, draw=warningred!90, fill=warningred!20, thick, rounded corners=2mm, minimum height=1.0cm, align=center, font=\small\sffamily},
     arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
 ]
     % Overall Dataset
@@ -105,7 +105,7 @@ To maximize data utility and obtain robust performance estimates, we employ **$k
 \centering
 \begin{tikzpicture}[
     scale=0.9,
-    fold/.style={rectangle, draw=gray!70, thick, minimum height=0.7cm, minimum width=1.7cm, text centered, font=\scriptsize\sffamily},
+    fold/.style={rectangle, draw=gray!70, thick, minimum height=0.7cm, minimum width=1.7cm, align=center, font=\scriptsize\sffamily},
     train_fill/.style={fill=keyideablue!25},
     val_fill/.style={fill=analogygreen!40}
 ]
@@ -237,7 +237,7 @@ When you apply a random shuffle to temporal data, two forms of leakage occur sim
 \centering
 \begin{tikzpicture}[
     scale=0.88,
-    bar/.style={rectangle, draw=gray!70, thick, minimum height=0.65cm, text centered, font=\scriptsize\sffamily},
+    bar/.style={rectangle, draw=gray!70, thick, minimum height=0.65cm, align=center, font=\scriptsize\sffamily},
     train_fill/.style={fill=keyideablue!25},
     val_fill/.style={fill=analogygreen!40},
     test_fill/.style={fill=warningred!30},
@@ -302,8 +302,8 @@ Data leakage is rarely obvious; it enters pipelines through subtle engineering e
 \centering
 \begin{tikzpicture}[
     scale=0.9,
-    leak_box/.style={rectangle, draw=warningred!80, fill=warningred!10, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
-    safe_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!10, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily}
+    leak_box/.style={rectangle, draw=warningred!80, fill=warningred!10, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily},
+    safe_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!10, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily}
 ]
     % Bad side
     \node[leak_box, minimum width=6.0cm] (b1) at (-3.4, 1.2) {\textbf{FLAWED: Global Preprocessing}\\Fit scaler/imputer on ALL data $\to$ leak $\mu, \sigma$};
@@ -797,7 +797,7 @@ Test your understanding of data partitioning, leakage prevention, and class imba
         \frac{48}{64} = 0.75 \quad (\mathbf{75\% \text{ overlap}})
         \end{equation*}
 
-        \item \textbf{Leakage Mechanism & Correction}:
+        \item \textbf{Leakage Mechanism \& Correction}:
         When windowed feature vectors are shuffled randomly, window $k$ may be placed in the training set while adjacent window $k+1$ is placed in the test set. Because they share $75\%$ of the exact same raw physical sensor readings, the test set is no longer independent; the model is evaluated on data it has already seen during training.
         
         \textit{Correction}: Partition the continuous raw sensor stream chronologically into distinct contiguous blocks *before* extracting windows, or insert a purge gap of at least $W = 64$ samples between training and evaluation blocks.

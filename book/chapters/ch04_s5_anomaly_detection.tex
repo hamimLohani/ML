@@ -12,17 +12,17 @@ This is the domain of \textbf{Anomaly Detection} (also termed \textit{outlier de
 \centering
 \begin{tikzpicture}[
     scale=0.92,
-    box/.style={rectangle, draw=gray!70, fill=gray!5, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
-    anom_box/.style={rectangle, draw=warningred!80, fill=warningred!10, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    box/.style={rectangle, draw=gray!70, fill=gray!5, thick, rounded corners=2mm, minimum height=1.0cm, align=center, font=\small\sffamily},
+    anom_box/.style={rectangle, draw=warningred!80, fill=warningred!10, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily},
     arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
 ]
     % Central Input
     \node[box, minimum width=12.2cm, fill=keyideablue!10, draw=keyideablue!80] (input) at (0, 3.4) {\textbf{Streaming Telemetry Stream} $\mathbf{x}(t) \in \mathbb{R}^D$ (Vibration, Temperature, Current, Flow)};
 
     % Three Anomaly Categories
-    \node[anom_box, minimum width=3.6cm] (point) at (-4.2, 1.4) {\textbf{1. Point Anomaly}\\[2pt]\footnotesize Instantaneous extreme spike;\\[-2pt]\footnotesize e.g., Temp $= 145^\circ\text{C}$};
-    \node[anom_box, minimum width=3.6cm] (context) at (0.0, 1.4) {\textbf{2. Contextual Anomaly}\\[2pt]\footnotesize Value normal overall, but\\[-2pt]\footnotesize wrong for context (e.g. night)};
-    \node[anom_box, minimum width=3.6cm] (collective) at (4.2, 1.4) {\textbf{3. Collective Anomaly}\\[2pt]\footnotesize Sequence individually valid,\\[-2pt]\footnotesize but pattern indicates failure};
+    \node[anom_box, minimum width=3.6cm] (point) at (-4.2, 1.4) {\textbf{1. Point Anomaly}\\ \footnotesize Instantaneous extreme spike;\\ \footnotesize e.g., Temp $= 145^\circ\text{C}$};
+    \node[anom_box, minimum width=3.6cm] (context) at (0.0, 1.4) {\textbf{2. Contextual Anomaly}\\ \footnotesize Value normal overall, but\\ \footnotesize wrong for context (e.g. night)};
+    \node[anom_box, minimum width=3.6cm] (collective) at (4.2, 1.4) {\textbf{3. Collective Anomaly}\\ \footnotesize Sequence individually valid,\\ \footnotesize but pattern indicates failure};
 
     % Arrows
     \draw[arrow] (-4.2, 2.9) -- (point.north);
@@ -381,7 +381,7 @@ An autoencoder is a feedforward neural network trained to execute an identity ma
     neuron/.style={circle, draw=keyideablue!80, fill=keyideablue!15, thick, minimum size=6.5mm, inner sep=0pt, font=\scriptsize\sffamily},
     latent/.style={circle, draw=exampleorange!80, fill=exampleorange!25, thick, minimum size=6.5mm, inner sep=0pt, font=\scriptsize\sffamily},
     out_neuron/.style={circle, draw=analogygreen!80, fill=analogygreen!15, thick, minimum size=6.5mm, inner sep=0pt, font=\scriptsize\sffamily},
-    layer_label/.style={font=\small\bfseries\sffamily, text centered}
+    layer_label/.style={font=\small\bfseries\sffamily, align=center}
 ]
     % Input Layer (D = 5)
     \foreach \i in {1,...,5} {

@@ -1,0 +1,1388 @@
+\contentsline {part}{I\hspace {1em}Foundations}{1}{part.1}%
+\contentsline {chapter}{\numberline {1}Programming and Tools}{2}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Python Fundamentals}{2}{section.1.1}%
+\contentsline {subsection}{\numberline {1.1.1}Variables, Types, and Basic Arithmetic}{2}{subsection.1.1.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{2}{section*.2}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{3}{section*.3}%
+\contentsline {paragraph}{The Maths: Sensor Voltage Conversion}{3}{section*.4}%
+\contentsline {paragraph}{Python Code}{3}{lstlisting.1.-1}%
+\contentsline {paragraph}{Line-by-Line Explanation}{4}{section*.6}%
+\contentsline {subsection}{\numberline {1.1.2}Conditionals and Decision Making}{5}{subsection.1.1.2}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{5}{section*.7}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{5}{section*.8}%
+\contentsline {paragraph}{Python Code}{5}{lstlisting.1.-4}%
+\contentsline {paragraph}{Line-by-Line Explanation}{6}{section*.10}%
+\contentsline {subsection}{\numberline {1.1.3}Loops: Iterating Over Data Streams}{7}{subsection.1.1.3}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{7}{section*.11}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{7}{section*.12}%
+\contentsline {paragraph}{The Maths: Calculating the Sample Mean}{7}{section*.13}%
+\contentsline {paragraph}{Python Code}{8}{lstlisting.1.-6}%
+\contentsline {paragraph}{Line-by-Line Explanation}{8}{section*.15}%
+\contentsline {subsection}{\numberline {1.1.4}Functions: Modular and Reusable Logic}{9}{subsection.1.1.4}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{9}{section*.16}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{9}{section*.17}%
+\contentsline {paragraph}{The Maths: Min-Max Feature Scaling}{10}{section*.18}%
+\contentsline {paragraph}{Python Code}{10}{lstlisting.1.-9}%
+\contentsline {paragraph}{Line-by-Line Explanation}{10}{section*.20}%
+\contentsline {subsection}{\numberline {1.1.5}Data Structures: Lists, Tuples, Dictionaries, and Sets}{11}{subsection.1.1.5}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{11}{section*.21}%
+\contentsline {paragraph}{Lists in Action: Indexing and Slicing}{12}{section*.22}%
+\contentsline {paragraph}{Python Code}{12}{lstlisting.1.-11}%
+\contentsline {subsection}{\numberline {1.1.6}List Comprehensions and Generators}{13}{subsection.1.1.6}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{13}{section*.24}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{13}{section*.25}%
+\contentsline {paragraph}{Python Code}{14}{lstlisting.1.-14}%
+\contentsline {paragraph}{Line-by-Line Explanation}{14}{section*.27}%
+\contentsline {subsection}{\numberline {1.1.7}Classes and Objects}{15}{subsection.1.1.7}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{15}{section*.28}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{15}{section*.29}%
+\contentsline {paragraph}{Python Code}{16}{lstlisting.1.-16}%
+\contentsline {paragraph}{Line-by-Line Explanation}{16}{section*.31}%
+\contentsline {subsection}{\numberline {1.1.8}File Input/Output: Text, JSON, and CSV}{17}{subsection.1.1.8}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{17}{section*.32}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{17}{section*.33}%
+\contentsline {paragraph}{Python Code}{17}{lstlisting.1.-18}%
+\contentsline {paragraph}{Line-by-Line Explanation}{18}{section*.35}%
+\contentsline {subsection}{\numberline {1.1.9}Error Handling: Exceptions and Resilience}{19}{subsection.1.1.9}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{19}{section*.36}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{19}{section*.37}%
+\contentsline {paragraph}{Python Code}{20}{lstlisting.1.-20}%
+\contentsline {paragraph}{Line-by-Line Explanation}{20}{section*.39}%
+\contentsline {subsection}{\numberline {1.1.10}Check Yourself}{21}{subsection.1.1.10}%
+\contentsline {section}{\numberline {1.2}Development Environment on macOS}{23}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}The Terminal for Complete Beginners}{24}{subsection.1.2.1}%
+\contentsline {paragraph}{The Seven Essential Navigation Commands}{24}{section*.41}%
+\contentsline {paragraph}{Paths: Absolute vs. Relative}{24}{section*.42}%
+\contentsline {subsection}{\numberline {1.2.2}Installing Python the Right Way with Homebrew}{24}{subsection.1.2.2}%
+\contentsline {paragraph}{Why You Must Never Use macOS System Python}{25}{section*.43}%
+\contentsline {paragraph}{Step-by-Step Installation}{25}{section*.44}%
+\contentsline {subsection}{\numberline {1.2.3}Virtual Environments: \texttt {venv} and Miniconda}{25}{subsection.1.2.3}%
+\contentsline {paragraph}{Option A: Python's Built-In \texttt {venv} (Recommended for Most Projects)}{26}{section*.45}%
+\contentsline {paragraph}{Option B: Miniconda / Conda (Recommended for Complex C/C++ Extensions)}{26}{section*.46}%
+\contentsline {subsection}{\numberline {1.2.4}Package Management with \texttt {pip} and \texttt {requirements.txt}}{26}{subsection.1.2.4}%
+\contentsline {paragraph}{Installing Core Data Science Packages}{26}{lstlisting.1.-35}%
+\contentsline {paragraph}{The Gold Standard of Reproducibility: \texttt {requirements.txt}}{27}{section*.48}%
+\contentsline {subsection}{\numberline {1.2.5}Interactive Exploration: Jupyter Notebook and JupyterLab}{27}{subsection.1.2.5}%
+\contentsline {paragraph}{Launching JupyterLab}{27}{section*.49}%
+\contentsline {subsection}{\numberline {1.2.6}Professional Editor: Visual Studio Code}{28}{subsection.1.2.6}%
+\contentsline {paragraph}{Installation and Setup}{28}{section*.50}%
+\contentsline {subsection}{\numberline {1.2.7}Check Yourself}{29}{subsection.1.2.7}%
+\contentsline {section}{\numberline {1.3}NumPy}{29}{section.1.3}%
+\contentsline {subsection}{\numberline {1.3.1}The \texttt {ndarray}: Arrays, Shapes, and Memory}{30}{subsection.1.3.1}%
+\contentsline {paragraph}{Array Dimensions and Terminology}{31}{section*.52}%
+\contentsline {paragraph}{Core Attributes of an Array}{31}{section*.53}%
+\contentsline {paragraph}{Python Code: Array Creation and Inspection}{31}{lstlisting.1.-42}%
+\contentsline {paragraph}{Common Array Generators}{32}{section*.55}%
+\contentsline {subsection}{\numberline {1.3.2}Indexing, Slicing, and the View vs. Copy Trap}{32}{subsection.1.3.2}%
+\contentsline {paragraph}{Multi-Dimensional Slicing Syntax}{32}{section*.56}%
+\contentsline {paragraph}{The Critical Trap: Views vs. Copies}{32}{section*.57}%
+\contentsline {paragraph}{Boolean Masking (Filtering Sensor Spikes)}{33}{section*.58}%
+\contentsline {subsection}{\numberline {1.3.3}Broadcasting: Math Across Mismatched Shapes}{33}{subsection.1.3.3}%
+\contentsline {paragraph}{The Two Strict Rules of Broadcasting}{33}{section*.59}%
+\contentsline {paragraph}{Hand-Worked Calculation: Step-by-Step Broadcasting}{34}{section*.60}%
+\contentsline {paragraph}{Practical Sensor Example: Normalizing Accelerometer Offsets}{34}{section*.61}%
+\contentsline {subsection}{\numberline {1.3.4}Vectorization: Eliminating Python Loops}{35}{subsection.1.3.4}%
+\contentsline {paragraph}{Benchmark: Python Loop vs. NumPy Vectorization}{35}{section*.62}%
+\contentsline {paragraph}{Reductions Along Axes}{35}{section*.63}%
+\contentsline {subsection}{\numberline {1.3.5}Linear Algebra Functions: \texttt {np.linalg}}{36}{subsection.1.3.5}%
+\contentsline {paragraph}{1. Matrix Multiplication (The \texttt {@} Operator)}{36}{section*.64}%
+\contentsline {paragraph}{2. Matrix Inverse and Determinant}{36}{section*.65}%
+\contentsline {paragraph}{3. Solving Systems of Linear Equations ($\mathbf {A}\mathbf {x} = \mathbf {b}$)}{36}{section*.66}%
+\contentsline {paragraph}{4. Vector and Matrix Norms}{37}{section*.67}%
+\contentsline {subsection}{\numberline {1.3.6}The TinyML Bridge: Exporting NumPy Arrays to C Firmware}{37}{subsection.1.3.6}%
+\contentsline {subsection}{\numberline {1.3.7}Check Yourself}{38}{subsection.1.3.7}%
+\contentsline {section}{\numberline {1.4}pandas}{39}{section.1.4}%
+\contentsline {subsection}{\numberline {1.4.1}Core Data Structures: Series and DataFrames}{40}{subsection.1.4.1}%
+\contentsline {paragraph}{Creating Series and DataFrames from Scratch}{41}{lstlisting.1.-65}%
+\contentsline {paragraph}{Essential DataFrame Inspection Attributes}{41}{section*.70}%
+\contentsline {subsection}{\numberline {1.4.2}Data Ingestion: Loading and Exporting CSV, Excel, and JSON}{41}{subsection.1.4.2}%
+\contentsline {paragraph}{1. Comma-Separated Values (CSV)}{42}{section*.71}%
+\contentsline {paragraph}{2. Microsoft Excel Files}{42}{lstlisting.1.-68}%
+\contentsline {paragraph}{3. JSON and Nested IoT Telemetry}{42}{section*.73}%
+\contentsline {paragraph}{Memory Optimization with Explicit \texttt {dtype}}{42}{section*.74}%
+\contentsline {subsection}{\numberline {1.4.3}Selecting, Filtering, and Sorting Data}{42}{subsection.1.4.3}%
+\contentsline {paragraph}{The Two Indexing Systems: \texttt {.loc} vs. \texttt {.iloc}}{42}{section*.75}%
+\contentsline {paragraph}{Boolean Filtering with Compound Conditions}{43}{section*.76}%
+\contentsline {paragraph}{Sorting Values}{44}{section*.77}%
+\contentsline {subsection}{\numberline {1.4.4}The Split-Apply-Combine Engine: \texttt {groupby} and Aggregation}{44}{subsection.1.4.4}%
+\contentsline {paragraph}{Hand-Worked Calculation: Grouping Telemetry by Device}{44}{section*.78}%
+\contentsline {paragraph}{Python Code for Multi-Metric Aggregations}{45}{lstlisting.1.-77}%
+\contentsline {subsection}{\numberline {1.4.5}Combining Datasets: Merging and Joining}{45}{subsection.1.4.5}%
+\contentsline {paragraph}{Database-Style Joins (\texttt {pd.merge})}{45}{section*.80}%
+\contentsline {subsection}{\numberline {1.4.6}Dates, Timestamps, and Sensor Resampling}{46}{subsection.1.4.6}%
+\contentsline {paragraph}{1. Chronological Slicing and Setting the Index}{46}{lstlisting.1.-81}%
+\contentsline {paragraph}{2. Resampling Sensor Frequencies (Downsampling)}{46}{section*.82}%
+\contentsline {paragraph}{3. Rolling Window Calculations}{47}{section*.83}%
+\contentsline {subsection}{\numberline {1.4.7}Check Yourself}{48}{subsection.1.4.7}%
+\contentsline {section}{\numberline {1.5}Visualization}{49}{section.1.5}%
+\contentsline {subsection}{\numberline {1.5.1}Matplotlib: The Engine Room of Python Plotting}{49}{subsection.1.5.1}%
+\contentsline {paragraph}{Professional Subplot Architecture}{50}{section*.85}%
+\contentsline {paragraph}{Why \texttt {plt.tight_layout()} and \texttt {dpi=300} Matter}{51}{section*.86}%
+\contentsline {subsection}{\numberline {1.5.2}Seaborn: Statistical Visualizations for Machine Learning}{51}{subsection.1.5.2}%
+\contentsline {subsection}{\numberline {1.5.3}The Four Core Exploratory Plots}{52}{subsection.1.5.3}%
+\contentsline {paragraph}{1. Histograms and Kernel Density Estimation (KDE)}{52}{section*.87}%
+\contentsline {paragraph}{2. Scatter Plots with Categorical Hue}{52}{section*.88}%
+\contentsline {paragraph}{3. Box Plots and Interquartile Range (IQR) Outlier Fences}{53}{section*.89}%
+\contentsline {paragraph}{4. Correlation Heatmaps}{53}{section*.90}%
+\contentsline {subsection}{\numberline {1.5.4}Plotting Machine Learning Diagnostics: Loss Curves and Confusion Matrices}{54}{subsection.1.5.4}%
+\contentsline {paragraph}{1. Diagnosing Training Dynamics with Loss Curves}{54}{section*.91}%
+\contentsline {paragraph}{2. Normalized Confusion Matrix Heatmap}{54}{section*.92}%
+\contentsline {subsection}{\numberline {1.5.5}Check Yourself}{56}{subsection.1.5.5}%
+\contentsline {section}{\numberline {1.6}Git and SQL}{57}{section.1.6}%
+\contentsline {subsection}{\numberline {1.6.1}Version Control with Git: Commits, Branches, and Merges}{58}{subsection.1.6.1}%
+\contentsline {paragraph}{The Three Areas of Git}{58}{section*.94}%
+\contentsline {paragraph}{Essential Local Git Workflow}{58}{section*.95}%
+\contentsline {paragraph}{Branching and Merging: Working Without Fear}{59}{section*.96}%
+\contentsline {paragraph}{Handling Merge Conflicts}{59}{section*.97}%
+\contentsline {subsection}{\numberline {1.6.2}GitHub Collaboration and Professional Project Structure}{59}{subsection.1.6.2}%
+\contentsline {paragraph}{Pushing to a Remote GitHub Repository}{60}{lstlisting.1.-98}%
+\contentsline {paragraph}{The Pull Request (PR) Lifecycle}{60}{section*.99}%
+\contentsline {paragraph}{The Non-Negotiable \texttt {.gitignore} File}{60}{section*.100}%
+\contentsline {paragraph}{Professional Project Structure and the \texttt {README.md}}{60}{section*.101}%
+\contentsline {subsection}{\numberline {1.6.3}SQL: Structured Query Language for Data Extraction}{61}{subsection.1.6.3}%
+\contentsline {paragraph}{The Relational Database Mental Model}{61}{section*.102}%
+\contentsline {paragraph}{Core SQL Query Structure}{61}{section*.103}%
+\contentsline {paragraph}{Step-by-Step Hand-Worked SQL Query Trace}{62}{section*.104}%
+\contentsline {paragraph}{Python Code: Querying SQL Directly into pandas}{63}{section*.105}%
+\contentsline {subsection}{\numberline {1.6.4}Check Yourself}{64}{subsection.1.6.4}%
+\contentsline {chapter}{\numberline {2}Math Foundations}{66}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Linear Algebra}{66}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Vectors and Matrices: Representing Multi-Dimensional Data}{66}{subsection.2.1.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{66}{section*.107}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{67}{section*.108}%
+\contentsline {paragraph}{Vector Operations: Addition and Scalar Scaling}{67}{section*.109}%
+\contentsline {paragraph}{Hand Calculation Example}{67}{section*.110}%
+\contentsline {paragraph}{Python Code}{67}{lstlisting.2.-106}%
+\contentsline {paragraph}{Line-by-Line Explanation}{68}{section*.112}%
+\contentsline {subsection}{\numberline {2.1.2}The Dot Product and Matrix Multiplication}{69}{subsection.2.1.2}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{69}{section*.113}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{70}{section*.114}%
+\contentsline {paragraph}{Hand Calculation Example}{70}{section*.115}%
+\contentsline {paragraph}{Python Code}{71}{lstlisting.2.-109}%
+\contentsline {paragraph}{Line-by-Line Explanation}{71}{section*.117}%
+\contentsline {subsection}{\numberline {2.1.3}Matrix Operations: Transpose, Inverse, and Determinant}{72}{subsection.2.1.3}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{72}{section*.118}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{73}{section*.119}%
+\contentsline {paragraph}{Hand Calculation Example}{73}{section*.120}%
+\contentsline {paragraph}{Python Code}{74}{lstlisting.2.-111}%
+\contentsline {subsection}{\numberline {2.1.4}Vector and Matrix Norms: Measuring Magnitude and Distance}{75}{subsection.2.1.4}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{75}{section*.122}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{75}{section*.123}%
+\contentsline {paragraph}{Hand Calculation Example}{76}{section*.124}%
+\contentsline {paragraph}{Python Code}{76}{lstlisting.2.-114}%
+\contentsline {subsection}{\numberline {2.1.5}Eigenvalues and Eigenvectors: Directions of Invariance}{77}{subsection.2.1.5}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{78}{section*.126}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{78}{section*.127}%
+\contentsline {paragraph}{Hand Calculation Example}{78}{section*.128}%
+\contentsline {paragraph}{Python Code}{79}{lstlisting.2.-116}%
+\contentsline {paragraph}{Line-by-Line Explanation}{79}{section*.130}%
+\contentsline {subsection}{\numberline {2.1.6}Singular Value Decomposition (SVD): The Master Decomposition}{80}{subsection.2.1.6}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{80}{section*.131}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{80}{section*.132}%
+\contentsline {paragraph}{Low-Rank Approximation (Model Compression)}{81}{section*.133}%
+\contentsline {paragraph}{Hand Calculation Example}{81}{section*.134}%
+\contentsline {paragraph}{Python Code}{81}{lstlisting.2.-118}%
+\contentsline {paragraph}{Line-by-Line Explanation}{82}{section*.136}%
+\contentsline {subsection}{\numberline {2.1.7}Check Yourself}{83}{subsection.2.1.7}%
+\contentsline {section}{\numberline {2.2}Calculus}{84}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Derivatives: The Instantaneous Rate of Change}{85}{subsection.2.2.1}%
+\contentsline {paragraph}{Mathematical Definition: The Limit of Secant Slopes}{85}{section*.138}%
+\contentsline {paragraph}{Hand-Worked Calculation: Deriving $f(x) = x^2$ from First Principles}{85}{section*.139}%
+\contentsline {paragraph}{The Essential Derivative Rules for Machine Learning}{86}{section*.140}%
+\contentsline {subsection}{\numberline {2.2.2}The Chain Rule: Differentiating Nested Functions}{86}{subsection.2.2.2}%
+\contentsline {paragraph}{Mathematical Formulation}{87}{section*.141}%
+\contentsline {paragraph}{Hand-Worked Calculation: A Complete Worked Example}{87}{section*.142}%
+\contentsline {paragraph}{The Chain Rule for a Single Neuron}{88}{section*.143}%
+\contentsline {subsection}{\numberline {2.2.3}Partial Derivatives: Slopes in Multi-Dimensional Space}{88}{subsection.2.2.3}%
+\contentsline {paragraph}{Hand-Worked Calculation: Evaluating Partial Derivatives}{88}{section*.144}%
+\contentsline {subsection}{\numberline {2.2.4}The Gradient Vector and the Jacobian Matrix}{89}{subsection.2.2.4}%
+\contentsline {paragraph}{The Two Fundamental Geometric Properties of the Gradient}{89}{section*.145}%
+\contentsline {paragraph}{The Jacobian Matrix: Multi-Output Functions}{90}{section*.146}%
+\contentsline {paragraph}{Hand-Worked Calculation: Constructing a Robotic Kinematics Jacobian}{90}{section*.147}%
+\contentsline {subsection}{\numberline {2.2.5}Gradient Descent: Optimization Through Iterative Steps}{91}{subsection.2.2.5}%
+\contentsline {paragraph}{The Role of the Learning Rate $\eta $}{91}{section*.148}%
+\contentsline {paragraph}{Complete Hand-Worked Trace of 4 Optimization Steps}{91}{section*.149}%
+\contentsline {paragraph}{Python Code: Gradient Descent from Scratch}{92}{lstlisting.2.-120}%
+\contentsline {subsection}{\numberline {2.2.6}The TinyML Bridge: On-Device Gradients on Microcontrollers}{93}{subsection.2.2.6}%
+\contentsline {subsection}{\numberline {2.2.7}Check Yourself}{94}{subsection.2.2.7}%
+\contentsline {section}{\numberline {2.3}Probability}{95}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Random Variables and Probability Distributions}{96}{subsection.2.3.1}%
+\contentsline {subsubsection}{Discrete Random Variables and the Probability Mass Function (PMF)}{97}{section*.152}%
+\contentsline {subsubsection}{Continuous Random Variables and the Probability Density Function (PDF)}{97}{section*.153}%
+\contentsline {subsubsection}{The Cumulative Distribution Function (CDF)}{98}{section*.154}%
+\contentsline {paragraph}{Solution:}{99}{section*.155}%
+\contentsline {subsection}{\numberline {2.3.2}Expectation, Variance, and Covariance}{99}{subsection.2.3.2}%
+\contentsline {subsubsection}{Expected Value: The Center of Mass}{99}{section*.156}%
+\contentsline {paragraph}{Formal Definition: Expected Value}{99}{section*.157}%
+\contentsline {paragraph}{Linearity of Expectation}{99}{section*.158}%
+\contentsline {subsubsection}{Variance and Standard Deviation: Measuring Spread}{100}{section*.159}%
+\contentsline {paragraph}{Formal Definition: Variance and Standard Deviation}{100}{section*.160}%
+\contentsline {paragraph}{The Computational Shortcut for Variance}{100}{section*.161}%
+\contentsline {paragraph}{Scaling Rules for Variance}{100}{section*.162}%
+\contentsline {subsubsection}{Covariance and Correlation: How Variables Interact}{100}{section*.163}%
+\contentsline {paragraph}{Formal Definition: Covariance}{100}{section*.164}%
+\contentsline {paragraph}{The Pearson Correlation Coefficient}{101}{section*.165}%
+\contentsline {paragraph}{Step 1: Compute Means}{102}{section*.166}%
+\contentsline {paragraph}{Step 2: Construct the Arithmetic Deviation Table}{102}{section*.167}%
+\contentsline {paragraph}{Step 3: Compute Variances and Standard Deviations}{102}{section*.168}%
+\contentsline {paragraph}{Step 4: Compute Covariance and Pearson Correlation}{102}{section*.169}%
+\contentsline {subsection}{\numberline {2.3.3}Conditional Probability and Bayes' Rule}{102}{subsection.2.3.3}%
+\contentsline {subsubsection}{Joint, Marginal, and Conditional Probability}{102}{section*.170}%
+\contentsline {subsubsection}{Statistical Independence}{103}{section*.171}%
+\contentsline {subsubsection}{The Law of Total Probability}{103}{section*.172}%
+\contentsline {subsubsection}{Bayes' Rule: Inverting Cause and Effect}{103}{section*.173}%
+\contentsline {paragraph}{Step 1: Identify Known Probabilities}{104}{section*.174}%
+\contentsline {paragraph}{Step 2: Compute Total Evidence $P(\text {Alarm})$}{104}{section*.175}%
+\contentsline {paragraph}{Step 3: Calculate the Posterior $P(\text {Crack} \mid \text {Alarm})$}{104}{section*.176}%
+\contentsline {paragraph}{Pedagogical Analysis: Why is the Probability Under $20\%$?}{105}{section*.177}%
+\contentsline {subsection}{\numberline {2.3.4}Parametric Probability Distributions in Machine Learning}{105}{subsection.2.3.4}%
+\contentsline {subsubsection}{The Gaussian (Normal) Distribution: $\mathcal {N}(\mu , \sigma ^2)$}{105}{section*.178}%
+\contentsline {paragraph}{Formal Definition: Gaussian Distribution PDF}{105}{section*.179}%
+\contentsline {subsubsection}{The Bernoulli Distribution: $\text {Bernoulli}(p)$}{106}{section*.180}%
+\contentsline {paragraph}{Formal Definition: Bernoulli PMF and Moments}{106}{section*.181}%
+\contentsline {paragraph}{Machine Learning Connection}{106}{section*.182}%
+\contentsline {subsubsection}{The Binomial Distribution: $\text {Binomial}(n, p)$}{106}{section*.183}%
+\contentsline {paragraph}{Formal Definition: Binomial PMF and Moments}{107}{section*.184}%
+\contentsline {paragraph}{Solution:}{107}{section*.185}%
+\contentsline {subsubsection}{The Poisson Distribution: $\text {Poisson}(\lambda )$}{107}{section*.186}%
+\contentsline {paragraph}{Formal Definition: Poisson PMF and Moments}{107}{section*.187}%
+\contentsline {paragraph}{Relationship to the Binomial Distribution}{107}{section*.188}%
+\contentsline {paragraph}{Solution:}{108}{section*.189}%
+\contentsline {subsection}{\numberline {2.3.5}Maximum Likelihood Estimation (MLE)}{108}{subsection.2.3.5}%
+\contentsline {subsubsection}{Probability versus Likelihood}{108}{section*.190}%
+\contentsline {subsubsection}{The Likelihood Function}{109}{section*.191}%
+\contentsline {subsubsection}{The Log-Likelihood Function}{109}{section*.192}%
+\contentsline {subsubsection}{Derivation 1: MLE for Bernoulli Trials}{109}{section*.193}%
+\contentsline {paragraph}{Step 1: Write the Likelihood and Log-Likelihood}{109}{section*.194}%
+\contentsline {paragraph}{Step 2: Differentiate with Respect to $p$}{109}{section*.195}%
+\contentsline {paragraph}{Step 3: Set the Derivative to Zero and Solve for $p$}{110}{section*.196}%
+\contentsline {paragraph}{Step 4: Verify the Second Derivative}{110}{section*.197}%
+\contentsline {subsubsection}{Derivation 2: MLE for the Gaussian Distribution}{110}{section*.198}%
+\contentsline {paragraph}{Step 1: Formulate the Log-Likelihood}{110}{section*.199}%
+\contentsline {paragraph}{Step 2: Derive $\hat {\mu }_{\text {MLE}}$}{110}{section*.200}%
+\contentsline {paragraph}{Step 3: Derive $\hat {\sigma }^2_{\text {MLE}}$}{110}{section*.201}%
+\contentsline {subsubsection}{The Grand Connection: How MLE Generates Machine Learning Loss Functions}{111}{section*.202}%
+\contentsline {paragraph}{Case 1: Gaussian Errors Yield Mean Squared Error (MSE)}{111}{section*.203}%
+\contentsline {paragraph}{Case 2: Bernoulli Targets Yield Binary Cross-Entropy (BCE)}{112}{section*.204}%
+\contentsline {subsection}{\numberline {2.3.6}Hands-On Python: Distributions, Noise Modeling, and MLE}{112}{subsection.2.3.6}%
+\contentsline {paragraph}{Detailed Code Walkthrough:}{113}{section*.205}%
+\contentsline {subsection}{\numberline {2.3.7}IoT and TinyML: Sensor Noise, Filtering, and Edge Anomaly Detection}{114}{subsection.2.3.7}%
+\contentsline {paragraph}{1. The Kalman Filter Preview: Balancing Noise Covariances}{114}{section*.206}%
+\contentsline {paragraph}{2. Online Edge Anomaly Detection via Welford's Algorithm}{114}{section*.207}%
+\contentsline {subsection}{\numberline {2.3.8}Common Pitfalls and Fallacies}{115}{subsection.2.3.8}%
+\contentsline {subsection}{\numberline {2.3.9}Key Takeaways}{116}{subsection.2.3.9}%
+\contentsline {subsection}{\numberline {2.3.10}Check Yourself}{116}{subsection.2.3.10}%
+\contentsline {section}{\numberline {2.4}Statistics}{120}{section.2.4}%
+\contentsline {subsection}{\numberline {2.4.1}Sampling and the Central Limit Theorem}{120}{subsection.2.4.1}%
+\contentsline {subsubsection}{Sampling Strategies in Machine Learning and IoT}{121}{section*.209}%
+\contentsline {subsubsection}{The Sampling Distribution and Standard Error}{121}{section*.210}%
+\contentsline {paragraph}{Formal Definition: Standard Error of the Mean (SEM)}{122}{section*.211}%
+\contentsline {subsubsection}{The Central Limit Theorem (CLT)}{122}{section*.212}%
+\contentsline {paragraph}{Why the CLT is Extraordinary}{123}{section*.213}%
+\contentsline {paragraph}{Solution:}{123}{section*.214}%
+\contentsline {subsection}{\numberline {2.4.2}Confidence Intervals: Quantifying Uncertainty}{124}{subsection.2.4.2}%
+\contentsline {subsubsection}{The Frequentist Definition of a Confidence Interval}{124}{section*.215}%
+\contentsline {subsubsection}{Constructing Confidence Intervals for the Mean}{124}{section*.216}%
+\contentsline {paragraph}{Case 1: Known Population Variance $\sigma ^2$ (The $Z$-Interval)}{124}{section*.217}%
+\contentsline {paragraph}{Case 2: Unknown Population Variance $\sigma ^2$ (The Student's $t$-Interval)}{125}{section*.218}%
+\contentsline {paragraph}{Step 1: Compute Standard Error and Degrees of Freedom}{125}{section*.219}%
+\contentsline {paragraph}{Step 2: Look Up Critical Values $t^*$ for $df = 8$}{125}{section*.220}%
+\contentsline {paragraph}{Step 3: Compute Margins of Error}{125}{section*.221}%
+\contentsline {paragraph}{Step 4: Compute Intervals}{126}{section*.222}%
+\contentsline {subsection}{\numberline {2.4.3}Hypothesis Testing and the True Meaning of $p$-Values}{126}{subsection.2.4.3}%
+\contentsline {subsubsection}{The Null and Alternative Hypotheses}{126}{section*.223}%
+\contentsline {subsubsection}{The 5-Step Hypothesis Testing Workflow}{126}{section*.224}%
+\contentsline {subsubsection}{The Quadrant of Errors: Type I and Type II}{127}{section*.225}%
+\contentsline {subsubsection}{What a $p$-Value IS and IS NOT}{127}{section*.226}%
+\contentsline {paragraph}{Step 1: State Hypotheses}{128}{section*.227}%
+\contentsline {paragraph}{Step 2: Significance Level and Critical Threshold}{128}{section*.228}%
+\contentsline {paragraph}{Step 3: Calculate Standard Error and Test Statistic}{128}{section*.229}%
+\contentsline {paragraph}{Step 4: Decision and Conclusion}{128}{section*.230}%
+\contentsline {subsection}{\numberline {2.4.4}Correlation vs.\ Causation: The Peril of Machine Learning Shortcuts}{129}{subsection.2.4.4}%
+\contentsline {subsubsection}{Pearson Linear Correlation versus Spearman Rank Correlation}{129}{section*.231}%
+\contentsline {subsubsection}{The Three Causal Mechanisms Behind Correlation}{129}{section*.232}%
+\contentsline {subsubsection}{The Shortcut Learning Trap in Artificial Intelligence}{130}{section*.233}%
+\contentsline {paragraph}{How to Protect Edge Models from Spurious Correlation}{130}{section*.234}%
+\contentsline {subsection}{\numberline {2.4.5}Hands-On Python: Simulation, Testing, and Correlation}{130}{subsection.2.4.5}%
+\contentsline {paragraph}{Detailed Code Walkthrough:}{132}{section*.235}%
+\contentsline {subsection}{\numberline {2.4.6}IoT and TinyML: Statistical Testing at the Edge}{132}{subsection.2.4.6}%
+\contentsline {paragraph}{1. The Two-Sample Welch's $t$-Test on Microcontrollers}{133}{section*.236}%
+\contentsline {paragraph}{2. Lightweight C Implementation of Online Drift Testing}{133}{section*.237}%
+\contentsline {subsection}{\numberline {2.4.7}Common Pitfalls in Statistical Machine Learning}{134}{subsection.2.4.7}%
+\contentsline {subsection}{\numberline {2.4.8}Key Takeaways}{135}{subsection.2.4.8}%
+\contentsline {subsection}{\numberline {2.4.9}Check Yourself}{135}{subsection.2.4.9}%
+\contentsline {section}{\numberline {2.5}Optimization and Information Theory}{138}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}Convex versus Non-Convex Optimization}{139}{subsection.2.5.1}%
+\contentsline {subsubsection}{Formal Definition of Convexity}{139}{section*.239}%
+\contentsline {paragraph}{Convex Sets}{139}{section*.240}%
+\contentsline {paragraph}{Convex Functions}{139}{section*.241}%
+\contentsline {paragraph}{First- and Second-Order Conditions for Convexity}{140}{section*.242}%
+\contentsline {subsubsection}{The Non-Convex Wilderness of Deep Learning}{140}{section*.243}%
+\contentsline {subsection}{\numberline {2.5.2}The Evolution of Gradient Descent Optimizers}{141}{subsection.2.5.2}%
+\contentsline {subsubsection}{Batch, Stochastic, and Mini-Batch Gradient Descent}{141}{section*.244}%
+\contentsline {subsubsection}{Momentum: Accelerating Through Ravines}{142}{section*.245}%
+\contentsline {paragraph}{Mathematical Formulation of Momentum}{142}{section*.246}%
+\contentsline {subsubsection}{RMSProp: Taming Disparate Feature Scales}{142}{section*.247}%
+\contentsline {paragraph}{Why RMSProp is Brilliant}{142}{section*.248}%
+\contentsline {subsubsection}{Adam: Adaptive Moment Estimation}{143}{section*.249}%
+\contentsline {paragraph}{The Complete Adam Algorithm}{143}{section*.250}%
+\contentsline {paragraph}{Part A: Standard SGD}{143}{section*.251}%
+\contentsline {paragraph}{Part B: Adam Optimizer ($\beta _1 = 0.9, \beta _2 = 0.999, \epsilon = 10^{-8}$)}{144}{section*.252}%
+\contentsline {subsection}{\numberline {2.5.3}Information Theory: Quantifying Surprise and Uncertainty}{144}{subsection.2.5.3}%
+\contentsline {subsubsection}{Self-Information: The Quantification of Surprise}{144}{section*.253}%
+\contentsline {paragraph}{Mathematical Definition: Self-Information}{145}{section*.254}%
+\contentsline {paragraph}{Why the Logarithm?}{145}{section*.255}%
+\contentsline {subsubsection}{Shannon Entropy: The Average Uncertainty}{145}{section*.256}%
+\contentsline {paragraph}{Formal Definition: Shannon Entropy}{145}{section*.257}%
+\contentsline {paragraph}{Physical and Computational Interpretations of Entropy}{145}{section*.258}%
+\contentsline {subsubsection}{Cross-Entropy: Mismatched Encodings}{146}{section*.259}%
+\contentsline {paragraph}{Formal Definition: Cross-Entropy}{146}{section*.260}%
+\contentsline {subsubsection}{Kullback-Leibler (KL) Divergence: Relative Entropy}{146}{section*.261}%
+\contentsline {paragraph}{Formal Definition: KL Divergence}{146}{section*.262}%
+\contentsline {paragraph}{Step 1: Compute Base-2 Logarithms}{147}{section*.263}%
+\contentsline {paragraph}{Step 2: Compute Shannon Entropy $H(P)$}{147}{section*.264}%
+\contentsline {paragraph}{Step 3: Compute Cross-Entropy $H(P, Q)$}{147}{section*.265}%
+\contentsline {paragraph}{Step 4: Compute KL Divergence $D_{\text {KL}}(P \parallel Q)$}{147}{section*.266}%
+\contentsline {subsection}{\numberline {2.5.4}The Grand Unification: Cross-Entropy Loss and Maximum Likelihood}{147}{subsection.2.5.4}%
+\contentsline {subsection}{\numberline {2.5.5}Hands-On Python: Optimizers and Information Metrics}{148}{subsection.2.5.5}%
+\contentsline {paragraph}{Detailed Code Walkthrough:}{150}{section*.267}%
+\contentsline {subsection}{\numberline {2.5.6}IoT and TinyML: Optimization Constraints and Telemetry Compression}{150}{subsection.2.5.6}%
+\contentsline {paragraph}{1. Why Adam is Unusable for Microcontroller On-Device Training}{151}{section*.268}%
+\contentsline {paragraph}{The Edge Solution: Standard SGD with Momentum or Quantized States}{151}{section*.269}%
+\contentsline {paragraph}{2. Telemetry Compression via Shannon Entropy}{151}{section*.270}%
+\contentsline {subsection}{\numberline {2.5.7}Common Pitfalls in Optimization and Information Theory}{152}{subsection.2.5.7}%
+\contentsline {subsection}{\numberline {2.5.8}Key Takeaways}{152}{subsection.2.5.8}%
+\contentsline {subsection}{\numberline {2.5.9}Check Yourself}{153}{subsection.2.5.9}%
+\contentsline {chapter}{\numberline {3}Data Handling and Preparation}{157}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Exploring and Cleaning Data}{157}{section.3.1}%
+\contentsline {subsection}{\numberline {3.1.1}Exploratory Data Analysis: Understanding Your Data}{157}{subsection.3.1.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{157}{section*.272}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{158}{section*.273}%
+\contentsline {paragraph}{The Maths: Sample Mean, Variance, and Standard Deviation}{158}{section*.274}%
+\contentsline {paragraph}{Hand Calculation Example}{158}{section*.275}%
+\contentsline {paragraph}{Python Code}{159}{lstlisting.3.-131}%
+\contentsline {paragraph}{Line-by-Line Explanation}{160}{section*.277}%
+\contentsline {subsection}{\numberline {3.1.2}Correlation Analysis: Discovering Relationships Between Features}{161}{subsection.3.1.2}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{161}{section*.278}%
+\contentsline {paragraph}{The Maths: Pearson's Correlation Formula}{161}{section*.279}%
+\contentsline {paragraph}{Hand Calculation Example}{162}{section*.280}%
+\contentsline {paragraph}{Python Code}{162}{lstlisting.3.-133}%
+\contentsline {subsection}{\numberline {3.1.3}Missing Data: Dropping vs. Imputation}{163}{subsection.3.1.3}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{163}{section*.282}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{164}{section*.283}%
+\contentsline {paragraph}{The Maths: Linear Interpolation}{164}{section*.284}%
+\contentsline {paragraph}{Python Code}{164}{lstlisting.3.-135}%
+\contentsline {subsection}{\numberline {3.1.4}Outlier Detection and Treatment: Filtering Noise}{165}{subsection.3.1.4}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{166}{section*.286}%
+\contentsline {paragraph}{The Idea in Words: The IQR (Interquartile Range) Method}{166}{section*.287}%
+\contentsline {paragraph}{Hand Calculation Example}{166}{section*.288}%
+\contentsline {paragraph}{Treatment Options}{166}{section*.289}%
+\contentsline {paragraph}{Python Code}{167}{lstlisting.3.-137}%
+\contentsline {subsection}{\numberline {3.1.5}Deduplication and Categorical Label Consistency}{167}{subsection.3.1.5}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{168}{section*.291}%
+\contentsline {paragraph}{Python Code}{168}{lstlisting.3.-139}%
+\contentsline {subsection}{\numberline {3.1.6}Check Yourself}{169}{subsection.3.1.6}%
+\contentsline {section}{\numberline {3.2}Feature Work}{170}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Feature Scaling: Unifying Numerical Magnitudes}{171}{subsection.3.2.1}%
+\contentsline {subsubsection}{Which Models Require Feature Scaling?}{171}{section*.294}%
+\contentsline {subsubsection}{Primary Scaling Techniques}{172}{section*.295}%
+\contentsline {paragraph}{1. Standardization ($Z$-Score Normalization)}{172}{section*.296}%
+\contentsline {paragraph}{2. Min-Max Normalization}{172}{section*.297}%
+\contentsline {paragraph}{3. Robust Scaling}{172}{section*.298}%
+\contentsline {paragraph}{4. Non-Linear and Logarithmic Transformations}{173}{section*.299}%
+\contentsline {paragraph}{Step 1: Compute Summary Statistics}{173}{section*.300}%
+\contentsline {paragraph}{Step 2: Min-Max Normalization}{173}{section*.301}%
+\contentsline {paragraph}{Step 3: Standardization}{173}{section*.302}%
+\contentsline {subsection}{\numberline {3.2.2}Categorical Encoding: Translating Symbols into Numbers}{174}{subsection.3.2.2}%
+\contentsline {subsubsection}{Ordinal versus Nominal Categories}{174}{section*.303}%
+\contentsline {subsubsection}{Primary Encoding Strategies}{174}{section*.304}%
+\contentsline {paragraph}{1. Label / Ordinal Encoding}{174}{section*.305}%
+\contentsline {paragraph}{2. One-Hot Encoding (OHE)}{174}{section*.306}%
+\contentsline {paragraph}{High Cardinality Bottlenecks}{175}{section*.307}%
+\contentsline {paragraph}{3. Target (Mean) Encoding}{175}{section*.308}%
+\contentsline {subsection}{\numberline {3.2.3}Feature Engineering: Creating Signal from Domain Physics}{175}{subsection.3.2.3}%
+\contentsline {subsubsection}{Physical Ratios and Interaction Terms}{175}{section*.309}%
+\contentsline {subsubsection}{Cyclical Temporal Features: The Midnight Paradox}{175}{section*.310}%
+\contentsline {paragraph}{Trigonometric Cyclical Encoding}{176}{section*.311}%
+\contentsline {subsubsection}{Sensor Time-Series Window Aggregations}{176}{section*.312}%
+\contentsline {subsection}{\numberline {3.2.4}Feature Selection: Trimming the Noise}{177}{subsection.3.2.4}%
+\contentsline {subsubsection}{1. Filter Methods (Fast \& Model-Agnostic)}{177}{section*.313}%
+\contentsline {subsubsection}{2. Wrapper Methods (Iterative \& Accurate)}{178}{section*.314}%
+\contentsline {subsubsection}{3. Embedded Methods (Integrated Optimization)}{178}{section*.315}%
+\contentsline {subsection}{\numberline {3.2.5}Dimensionality Reduction as Preprocessing: PCA}{178}{subsection.3.2.5}%
+\contentsline {subsubsection}{Principal Component Analysis (PCA)}{178}{section*.316}%
+\contentsline {paragraph}{How PCA Works}{178}{section*.317}%
+\contentsline {paragraph}{Explained Variance Ratio}{179}{section*.318}%
+\contentsline {subsection}{\numberline {3.2.6}Hands-On Python: A Complete Preprocessing Pipeline}{179}{subsection.3.2.6}%
+\contentsline {paragraph}{Detailed Code Walkthrough:}{180}{section*.319}%
+\contentsline {subsection}{\numberline {3.2.7}IoT and TinyML: Feature Engineering on the Edge}{181}{subsection.3.2.7}%
+\contentsline {paragraph}{1. The TinyML Paradigm: Physics-Driven Feature Extraction}{181}{section*.320}%
+\contentsline {paragraph}{2. Fast Integer Bit-Shift Scaling on Microcontrollers}{181}{section*.321}%
+\contentsline {paragraph}{3. Real-Time Sliding Window Feature Extractor in Embedded C}{181}{section*.322}%
+\contentsline {subsection}{\numberline {3.2.8}Common Pitfalls in Feature Preparation}{182}{subsection.3.2.8}%
+\contentsline {subsection}{\numberline {3.2.9}Key Takeaways}{183}{subsection.3.2.9}%
+\contentsline {subsection}{\numberline {3.2.10}Check Yourself}{183}{subsection.3.2.10}%
+\contentsline {section}{\numberline {3.3}Splitting Data and Common Pitfalls}{186}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}The Generalization Imperative: Memorization versus Learning}{187}{subsection.3.3.1}%
+\contentsline {subsubsection}{The Three-Way Partition: Roles and Lifecycle}{187}{section*.324}%
+\contentsline {paragraph}{1. The Training Set (Typically $60\%$ to $80\%$)}{187}{section*.325}%
+\contentsline {paragraph}{2. The Validation Set (Typically $10\%$ to $20\%$)}{188}{section*.326}%
+\contentsline {paragraph}{3. The Test Set (Typically $10\%$ to $20\%$)}{188}{section*.327}%
+\contentsline {subsubsection}{$k$-Fold Cross-Validation}{188}{section*.328}%
+\contentsline {subsection}{\numberline {3.3.2}Stratified and Group-Based Splitting}{189}{subsection.3.3.2}%
+\contentsline {subsubsection}{Stratified Splitting: Preserving Distribution Proportions}{189}{section*.329}%
+\contentsline {paragraph}{Formal Definition: Stratified Sampling}{189}{section*.330}%
+\contentsline {subsubsection}{Group-Based Splitting: Preventing Device Fingerprint Leakage}{189}{section*.331}%
+\contentsline {paragraph}{The Solution: GroupKFold}{190}{section*.332}%
+\contentsline {subsection}{\numberline {3.3.3}Time-Based Splits for Sensor and Temporal Data}{190}{subsection.3.3.3}%
+\contentsline {subsubsection}{Why Random Shuffling Fails on Time Series}{190}{section*.333}%
+\contentsline {subsubsection}{Temporal Partitioning Strategies}{191}{section*.334}%
+\contentsline {subsection}{\numberline {3.3.4}Data Leakage: The Silent Killer of Machine Learning}{191}{subsection.3.3.4}%
+\contentsline {paragraph}{Formal Definition: Data Leakage}{191}{section*.335}%
+\contentsline {subsubsection}{The Five Architectural Vectors of Leakage}{191}{section*.336}%
+\contentsline {subsubsection}{Architectural Defense: Scikit-Learn Pipelines}{192}{section*.337}%
+\contentsline {subsection}{\numberline {3.3.5}Handling Imbalanced Datasets}{193}{subsection.3.3.5}%
+\contentsline {subsubsection}{The Ubiquity of Imbalance and the Accuracy Paradox}{193}{section*.338}%
+\contentsline {subsubsection}{Evaluation Metrics for Imbalanced Classification}{193}{section*.339}%
+\contentsline {subsubsection}{Mitigation Strategy 1: Cost-Sensitive Learning (Class Weights)}{194}{section*.340}%
+\contentsline {subsubsection}{Mitigation Strategy 2: Data Resampling}{194}{section*.341}%
+\contentsline {subsection}{\numberline {3.3.6}Hands-On Python: Leak-Free Pipeline on Imbalanced Telemetry}{195}{subsection.3.3.6}%
+\contentsline {paragraph}{Detailed Performance Analysis:}{196}{section*.342}%
+\contentsline {subsection}{\numberline {3.3.7}IoT and TinyML: Splitting and Deployment in the Physical World}{197}{subsection.3.3.7}%
+\contentsline {paragraph}{1. The ``Quiet Sensor'' Problem in Field Data Collection}{197}{section*.343}%
+\contentsline {paragraph}{2. Edge Threshold Tuning and Alarm Hysteresis}{197}{section*.344}%
+\contentsline {subsection}{\numberline {3.3.8}Common Pitfalls in Data Partitioning}{198}{subsection.3.3.8}%
+\contentsline {subsection}{\numberline {3.3.9}Key Takeaways}{198}{subsection.3.3.9}%
+\contentsline {subsection}{\numberline {3.3.10}Check Yourself}{199}{subsection.3.3.10}%
+\contentsline {part}{II\hspace {1em}Machine Learning}{203}{part.2}%
+\contentsline {chapter}{\numberline {4}Classical Machine Learning}{204}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Supervised Learning: Regression}{204}{section.4.1}%
+\contentsline {subsection}{\numberline {4.1.1}Linear Regression: The Line of Best Fit}{204}{subsection.4.1.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{204}{section*.346}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{205}{section*.347}%
+\contentsline {paragraph}{The Loss Function: Mean Squared Error (MSE)}{205}{section*.348}%
+\contentsline {paragraph}{The Closed-Form Solution: The Normal Equation}{205}{section*.349}%
+\contentsline {paragraph}{Hand Calculation Example}{205}{section*.350}%
+\contentsline {paragraph}{Python Code}{207}{lstlisting.4.-152}%
+\contentsline {paragraph}{Line-by-Line Explanation}{207}{section*.352}%
+\contentsline {subsection}{\numberline {4.1.2}Training from Scratch: Gradient Descent}{208}{subsection.4.1.2}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{208}{section*.353}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{208}{section*.354}%
+\contentsline {paragraph}{The Maths: Gradients of the MSE Loss}{208}{section*.355}%
+\contentsline {paragraph}{Hand Calculation Example (One Gradient Descent Step)}{209}{section*.356}%
+\contentsline {paragraph}{Python Code from Scratch}{209}{lstlisting.4.-154}%
+\contentsline {subsection}{\numberline {4.1.3}Polynomial Regression: Modeling Non-Linear Relationships}{210}{subsection.4.1.3}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{211}{section*.358}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{211}{section*.359}%
+\contentsline {paragraph}{The Trade-Off: Underfitting vs. Overfitting}{211}{section*.360}%
+\contentsline {paragraph}{Python Code}{211}{lstlisting.4.-156}%
+\contentsline {paragraph}{Line-by-Line Explanation}{212}{section*.362}%
+\contentsline {subsection}{\numberline {4.1.4}Regularization: Ridge ($L_2$) and Lasso ($L_1$)}{212}{subsection.4.1.4}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{213}{section*.363}%
+\contentsline {paragraph}{The Idea in Words: Ridge vs. Lasso}{213}{section*.364}%
+\contentsline {paragraph}{Hand Calculation Example}{213}{section*.365}%
+\contentsline {paragraph}{Python Code}{214}{lstlisting.4.-158}%
+\contentsline {paragraph}{Line-by-Line Explanation}{214}{section*.367}%
+\contentsline {subsection}{\numberline {4.1.5}Check Yourself}{215}{subsection.4.1.5}%
+\contentsline {section}{\numberline {4.2}Supervised Learning: Classification}{217}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}Logistic Regression: The Probabilistic Linear Boundary}{217}{subsection.4.2.1}%
+\contentsline {subsubsection}{Why Ordinary Linear Regression Fails for Classification}{218}{section*.369}%
+\contentsline {subsubsection}{The Logistic (Sigmoid) Activation Function}{218}{section*.370}%
+\contentsline {subsubsection}{Log-Odds and the Decision Boundary}{218}{section*.371}%
+\contentsline {subsubsection}{The Loss Function: Binary Cross-Entropy (Log Loss)}{219}{section*.372}%
+\contentsline {paragraph}{Intuition of Cross-Entropy Loss}{219}{section*.373}%
+\contentsline {subsubsection}{Optimization via Gradient Descent}{219}{section*.374}%
+\contentsline {subsubsection}{Multiclass Logistic Regression: Softmax}{220}{section*.375}%
+\contentsline {subsection}{\numberline {4.2.2}$k$-Nearest Neighbors ($k$-NN): Memory-Based Inference}{220}{subsection.4.2.2}%
+\contentsline {subsubsection}{Step-by-Step Algorithm Execution}{220}{section*.376}%
+\contentsline {subsubsection}{Distance Metrics}{221}{section*.377}%
+\contentsline {subsubsection}{Choosing Hyperparameter $k$: The Bias-Variance Trade-Off}{221}{section*.378}%
+\contentsline {subsubsection}{The Edge Computational Bottleneck}{221}{section*.379}%
+\contentsline {subsection}{\numberline {4.2.3}Naive Bayes: Fast Probabilistic Reasoning}{222}{subsection.4.2.3}%
+\contentsline {subsubsection}{The Foundation: Bayes' Theorem}{222}{section*.380}%
+\contentsline {subsubsection}{The ``Naive'' Conditional Independence Assumption}{222}{section*.381}%
+\contentsline {subsubsection}{Numerical Stability: Log-Space Computation}{223}{section*.382}%
+\contentsline {subsubsection}{Gaussian Naive Bayes for Continuous Sensor Data}{223}{section*.383}%
+\contentsline {subsection}{\numberline {4.2.4}Support Vector Machines (SVM): Maximum Margin Classifiers}{223}{subsection.4.2.4}%
+\contentsline {subsubsection}{The Margin and Support Vectors}{223}{section*.384}%
+\contentsline {paragraph}{Formal Definition: Support Vectors}{224}{section*.385}%
+\contentsline {subsubsection}{Mathematical Formulation: Hard Margin SVM}{224}{section*.386}%
+\contentsline {subsubsection}{Soft Margin SVM and Regularization Parameter $C$}{224}{section*.387}%
+\contentsline {subsubsection}{The Kernel Trick: Non-Linear Classification}{225}{section*.388}%
+\contentsline {paragraph}{Common Kernel Functions}{225}{section*.389}%
+\contentsline {subsection}{\numberline {4.2.5}Decision Trees: Orthogonal Logic and Rule Extraction}{225}{subsection.4.2.5}%
+\contentsline {subsubsection}{Anatomy of a Decision Tree}{225}{section*.390}%
+\contentsline {subsubsection}{How a Decision Tree Learns: Impurity Metrics}{226}{section*.391}%
+\contentsline {paragraph}{1. Gini Impurity}{226}{section*.392}%
+\contentsline {paragraph}{2. Entropy (Shannon Information)}{226}{section*.393}%
+\contentsline {subsubsection}{Strengths and Critical Weaknesses of Trees}{227}{section*.394}%
+\contentsline {paragraph}{Advantages:}{227}{section*.395}%
+\contentsline {paragraph}{Disadvantages:}{227}{section*.396}%
+\contentsline {paragraph}{Regularization via Pruning}{227}{section*.397}%
+\contentsline {subsection}{\numberline {4.2.6}Hands-On Python: The Five-Classifier Industrial Showdown}{227}{subsection.4.2.6}%
+\contentsline {paragraph}{Analysis of Results:}{228}{section*.398}%
+\contentsline {subsection}{\numberline {4.2.7}IoT and TinyML: Deploying Classifiers on Microcontrollers}{229}{subsection.4.2.7}%
+\contentsline {paragraph}{Compiling a Scikit-Learn Decision Tree to Pure C Code}{229}{section*.399}%
+\contentsline {subsection}{\numberline {4.2.8}Common Pitfalls in Supervised Classification}{230}{subsection.4.2.8}%
+\contentsline {subsection}{\numberline {4.2.9}Key Takeaways}{230}{subsection.4.2.9}%
+\contentsline {subsection}{\numberline {4.2.10}Check Yourself}{231}{subsection.4.2.10}%
+\contentsline {section}{\numberline {4.3}Ensemble Methods}{234}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}Bagging and Random Forests: Parallel Variance Reduction}{235}{subsection.4.3.1}%
+\contentsline {subsubsection}{The Statistical Power of the Majority Vote}{235}{section*.401}%
+\contentsline {subsubsection}{Bootstrap Sampling and Out-Of-Bag (OOB) Estimation}{236}{section*.402}%
+\contentsline {paragraph}{Formal Definition: Bootstrap Sampling}{236}{section*.403}%
+\contentsline {paragraph}{The Out-Of-Bag (OOB) Phenomenon}{236}{section*.404}%
+\contentsline {subsubsection}{Random Forests: De-Correlating the Trees}{237}{section*.405}%
+\contentsline {paragraph}{Breiman's Breakthrough: Random Feature Subspaces}{237}{section*.406}%
+\contentsline {subsubsection}{Feature Importance: Gini Impurity versus Permutation}{237}{section*.407}%
+\contentsline {subsection}{\numberline {4.3.2}Gradient Boosting: The Residual Correction Engine}{238}{subsection.4.3.2}%
+\contentsline {subsubsection}{The Core Intuition of Boosting}{238}{section*.408}%
+\contentsline {subsubsection}{Gradient Descent in Function Space}{238}{section*.409}%
+\contentsline {paragraph}{The Role of the Learning Rate $\eta $}{238}{section*.410}%
+\contentsline {subsection}{\numberline {4.3.3}Modern Gradient Boosting: XGBoost and LightGBM}{239}{subsection.4.3.3}%
+\contentsline {subsubsection}{XGBoost: Extreme Gradient Boosting}{239}{section*.411}%
+\contentsline {subsubsection}{LightGBM and CatBoost: The Modern Boosting Ecosystem}{239}{section*.412}%
+\contentsline {subsection}{\numberline {4.3.4}Stacking and Voting: Heterogeneous Ensembles}{240}{subsection.4.3.4}%
+\contentsline {subsubsection}{Voting Classifiers: Hard versus Soft Voting}{240}{section*.413}%
+\contentsline {subsubsection}{Stacked Generalization (Stacking)}{241}{section*.414}%
+\contentsline {subsection}{\numberline {4.3.5}Hands-On Python: The Ensemble Benchmark}{241}{subsection.4.3.5}%
+\contentsline {paragraph}{Analysis of Results:}{243}{section*.415}%
+\contentsline {subsection}{\numberline {4.3.6}IoT and TinyML: Running Ensembles on Edge Microcontrollers}{243}{subsection.4.3.6}%
+\contentsline {paragraph}{1. Compact Forests via C Code Generation}{243}{section*.416}%
+\contentsline {paragraph}{2. Model Distillation for Edge Deployment}{244}{section*.417}%
+\contentsline {subsection}{\numberline {4.3.7}Common Pitfalls in Ensemble Modeling}{244}{subsection.4.3.7}%
+\contentsline {subsection}{\numberline {4.3.8}Key Takeaways}{245}{subsection.4.3.8}%
+\contentsline {subsection}{\numberline {4.3.9}Check Yourself}{245}{subsection.4.3.9}%
+\contentsline {section}{\numberline {4.4}Unsupervised Learning}{248}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}$k$-Means Clustering: Vector Quantization and Centroid Optimization}{249}{subsection.4.4.1}%
+\contentsline {subsubsection}{Mathematical Formulation: Minimizing Within-Cluster Inertia}{250}{section*.419}%
+\contentsline {subsubsection}{Lloyd's Algorithm: The Alternating Optimization}{250}{section*.420}%
+\contentsline {paragraph}{Convergence Guarantee}{250}{section*.421}%
+\contentsline {subsubsection}{Initialization Pitfalls and $k$-Means++}{251}{section*.422}%
+\contentsline {subsubsection}{Determining the Optimal Number of Clusters $K$}{251}{section*.423}%
+\contentsline {paragraph}{1. The Elbow Method}{251}{section*.424}%
+\contentsline {paragraph}{2. Silhouette Analysis}{251}{section*.425}%
+\contentsline {subsubsection}{Assumptions and Critical Limitations of $k$-Means}{252}{section*.426}%
+\contentsline {subsection}{\numberline {4.4.2}Hierarchical Clustering: Dendrograms and Linkage Criteria}{252}{subsection.4.4.2}%
+\contentsline {subsubsection}{Agglomerative (Bottom-Up) Clustering}{252}{section*.427}%
+\contentsline {subsubsection}{Linkage Criteria: Measuring Inter-Cluster Distance}{252}{section*.428}%
+\contentsline {subsubsection}{The Dendrogram: Visualizing Multi-Scale Structure}{253}{section*.429}%
+\contentsline {subsection}{\numberline {4.4.3}DBSCAN: Density-Based Spatial Clustering with Noise}{253}{subsection.4.4.3}%
+\contentsline {subsubsection}{Core Parameters: Epsilon ($\varepsilon $) and MinPts}{254}{section*.430}%
+\contentsline {subsubsection}{Point Classification: Core, Border, and Noise}{254}{section*.431}%
+\contentsline {subsubsection}{Density-Reachability and Cluster Formation}{254}{section*.432}%
+\contentsline {subsubsection}{Why DBSCAN is Essential for IoT Anomaly Detection}{255}{section*.433}%
+\contentsline {subsection}{\numberline {4.4.4}Gaussian Mixture Models: Soft Probabilistic Clustering}{255}{subsection.4.4.4}%
+\contentsline {subsubsection}{Mathematical Formulation of the Mixture}{255}{section*.434}%
+\contentsline {subsubsection}{Covariance Matrix Topologies}{255}{section*.435}%
+\contentsline {subsubsection}{The Expectation-Maximization (EM) Algorithm}{256}{section*.436}%
+\contentsline {subsection}{\numberline {4.4.5}PCA for Anomaly Detection: The Linear Reconstruction Engine}{256}{subsection.4.4.5}%
+\contentsline {subsubsection}{The Geometric Duality of PCA}{256}{section*.437}%
+\contentsline {subsubsection}{Reconstruction Error as an Outlier Metric}{257}{section*.438}%
+\contentsline {subsection}{\numberline {4.4.6}Non-Linear Dimensionality Reduction: t-SNE and UMAP}{257}{subsection.4.4.6}%
+\contentsline {subsubsection}{t-SNE: t-Distributed Stochastic Neighbor Embedding}{257}{section*.439}%
+\contentsline {paragraph}{1. High-Dimensional Probabilities}{257}{section*.440}%
+\contentsline {paragraph}{2. Low-Dimensional Probabilities: Solving the Crowding Problem}{258}{section*.441}%
+\contentsline {paragraph}{3. Objective Function: Minimizing KL Divergence}{258}{section*.442}%
+\contentsline {subsubsection}{UMAP: Uniform Manifold Approximation and Projection}{258}{section*.443}%
+\contentsline {paragraph}{Key Advantages of UMAP over t-SNE:}{258}{section*.444}%
+\contentsline {paragraph}{Core UMAP Hyperparameters}{259}{section*.445}%
+\contentsline {subsection}{\numberline {4.4.7}Hands-On Python: The Unsupervised Telemetry Lab}{259}{subsection.4.4.7}%
+\contentsline {paragraph}{Detailed Analysis of Lab Results:}{260}{section*.446}%
+\contentsline {subsection}{\numberline {4.4.8}IoT and TinyML: Unsupervised Learning on Microcontrollers}{261}{subsection.4.4.8}%
+\contentsline {paragraph}{1. The Edge Self-Commissioning Pipeline}{261}{section*.447}%
+\contentsline {paragraph}{2. Lightweight C Routine: Nearest-Centroid Edge Anomaly Detector}{261}{section*.448}%
+\contentsline {subsection}{\numberline {4.4.9}Common Pitfalls in Unsupervised Learning}{262}{subsection.4.4.9}%
+\contentsline {subsection}{\numberline {4.4.10}Key Takeaways}{262}{subsection.4.4.10}%
+\contentsline {subsection}{\numberline {4.4.11}Check Yourself}{263}{subsection.4.4.11}%
+\contentsline {section}{\numberline {4.5}Anomaly Detection}{267}{section.4.5}%
+\contentsline {subsection}{\numberline {4.5.1}Statistical Thresholds}{268}{subsection.4.5.1}%
+\contentsline {subsubsection}{Univariate Thresholds: Z-Score and Tukey's Fences}{268}{section*.450}%
+\contentsline {paragraph}{The Gaussian Z-Score (3-Sigma Rule)}{268}{section*.451}%
+\contentsline {paragraph}{Tukey's Interquartile Range (IQR) Fences}{268}{section*.452}%
+\contentsline {subsubsection}{The Failure of Univariate Thresholds in Coupled Systems}{269}{section*.453}%
+\contentsline {subsubsection}{Multivariate Anomaly Detection: Mahalanobis Distance}{269}{section*.454}%
+\contentsline {subsection}{\numberline {4.5.2}Isolation Forest}{271}{subsection.4.5.2}%
+\contentsline {subsubsection}{Algorithm: Building an Isolation Tree (\textit {iTree})}{271}{section*.455}%
+\contentsline {subsubsection}{The Mathematical Anomaly Score}{272}{section*.456}%
+\contentsline {subsection}{\numberline {4.5.3}One-Class Support Vector Machines (OC-SVM)}{273}{subsection.4.5.3}%
+\contentsline {subsubsection}{Geometric Formulation: Separating Normal Data from the Origin}{273}{section*.457}%
+\contentsline {subsubsection}{The Kernel Trick and Decision Function}{273}{section*.458}%
+\contentsline {subsection}{\numberline {4.5.4}Autoencoders for Semi-Supervised Anomaly Detection}{274}{subsection.4.5.4}%
+\contentsline {subsubsection}{Architecture: The Information Bottleneck}{274}{section*.459}%
+\contentsline {subsubsection}{The Reconstruction Error Anomaly Score}{275}{section*.460}%
+\contentsline {paragraph}{Selecting the Anomaly Threshold $\tau $}{275}{section*.461}%
+\contentsline {subsection}{\numberline {4.5.5}Comparative Case Study: Industrial Pumping Station}{276}{subsection.4.5.5}%
+\contentsline {subsubsection}{Benchmark Analysis and Method Selection Guide}{278}{section*.462}%
+\contentsline {subsection}{\numberline {4.5.6}Summary and Practical Checklist}{278}{subsection.4.5.6}%
+\contentsline {subsection}{\numberline {4.5.7}Check Yourself}{279}{subsection.4.5.7}%
+\contentsline {section}{\numberline {4.6}Model Quality and scikit-learn Pipelines}{282}{section.4.6}%
+\contentsline {subsection}{\numberline {4.6.1}Overfitting, Underfitting, and the Bias-Variance Decomposition}{282}{subsection.4.6.1}%
+\contentsline {subsubsection}{The Mathematical Decomposition of Generalization Error}{282}{section*.464}%
+\contentsline {subsubsection}{Diagnostic Symptoms and Engineering Remedies}{285}{section*.465}%
+\contentsline {subsection}{\numberline {4.6.2}Constraining Model Complexity: L1 and L2 Regularization}{285}{subsection.4.6.2}%
+\contentsline {subsubsection}{L2 Regularization (Ridge Regression / Weight Decay)}{285}{section*.466}%
+\contentsline {subsubsection}{L1 Regularization (Lasso Regression)}{286}{section*.467}%
+\contentsline {subsubsection}{Elastic Net: Combining L1 and L2}{286}{section*.468}%
+\contentsline {subsection}{\numberline {4.6.3}Rigorous Model Validation: Cross-Validation Strategies}{287}{subsection.4.6.3}%
+\contentsline {subsubsection}{$k$-Fold Cross-Validation}{287}{section*.469}%
+\contentsline {paragraph}{Choosing $k$: The Bias-Variance Trade-off of Cross-Validation}{288}{section*.470}%
+\contentsline {subsubsection}{Stratified and Time-Series Cross-Validation}{288}{section*.471}%
+\contentsline {subsection}{\numberline {4.6.4}Hyperparameter Optimization: Grid Search vs Random Search}{288}{subsection.4.6.4}%
+\contentsline {subsubsection}{Grid Search (\texttt {GridSearchCV})}{289}{section*.472}%
+\contentsline {subsubsection}{Random Search (\texttt {RandomizedSearchCV})}{289}{section*.473}%
+\contentsline {subsection}{\numberline {4.6.5}Comprehensive Model Evaluation Metrics}{289}{subsection.4.6.5}%
+\contentsline {subsubsection}{Regression Metrics: Quantifying Continuous Errors}{289}{section*.474}%
+\contentsline {paragraph}{Mean Absolute Error (MAE)}{290}{section*.475}%
+\contentsline {paragraph}{Mean Squared Error (MSE) and Root Mean Squared Error (RMSE)}{290}{section*.476}%
+\contentsline {paragraph}{Coefficient of Determination ($R^2$)}{290}{section*.477}%
+\contentsline {subsubsection}{Classification Metrics and the Confusion Matrix}{291}{section*.478}%
+\contentsline {subsubsection}{Threshold Curves: ROC-AUC vs Precision-Recall Curves}{292}{section*.479}%
+\contentsline {paragraph}{Receiver Operating Characteristic (ROC) Curve}{292}{section*.480}%
+\contentsline {paragraph}{Precision-Recall (PR) Curve}{293}{section*.481}%
+\contentsline {subsection}{\numberline {4.6.6}The Golden Standard: scikit-learn Pipelines}{293}{subsection.4.6.6}%
+\contentsline {subsubsection}{Pipeline Architecture and Leak-Free Execution}{293}{section*.482}%
+\contentsline {subsubsection}{End-to-End Production Example: IoT Pumping Station Pipeline}{294}{section*.483}%
+\contentsline {subsection}{\numberline {4.6.7}Summary and Practical Checklist}{296}{subsection.4.6.7}%
+\contentsline {subsection}{\numberline {4.6.8}Check Yourself}{297}{subsection.4.6.8}%
+\contentsline {chapter}{\numberline {5}Deep Learning}{301}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Neural Network Basics}{301}{section.5.1}%
+\contentsline {subsection}{\numberline {5.1.1}The Perceptron and Multilayer Networks}{301}{subsection.5.1.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{301}{section*.485}%
+\contentsline {paragraph}{The Idea in Words, Step by Step}{302}{section*.486}%
+\contentsline {paragraph}{Matrix Formulation of a Dense Layer}{302}{section*.487}%
+\contentsline {paragraph}{Python Code with PyTorch}{302}{lstlisting.5.-174}%
+\contentsline {subsection}{\numberline {5.1.2}Activation Functions: Injecting Non-Linearity}{304}{subsection.5.1.2}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{304}{section*.489}%
+\contentsline {paragraph}{The Four Core Activation Functions}{304}{section*.490}%
+\contentsline {paragraph}{Hand Calculation Example: Softmax Probabilities}{305}{section*.491}%
+\contentsline {subsection}{\numberline {5.1.3}Loss Functions: Guiding the Learning Process}{306}{subsection.5.1.3}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{306}{section*.492}%
+\contentsline {paragraph}{The Two Standard Loss Functions}{306}{section*.493}%
+\contentsline {paragraph}{Hand Calculation Example: Binary Cross-Entropy Penalty}{306}{section*.494}%
+\contentsline {subsection}{\numberline {5.1.4}Forward Pass and Backpropagation Worked by Hand}{307}{subsection.5.1.4}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{307}{section*.495}%
+\contentsline {paragraph}{The Complete Hand-Calculated Walkthrough}{307}{section*.496}%
+\contentsline {paragraph}{Network Specifications}{307}{section*.497}%
+\contentsline {paragraph}{Step 1: The Forward Pass}{308}{section*.498}%
+\contentsline {paragraph}{Step 2: The Backward Pass (Backpropagation)}{308}{section*.499}%
+\contentsline {paragraph}{Step 3: Update Parameters via Gradient Descent}{309}{section*.500}%
+\contentsline {paragraph}{Python Code Verification}{309}{lstlisting.5.-176}%
+\contentsline {subsection}{\numberline {5.1.5}Weight Initialization: Avoiding Vanishing and Exploding Gradients}{310}{subsection.5.1.5}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{310}{section*.502}%
+\contentsline {paragraph}{Modern Initialization Strategies}{310}{section*.503}%
+\contentsline {paragraph}{Python Code}{310}{lstlisting.5.-178}%
+\contentsline {subsection}{\numberline {5.1.6}Check Yourself}{311}{subsection.5.1.6}%
+\contentsline {section}{\numberline {5.2}PyTorch}{312}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Tensors: The Foundational Data Structure}{313}{subsection.5.2.1}%
+\contentsline {subsubsection}{Tensor Properties and Memory Management}{314}{section*.506}%
+\contentsline {paragraph}{Zero-Copy Memory Sharing with NumPy}{314}{section*.507}%
+\contentsline {subsubsection}{Essential Tensor Manipulation Operations}{314}{section*.508}%
+\contentsline {subsection}{\numberline {5.2.2}Autograd: The Automatic Differentiation Engine}{315}{subsection.5.2.2}%
+\contentsline {subsubsection}{How Autograd Functions: The Dynamic Computational Graph}{315}{section*.509}%
+\contentsline {subsubsection}{Controlling Gradient Tracking}{316}{section*.510}%
+\contentsline {subsection}{\numberline {5.2.3}Data Pipelines: \texttt {Dataset} and \texttt {DataLoader}}{317}{subsection.5.2.3}%
+\contentsline {subsubsection}{Authoring a Custom IoT \texttt {Dataset}}{317}{section*.511}%
+\contentsline {subsubsection}{Configuring the \texttt {DataLoader}}{318}{section*.512}%
+\contentsline {subsection}{\numberline {5.2.4}Building Models with \texttt {torch.nn.Module}}{318}{subsection.5.2.4}%
+\contentsline {subsection}{\numberline {5.2.5}Hardware Acceleration: Apple Silicon (MPS) and CUDA}{319}{subsection.5.2.5}%
+\contentsline {subsubsection}{The Apple Silicon Unified Memory Architecture (UMA)}{319}{section*.513}%
+\contentsline {subsubsection}{Writing Device-Agnostic Code}{320}{section*.514}%
+\contentsline {subsection}{\numberline {5.2.6}Writing a Production-Grade Training Loop}{320}{subsection.5.2.6}%
+\contentsline {subsubsection}{The Canonical Training Step}{320}{section*.515}%
+\contentsline {subsection}{\numberline {5.2.7}Model Persistence: Saving, Loading, and Edge Export}{322}{subsection.5.2.7}%
+\contentsline {subsubsection}{Why You Should Always Save the \texttt {state\_dict}}{323}{section*.516}%
+\contentsline {subsubsection}{Comprehensive Training Checkpoints}{323}{section*.517}%
+\contentsline {subsection}{\numberline {5.2.8}Summary and Practical Checklist}{324}{subsection.5.2.8}%
+\contentsline {subsection}{\numberline {5.2.9}Check Yourself}{325}{subsection.5.2.9}%
+\contentsline {section}{\numberline {5.3}Training Techniques}{327}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Dropout: Preventing Co-adaptation through Random Thinning}{328}{subsection.5.3.1}%
+\contentsline {subsubsection}{Mathematical Formulation: Inverted Dropout}{328}{section*.519}%
+\contentsline {paragraph}{Why Scale by $\frac {1}{1 - p}$ During Training?}{329}{section*.520}%
+\contentsline {subsubsection}{Dropout as an Implicit Ensemble}{329}{section*.521}%
+\contentsline {paragraph}{Monte Carlo Dropout: Estimating Predictive Uncertainty at the Edge}{329}{section*.522}%
+\contentsline {paragraph}{Practical Hyperparameter Rules for IoT Sensors}{330}{section*.523}%
+\contentsline {subsection}{\numberline {5.3.2}Batch Normalization: Accelerating Convergence}{330}{subsection.5.3.2}%
+\contentsline {subsubsection}{The Batch Normalization Algorithm}{330}{section*.524}%
+\contentsline {subsubsection}{Training versus Inference: Running Statistics}{331}{section*.525}%
+\contentsline {subsubsection}{Alternative Normalization: LayerNorm and GroupNorm}{331}{section*.526}%
+\contentsline {paragraph}{Layer Normalization (\texttt {nn.LayerNorm})}{331}{section*.527}%
+\contentsline {subsubsection}{Edge Optimization: Batch Normalization Folding}{332}{section*.528}%
+\contentsline {subsection}{\numberline {5.3.3}Learning Rate Schedules: Dynamic Adaptation}{332}{subsection.5.3.3}%
+\contentsline {subsubsection}{Common Scheduling Algorithms}{332}{section*.529}%
+\contentsline {paragraph}{1. Step Decay (\texttt {StepLR})}{332}{section*.530}%
+\contentsline {paragraph}{2. Cosine Annealing (\texttt {CosineAnnealingLR})}{332}{section*.531}%
+\contentsline {paragraph}{3. Warmup with Cosine Decay}{333}{section*.532}%
+\contentsline {paragraph}{4. Reduce on Plateau (\texttt {ReduceLROnPlateau})}{333}{section*.533}%
+\contentsline {subsection}{\numberline {5.3.4}Early Stopping: The Non-Parametric Regularizer}{333}{subsection.5.3.4}%
+\contentsline {subsection}{\numberline {5.3.5}Data Augmentation for Physical and Edge Sensors}{334}{subsection.5.3.5}%
+\contentsline {subsubsection}{Core Sensor Augmentation Transformations}{334}{section*.534}%
+\contentsline {subsection}{\numberline {5.3.6}Systematic Debugging: What to Do When a Model Will Not Learn}{336}{subsection.5.3.6}%
+\contentsline {subsubsection}{The 7-Step Diagnostic Protocol Explained}{336}{section*.535}%
+\contentsline {subsection}{\numberline {5.3.7}Summary and Practical Checklist}{338}{subsection.5.3.7}%
+\contentsline {subsection}{\numberline {5.3.8}Check Yourself}{338}{subsection.5.3.8}%
+\contentsline {section}{\numberline {5.4}Convolutional Networks}{342}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}The Convolution Operation: Filters and Feature Maps}{342}{subsection.5.4.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{342}{section*.537}%
+\contentsline {paragraph}{The 2D Convolution in Mathematics}{343}{section*.538}%
+\contentsline {paragraph}{Multi-Channel Convolution (Color Images and Deep Layers)}{345}{section*.539}%
+\contentsline {subsection}{\numberline {5.4.2}Padding and Stride: Controlling Spatial Dimensions}{345}{subsection.5.4.2}%
+\contentsline {paragraph}{Padding ($P$)}{345}{section*.540}%
+\contentsline {paragraph}{Stride ($S$)}{345}{section*.541}%
+\contentsline {paragraph}{The Universal Dimension Formula}{346}{section*.542}%
+\contentsline {subsection}{\numberline {5.4.3}Pooling: Spatial Downsampling and Invariance}{346}{subsection.5.4.3}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{346}{section*.543}%
+\contentsline {paragraph}{Types of Pooling}{347}{section*.544}%
+\contentsline {subsection}{\numberline {5.4.4}Classic CNN Architectures: LeNet, VGG, and ResNet}{347}{subsection.5.4.4}%
+\contentsline {subsubsection}{LeNet-5 (1998): The Blueprint}{348}{section*.545}%
+\contentsline {subsubsection}{VGG (2014): The Power of Small Filters}{348}{section*.546}%
+\contentsline {subsubsection}{ResNet (2015): Residual Connections and Ultra-Deep Networks}{348}{section*.547}%
+\contentsline {paragraph}{The Math of Residual Connections}{349}{section*.548}%
+\contentsline {subsection}{\numberline {5.4.5}Transfer Learning with Pretrained Models}{349}{subsection.5.4.5}%
+\contentsline {paragraph}{Why It Works: The Feature Hierarchy}{350}{section*.549}%
+\contentsline {paragraph}{Two Strategies for Transfer Learning}{350}{section*.550}%
+\contentsline {subsection}{\numberline {5.4.6}End-to-End Implementation: Image Classification with PyTorch}{350}{subsection.5.4.6}%
+\contentsline {paragraph}{The PyTorch Implementation}{350}{lstlisting.5.-190}%
+\contentsline {paragraph}{Expected Output}{352}{lstlisting.5.-191}%
+\contentsline {paragraph}{Line-by-Line Code Breakdown}{352}{section*.553}%
+\contentsline {subsection}{\numberline {5.4.7}ML for IoT and Edge: TinyML Vision and 1D/2D CNNs}{352}{subsection.5.4.7}%
+\contentsline {paragraph}{The Peak Activation Memory Bottleneck}{352}{section*.554}%
+\contentsline {paragraph}{1D CNNs vs 2D CNNs on Sensor Data}{353}{section*.555}%
+\contentsline {subsection}{\numberline {5.4.8}Common Mistakes and Misconceptions}{353}{subsection.5.4.8}%
+\contentsline {subsection}{\numberline {5.4.9}Key Takeaways}{354}{subsection.5.4.9}%
+\contentsline {subsection}{\numberline {5.4.10}Check Yourself}{354}{subsection.5.4.10}%
+\contentsline {section}{\numberline {5.5}Sequence Models}{356}{section.5.5}%
+\contentsline {subsection}{\numberline {5.5.1}Recurrent Neural Networks (RNNs): Architecture and Operation}{357}{subsection.5.5.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{357}{section*.557}%
+\contentsline {paragraph}{Mathematical Formulation of a Vanilla RNN}{357}{section*.558}%
+\contentsline {subsection}{\numberline {5.5.2}Backpropagation Through Time (BPTT) and the Gradient Breakdown}{359}{subsection.5.5.2}%
+\contentsline {paragraph}{The Chain Rule Across Time}{359}{section*.559}%
+\contentsline {paragraph}{The Two Catastrophic Failure Modes}{359}{section*.560}%
+\contentsline {subsection}{\numberline {5.5.3}Long Short-Term Memory (LSTM)}{360}{subsection.5.5.3}%
+\contentsline {paragraph}{The Six Equations of an LSTM Cell}{361}{section*.561}%
+\contentsline {subsection}{\numberline {5.5.4}Gated Recurrent Unit (GRU): Streamlined Gating for Edge AI}{363}{subsection.5.5.4}%
+\contentsline {paragraph}{Mathematical Formulation of a GRU}{363}{section*.562}%
+\contentsline {subsection}{\numberline {5.5.5}Sequence-to-Sequence (Seq2Seq) Architectures}{363}{subsection.5.5.5}%
+\contentsline {paragraph}{How Seq2Seq Works}{364}{section*.563}%
+\contentsline {paragraph}{Teacher Forcing During Training}{364}{section*.564}%
+\contentsline {subsection}{\numberline {5.5.6}PyTorch Implementation: Predictive Sensor Telemetry}{364}{subsection.5.5.6}%
+\contentsline {paragraph}{The PyTorch Implementation}{365}{lstlisting.5.-192}%
+\contentsline {paragraph}{Expected Output}{366}{lstlisting.5.-193}%
+\contentsline {paragraph}{Line-by-Line Code Breakdown}{366}{section*.567}%
+\contentsline {subsection}{\numberline {5.5.7}ML for IoT and Edge: Sequence Models on Microcontrollers}{366}{subsection.5.5.7}%
+\contentsline {paragraph}{Stateful Streaming vs Stateless Batching}{367}{section*.568}%
+\contentsline {subsection}{\numberline {5.5.8}Common Mistakes and Misconceptions}{367}{subsection.5.5.8}%
+\contentsline {subsection}{\numberline {5.5.9}Key Takeaways}{367}{subsection.5.5.9}%
+\contentsline {subsection}{\numberline {5.5.10}Check Yourself}{368}{subsection.5.5.10}%
+\contentsline {section}{\numberline {5.6}Attention and Transformers}{370}{section.5.6}%
+\contentsline {subsection}{\numberline {5.6.1}The Attention Mechanism: Queries, Keys, and Values}{370}{subsection.5.6.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{370}{section*.570}%
+\contentsline {paragraph}{Mathematical Formulation: Scaled Dot-Product Attention}{371}{section*.571}%
+\contentsline {subsection}{\numberline {5.6.2}Self-Attention and Multi-Head Attention}{373}{subsection.5.6.2}%
+\contentsline {paragraph}{Self-Attention: The Sequence Attending to Itself}{373}{section*.572}%
+\contentsline {paragraph}{Multi-Head Attention: Looking from Multiple Perspectives}{373}{section*.573}%
+\contentsline {subsection}{\numberline {5.6.3}Positional Encodings: Injecting Order into Sets}{374}{subsection.5.6.3}%
+\contentsline {paragraph}{Sinusoidal Positional Encoding}{374}{section*.574}%
+\contentsline {paragraph}{Why Sines and Cosines?}{374}{section*.575}%
+\contentsline {subsection}{\numberline {5.6.4}The Complete Transformer Architecture}{375}{subsection.5.6.4}%
+\contentsline {paragraph}{1. The Encoder Pipeline}{375}{section*.576}%
+\contentsline {paragraph}{2. The Decoder Pipeline}{376}{section*.577}%
+\contentsline {subsection}{\numberline {5.6.5}BERT vs GPT: Two Architectural Philosophies}{376}{subsection.5.6.5}%
+\contentsline {paragraph}{1. BERT: Bidirectional Representation for Diagnostics}{376}{section*.578}%
+\contentsline {paragraph}{2. GPT: Autoregressive Generative Intelligence}{377}{section*.579}%
+\contentsline {subsection}{\numberline {5.6.6}PyTorch Implementation: Building a Multi-Head Attention Layer}{377}{subsection.5.6.6}%
+\contentsline {paragraph}{The PyTorch Implementation}{377}{lstlisting.5.-194}%
+\contentsline {paragraph}{Expected Output}{378}{lstlisting.5.-195}%
+\contentsline {paragraph}{Line-by-Line Code Breakdown}{378}{section*.582}%
+\contentsline {subsection}{\numberline {5.6.7}ML for IoT and Edge: Transformers on Embedded Devices}{379}{subsection.5.6.7}%
+\contentsline {paragraph}{How TinyML Engineers Deploy Transformers to Edge Devices}{379}{section*.583}%
+\contentsline {subsection}{\numberline {5.6.8}Common Mistakes and Misconceptions}{379}{subsection.5.6.8}%
+\contentsline {subsection}{\numberline {5.6.9}Key Takeaways}{380}{subsection.5.6.9}%
+\contentsline {subsection}{\numberline {5.6.10}Check Yourself}{380}{subsection.5.6.10}%
+\contentsline {section}{\numberline {5.7}Other Architectures}{383}{section.5.7}%
+\contentsline {subsection}{\numberline {5.7.1}Autoencoders: Compression, Reconstruction, and Anomaly Detection}{383}{subsection.5.7.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{383}{section*.585}%
+\contentsline {paragraph}{Architecture and Mathematical Formulation}{384}{section*.586}%
+\contentsline {paragraph}{Unsupervised Anomaly Detection Mechanism}{384}{section*.587}%
+\contentsline {subsection}{\numberline {5.7.2}Variational Autoencoders (VAEs): Continuous Latent Spaces}{386}{subsection.5.7.2}%
+\contentsline {paragraph}{The Limitation of Standard Autoencoders}{386}{section*.588}%
+\contentsline {paragraph}{The VAE Loss Function: Reconstruction + KL Divergence}{386}{section*.589}%
+\contentsline {paragraph}{The Reparameterization Trick}{386}{section*.590}%
+\contentsline {subsection}{\numberline {5.7.3}Generative Adversarial Networks (GANs): Overview}{387}{subsection.5.7.3}%
+\contentsline {paragraph}{The Minimax Game Objective}{387}{section*.591}%
+\contentsline {paragraph}{Training Challenges in GANs}{388}{section*.592}%
+\contentsline {subsection}{\numberline {5.7.4}PyTorch Implementation: Autoencoder for Anomaly Detection}{388}{subsection.5.7.4}%
+\contentsline {paragraph}{The PyTorch Implementation}{388}{lstlisting.5.-196}%
+\contentsline {paragraph}{Expected Output}{389}{lstlisting.5.-197}%
+\contentsline {paragraph}{Line-by-Line Code Breakdown}{389}{section*.595}%
+\contentsline {subsection}{\numberline {5.7.5}ML for IoT and Edge: TinyML Anomaly Detection and Compression}{390}{subsection.5.7.5}%
+\contentsline {paragraph}{Edge Data Compression Over Low-Bandwidth Networks}{390}{section*.596}%
+\contentsline {paragraph}{Synthetic Fault Augmentation via VAEs and GANs}{390}{section*.597}%
+\contentsline {subsection}{\numberline {5.7.6}Common Mistakes and Misconceptions}{391}{subsection.5.7.6}%
+\contentsline {subsection}{\numberline {5.7.7}Key Takeaways}{391}{subsection.5.7.7}%
+\contentsline {subsection}{\numberline {5.7.8}Check Yourself}{392}{subsection.5.7.8}%
+\contentsline {chapter}{\numberline {6}Specialized Areas}{394}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Time-Series and Sensor Data}{394}{section.6.1}%
+\contentsline {subsection}{\numberline {6.1.1}Components of Time Series: Trend, Seasonality, and Stationarity}{394}{subsection.6.1.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{394}{section*.599}%
+\contentsline {paragraph}{The Concept of Stationarity}{395}{section*.600}%
+\contentsline {paragraph}{Transforming Non-Stationary Data: Differencing}{395}{section*.601}%
+\contentsline {paragraph}{Hand Calculation Example}{395}{section*.602}%
+\contentsline {paragraph}{Python Code}{396}{lstlisting.6.-198}%
+\contentsline {paragraph}{Line-by-Line Explanation}{396}{section*.604}%
+\contentsline {subsection}{\numberline {6.1.2}Classical Forecasting: Moving Averages and ARIMA}{397}{subsection.6.1.2}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{397}{section*.605}%
+\contentsline {paragraph}{Exponential Moving Average (EMA)}{397}{section*.606}%
+\contentsline {paragraph}{Hand Calculation Example: Exponential Moving Average}{397}{section*.607}%
+\contentsline {paragraph}{The ARIMA$(p, d, q)$ Model}{398}{section*.608}%
+\contentsline {paragraph}{Python Code}{398}{lstlisting.6.-200}%
+\contentsline {subsection}{\numberline {6.1.3}Windowing Sensor Streams for Machine Learning}{399}{subsection.6.1.3}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{399}{section*.610}%
+\contentsline {paragraph}{The Parameters of a Sliding Window}{399}{section*.611}%
+\contentsline {paragraph}{Hand Calculation Example}{399}{section*.612}%
+\contentsline {paragraph}{Python Code}{400}{lstlisting.6.-203}%
+\contentsline {subsection}{\numberline {6.1.4}Deep Learning for Time Series: LSTM and 1D-CNN}{401}{subsection.6.1.4}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{401}{section*.614}%
+\contentsline {paragraph}{1D Convolution: Slicing with Filter Kernels}{401}{section*.615}%
+\contentsline {paragraph}{Hand Calculation Example: 1D Edge/Difference Kernel}{401}{section*.616}%
+\contentsline {paragraph}{The LSTM Cell: Gated Memory}{402}{section*.617}%
+\contentsline {paragraph}{Python Code with PyTorch}{402}{lstlisting.6.-205}%
+\contentsline {subsection}{\numberline {6.1.5}Forecasting Evaluation: Metrics and Temporal Validation}{403}{subsection.6.1.5}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{403}{section*.619}%
+\contentsline {paragraph}{Temporal Cross-Validation (Walk-Forward Validation)}{403}{section*.620}%
+\contentsline {paragraph}{Standard Forecast Evaluation Metrics}{403}{section*.621}%
+\contentsline {paragraph}{Hand Calculation Example}{404}{section*.622}%
+\contentsline {paragraph}{Python Code}{404}{lstlisting.6.-207}%
+\contentsline {subsection}{\numberline {6.1.6}Check Yourself}{405}{subsection.6.1.6}%
+\contentsline {section}{\numberline {6.2}Computer Vision}{406}{section.6.2}%
+\contentsline {subsection}{\numberline {6.2.1}The Vision Spectrum: Classification, Detection, and Segmentation}{406}{subsection.6.2.1}%
+\contentsline {paragraph}{Classification on Edge Devices}{407}{section*.625}%
+\contentsline {subsection}{\numberline {6.2.2}Object Detection: Two-Stage vs One-Stage Detectors}{407}{subsection.6.2.2}%
+\contentsline {paragraph}{Why Object Detection is Hard}{407}{section*.626}%
+\contentsline {paragraph}{Two-Stage Detectors (R-CNN Family)}{407}{section*.627}%
+\contentsline {paragraph}{One-Stage Detectors (YOLO and SSD)}{407}{section*.628}%
+\contentsline {subsection}{\numberline {6.2.3}The YOLO (You Only Look Once) Architecture}{408}{subsection.6.2.3}%
+\contentsline {paragraph}{The Grid Cell Formulation}{408}{section*.629}%
+\contentsline {paragraph}{Intersection over Union (IoU)}{409}{section*.630}%
+\contentsline {paragraph}{Post-Processing: Non-Maximum Suppression (NMS)}{410}{section*.631}%
+\contentsline {subsection}{\numberline {6.2.4}Segmentation Basics: U-Net and Pixel-Level Classification}{410}{subsection.6.2.4}%
+\contentsline {paragraph}{Semantic vs Instance Segmentation}{410}{section*.632}%
+\contentsline {paragraph}{The U-Net Architecture}{411}{section*.633}%
+\contentsline {paragraph}{Loss Functions for Segmentation: The Class Imbalance Problem}{411}{section*.634}%
+\contentsline {subsection}{\numberline {6.2.5}PyTorch Implementation: IoU and Non-Maximum Suppression}{411}{subsection.6.2.5}%
+\contentsline {paragraph}{The PyTorch Implementation}{411}{lstlisting.6.-209}%
+\contentsline {paragraph}{Expected Output}{413}{lstlisting.6.-210}%
+\contentsline {paragraph}{Line-by-Line Code Breakdown}{413}{section*.637}%
+\contentsline {subsection}{\numberline {6.2.6}ML for IoT and Edge: Embedded Vision on Microcontrollers}{413}{subsection.6.2.6}%
+\contentsline {paragraph}{FOMO: Faster Objects, More Objects on Microcontrollers}{414}{section*.638}%
+\contentsline {subsection}{\numberline {6.2.7}Common Mistakes and Misconceptions}{414}{subsection.6.2.7}%
+\contentsline {subsection}{\numberline {6.2.8}Key Takeaways}{415}{subsection.6.2.8}%
+\contentsline {subsection}{\numberline {6.2.9}Check Yourself}{415}{subsection.6.2.9}%
+\contentsline {section}{\numberline {6.3}Natural Language Processing}{417}{section.6.3}%
+\contentsline {subsection}{\numberline {6.3.1}Tokenization: Slicing Text into Atomic Units}{417}{subsection.6.3.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{417}{section*.640}%
+\contentsline {paragraph}{Three Tokenization Strategies}{418}{section*.641}%
+\contentsline {subsection}{\numberline {6.3.2}Classical Text Vectorization: Bag of Words and TF-IDF}{418}{subsection.6.3.2}%
+\contentsline {subsubsection}{Bag of Words (Count Vectorization)}{418}{section*.642}%
+\contentsline {paragraph}{Limitations of Bag of Words}{419}{section*.643}%
+\contentsline {subsubsection}{Term Frequency--Inverse Document Frequency (TF-IDF)}{419}{section*.644}%
+\contentsline {subsection}{\numberline {6.3.3}Dense Word Embeddings: Word2Vec and Semantic Geometry}{420}{subsection.6.3.3}%
+\contentsline {paragraph}{The Flaw of One-Hot and TF-IDF Vectors: The Orthogonality Trap}{420}{section*.645}%
+\contentsline {paragraph}{Word2Vec: Continuous Bag of Words (CBOW) and Skip-Gram}{421}{section*.646}%
+\contentsline {paragraph}{Semantic Vector Arithmetic and Cosine Similarity}{421}{section*.647}%
+\contentsline {subsection}{\numberline {6.3.4}Text Classification and Fine-Tuning Pretrained Models}{421}{subsection.6.3.4}%
+\contentsline {paragraph}{From Static to Contextual Embeddings: The Transformer Revolution}{421}{section*.648}%
+\contentsline {paragraph}{The Transfer Learning Protocol for Text Classification}{422}{section*.649}%
+\contentsline {subsection}{\numberline {6.3.5}PyTorch Implementation: Neural Text Classification}{422}{subsection.6.3.5}%
+\contentsline {paragraph}{The PyTorch Implementation}{422}{lstlisting.6.-211}%
+\contentsline {paragraph}{Expected Output}{424}{lstlisting.6.-212}%
+\contentsline {paragraph}{Line-by-Line Code Breakdown}{424}{section*.652}%
+\contentsline {subsection}{\numberline {6.3.6}ML for IoT and Edge: Speech Commands and Tiny Language Models}{424}{subsection.6.3.6}%
+\contentsline {paragraph}{Knowledge Distillation: Shrinking BERT for the Edge}{424}{section*.653}%
+\contentsline {subsection}{\numberline {6.3.7}Common Mistakes and Misconceptions}{425}{subsection.6.3.7}%
+\contentsline {subsection}{\numberline {6.3.8}Key Takeaways}{425}{subsection.6.3.8}%
+\contentsline {subsection}{\numberline {6.3.9}Check Yourself}{426}{subsection.6.3.9}%
+\contentsline {section}{\numberline {6.4}Large Language Models}{427}{section.6.4}%
+\contentsline {subsection}{\numberline {6.4.1}How LLMs Are Trained: The Three-Stage Alignment Pipeline}{428}{subsection.6.4.1}%
+\contentsline {subsubsection}{Stage 1: Self-Supervised Pretraining (The Foundation)}{428}{section*.655}%
+\contentsline {subsubsection}{Stage 2: Supervised Fine-Tuning (Instruction Tuning)}{429}{section*.656}%
+\contentsline {subsubsection}{Stage 3: Preference Alignment (RLHF and DPO)}{429}{section*.657}%
+\contentsline {subsection}{\numberline {6.4.2}Prompt Engineering: Steering Generative Engines}{429}{subsection.6.4.2}%
+\contentsline {paragraph}{1. Zero-Shot vs Few-Shot Prompting (In-Context Learning)}{429}{section*.658}%
+\contentsline {paragraph}{2. Chain-of-Thought (CoT) Prompting}{430}{section*.659}%
+\contentsline {paragraph}{3. Structured Output Enforcement (JSON for IoT)}{430}{section*.660}%
+\contentsline {subsection}{\numberline {6.4.3}Retrieval-Augmented Generation (RAG)}{430}{subsection.6.4.3}%
+\contentsline {paragraph}{The Three Steps of RAG}{431}{section*.661}%
+\contentsline {subsection}{\numberline {6.4.4}Parameter-Efficient Fine-Tuning: LoRA}{431}{subsection.6.4.4}%
+\contentsline {paragraph}{The VRAM Barrier of Full Fine-Tuning}{431}{section*.662}%
+\contentsline {paragraph}{Mathematical Formulation of LoRA}{432}{section*.663}%
+\contentsline {subsection}{\numberline {6.4.5}Evaluating LLM Outputs}{433}{subsection.6.4.5}%
+\contentsline {paragraph}{1. Perplexity (PPL)}{433}{section*.664}%
+\contentsline {paragraph}{2. N-Gram Overlap Metrics: BLEU and ROUGE}{433}{section*.665}%
+\contentsline {paragraph}{3. LLM-as-a-Judge and RAG Triad Metrics}{433}{section*.666}%
+\contentsline {subsection}{\numberline {6.4.6}Python Implementation: A Self-Contained Vector RAG Pipeline}{434}{subsection.6.4.6}%
+\contentsline {paragraph}{The Python Implementation}{434}{lstlisting.6.-217}%
+\contentsline {paragraph}{Expected Output}{435}{lstlisting.6.-218}%
+\contentsline {paragraph}{Line-by-Line Code Breakdown}{435}{section*.669}%
+\contentsline {subsection}{\numberline {6.4.7}ML for IoT and Edge: Small Language Models on Edge Gateways}{435}{subsection.6.4.7}%
+\contentsline {paragraph}{Quantization and 4-Bit Execution with GGUF}{436}{section*.670}%
+\contentsline {subsection}{\numberline {6.4.8}Common Mistakes and Misconceptions}{436}{subsection.6.4.8}%
+\contentsline {subsection}{\numberline {6.4.9}Key Takeaways}{437}{subsection.6.4.9}%
+\contentsline {subsection}{\numberline {6.4.10}Check Yourself}{437}{subsection.6.4.10}%
+\contentsline {section}{\numberline {6.5}Generative Models}{439}{section.6.5}%
+\contentsline {subsection}{\numberline {6.5.1}The Generative Trilemma}{439}{subsection.6.5.1}%
+\contentsline {subsection}{\numberline {6.5.2}Diffusion Models: Principles and Intuition}{441}{subsection.6.5.2}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{441}{section*.672}%
+\contentsline {subsection}{\numberline {6.5.3}The Mathematical Mechanics: Forward and Reverse Processes}{441}{subsection.6.5.3}%
+\contentsline {subsubsection}{The Forward (Noising) Process}{442}{section*.673}%
+\contentsline {paragraph}{The Direct Sampling Shortcut}{442}{section*.674}%
+\contentsline {subsubsection}{The Reverse (Denoising) Process}{442}{section*.675}%
+\contentsline {subsubsection}{The Objective: Predicting the Injected Noise}{443}{section*.676}%
+\contentsline {paragraph}{Given Setup:}{443}{section*.677}%
+\contentsline {paragraph}{Step 1: Compute Cumulative Alphas ($\bar {\alpha }_t$)}{443}{section*.678}%
+\contentsline {paragraph}{Step 2: Forward Noising to Timestep $t = 2$}{443}{section*.679}%
+\contentsline {paragraph}{Step 3: Reverse Denoising from $t = 2$ to $t = 1$}{444}{section*.680}%
+\contentsline {subsection}{\numberline {6.5.4}Latent Diffusion Models: Scaling to High Resolutions}{444}{subsection.6.5.4}%
+\contentsline {subsection}{\numberline {6.5.5}Architectural Comparison: GANs vs. VAEs vs. Diffusion}{445}{subsection.6.5.5}%
+\contentsline {paragraph}{Choosing the Right Model for Your Problem}{446}{section*.681}%
+\contentsline {subsection}{\numberline {6.5.6}PyTorch Implementation: Forward Scheduler and Denoising Network}{446}{subsection.6.5.6}%
+\contentsline {paragraph}{Line-by-Line Code Explanation}{448}{section*.682}%
+\contentsline {paragraph}{1. Synthetic Anomaly Augmentation for Rare Failure Modes}{448}{section*.683}%
+\contentsline {paragraph}{2. Sensor Super-Resolution and Denoising}{448}{section*.684}%
+\contentsline {paragraph}{3. The Edge Compute Dilemma: Can Diffusion Run on Microcontrollers?}{449}{section*.685}%
+\contentsline {section}{\numberline {6.6}Reinforcement Learning and Graph Neural Networks}{451}{section.6.6}%
+\contentsline {subsection}{\numberline {6.6.1}The Reinforcement Learning Framework}{452}{subsection.6.6.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{453}{section*.687}%
+\contentsline {paragraph}{The Discrete Interaction Step}{453}{section*.688}%
+\contentsline {paragraph}{The Exploration vs.\ Exploitation Dilemma}{454}{section*.689}%
+\contentsline {subsection}{\numberline {6.6.2}Markov Decision Processes (MDPs)}{454}{subsection.6.6.2}%
+\contentsline {paragraph}{The Markov Property}{454}{section*.690}%
+\contentsline {paragraph}{Formal MDP Definition}{455}{section*.691}%
+\contentsline {paragraph}{The Discounted Return}{455}{section*.692}%
+\contentsline {paragraph}{Policies and Value Functions}{455}{section*.693}%
+\contentsline {paragraph}{The Bellman Equation}{456}{section*.694}%
+\contentsline {subsection}{\numberline {6.6.3}Tabular Q-Learning}{456}{subsection.6.6.3}%
+\contentsline {paragraph}{The Q-Learning Update Rule}{456}{section*.695}%
+\contentsline {paragraph}{Problem Setup:}{457}{section*.696}%
+\contentsline {paragraph}{Current Q-Table Values:}{457}{section*.697}%
+\contentsline {paragraph}{Hyperparameters:}{457}{section*.698}%
+\contentsline {paragraph}{Observed Transition:}{457}{section*.699}%
+\contentsline {paragraph}{Step 1: Identify the Prior Estimate}{457}{section*.700}%
+\contentsline {paragraph}{Step 2: Find the Maximum Q-Value in Next State $S_1$}{457}{section*.701}%
+\contentsline {paragraph}{Step 3: Compute the TD Target}{457}{section*.702}%
+\contentsline {paragraph}{Step 4: Compute the Temporal Difference (TD) Error}{458}{section*.703}%
+\contentsline {paragraph}{Step 5: Apply the Q-Learning Update}{458}{section*.704}%
+\contentsline {subsection}{\numberline {6.6.4}Deep Q-Networks (DQN)}{458}{subsection.6.6.4}%
+\contentsline {paragraph}{Two Critical Innovations of DQN}{458}{section*.705}%
+\contentsline {subsection}{\numberline {6.6.5}Policy Gradients and Actor-Critic Methods}{459}{subsection.6.6.5}%
+\contentsline {paragraph}{The Policy Gradient Approach}{459}{section*.706}%
+\contentsline {paragraph}{The Actor-Critic Architecture}{460}{section*.707}%
+\contentsline {subsection}{\numberline {6.6.6}Graph Data Basics: When Data Lives on Networks}{460}{subsection.6.6.6}%
+\contentsline {paragraph}{Why It Exists: The Non-Euclidean Reality of IoT}{460}{section*.708}%
+\contentsline {paragraph}{Formal Graph Definitions}{461}{section*.709}%
+\contentsline {subsection}{\numberline {6.6.7}Graph Neural Networks and the Message-Passing Paradigm}{461}{subsection.6.6.7}%
+\contentsline {paragraph}{The Challenge: Permutation Invariance}{461}{section*.710}%
+\contentsline {paragraph}{Graph Convolutional Networks (GCN)}{462}{section*.711}%
+\contentsline {paragraph}{Given Setup:}{463}{section*.712}%
+\contentsline {paragraph}{Step 1: Add Self-Loops ($\mathbf {\tilde {A}} = \mathbf {A} + \mathbf {I}$)}{463}{section*.713}%
+\contentsline {paragraph}{Step 2: Calculate Row Sums ($\mathbf {\tilde {D}}$)}{463}{section*.714}%
+\contentsline {paragraph}{Step 3: Compute Symmetric Normalization for Node 1}{463}{section*.715}%
+\contentsline {subsection}{\numberline {6.6.8}Python Implementations: Q-Learning and GCN}{464}{subsection.6.6.8}%
+\contentsline {paragraph}{Line-by-Line Code Explanation}{466}{section*.716}%
+\contentsline {paragraph}{1. Edge Reinforcement Learning: Adaptive Duty Cycling}{466}{section*.717}%
+\contentsline {paragraph}{2. Graph Neural Networks for Smart Infrastructure}{466}{section*.718}%
+\contentsline {paragraph}{3. Edge Compute Constraints: The Cloud-Edge Partition}{467}{section*.719}%
+\contentsline {part}{III\hspace {1em}ML for IoT}{471}{part.3}%
+\contentsline {chapter}{\numberline {7}ML for IoT and Edge (TinyML)}{472}{chapter.7}%
+\contentsline {section}{\numberline {7.1}The Sensor Data Pipeline}{472}{section.7.1}%
+\contentsline {subsection}{\numberline {7.1.1}Collecting and Labeling Sensor Data in the Wild}{472}{subsection.7.1.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{473}{section*.721}%
+\contentsline {paragraph}{The Nyquist-Shannon Sampling Theorem}{473}{section*.722}%
+\contentsline {paragraph}{Hand Calculation Example: Sampling Rate Selection}{473}{section*.723}%
+\contentsline {paragraph}{Python Code}{474}{lstlisting.7.-219}%
+\contentsline {paragraph}{Line-by-Line Explanation}{474}{section*.725}%
+\contentsline {subsection}{\numberline {7.1.2}Signal Filtering and Noise Removal on the Edge}{475}{subsection.7.1.2}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{475}{section*.726}%
+\contentsline {paragraph}{The Median Filter in Detail}{475}{section*.727}%
+\contentsline {paragraph}{Hand Calculation Example: Median Filter vs. Mean Filter}{475}{section*.728}%
+\contentsline {paragraph}{Python Code}{476}{lstlisting.7.-221}%
+\contentsline {subsection}{\numberline {7.1.3}Windowing and Time/Frequency Feature Extraction}{477}{subsection.7.1.3}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{477}{section*.730}%
+\contentsline {paragraph}{The Core Edge Feature Toolkit}{477}{section*.731}%
+\contentsline {paragraph}{Hand Calculation Example: Time-Domain Feature Vector}{477}{section*.732}%
+\contentsline {paragraph}{Python Code}{478}{lstlisting.7.-223}%
+\contentsline {subsection}{\numberline {7.1.4}Handling Missing, Dropped, and Delayed Sensor Readings}{479}{subsection.7.1.4}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{479}{section*.734}%
+\contentsline {paragraph}{Resilience Strategies for Edge Systems}{479}{section*.735}%
+\contentsline {paragraph}{Python Code}{479}{lstlisting.7.-225}%
+\contentsline {subsection}{\numberline {7.1.5}Check Yourself}{480}{subsection.7.1.5}%
+\contentsline {section}{\numberline {7.2}Edge vs Cloud}{482}{section.7.2}%
+\contentsline {subsection}{\numberline {7.2.1}The Four Pillars of the Architectural Trade-Off}{482}{subsection.7.2.1}%
+\contentsline {subsubsection}{1. Latency: Determinism vs.\ Network Jitter}{482}{section*.738}%
+\contentsline {subsubsection}{2. Bandwidth and Network Saturation}{483}{section*.739}%
+\contentsline {subsubsection}{3. Power: The Energy Cost of Computation vs.\ Radio Transmission}{483}{section*.740}%
+\contentsline {subsubsection}{4. Privacy, Confidentiality, and Regulatory Compliance}{484}{section*.741}%
+\contentsline {subsection}{\numberline {7.2.2}Decision Framework: When to Infer on Device vs.\ Server}{484}{subsection.7.2.2}%
+\contentsline {paragraph}{The Cascaded / Tiered Hybrid Architecture}{484}{section*.742}%
+\contentsline {paragraph}{Common Hardware Specifications:}{485}{section*.743}%
+\contentsline {paragraph}{Design A: Raw Streaming to Cloud via Wi-Fi}{485}{section*.744}%
+\contentsline {paragraph}{Design B: On-Device TinyML Inference}{486}{section*.745}%
+\contentsline {paragraph}{Step 1: Calculate Daily Bandwidth}{486}{section*.746}%
+\contentsline {paragraph}{Step 2: Calculate Daily Energy Consumption for Design A (Cloud Streaming)}{486}{section*.747}%
+\contentsline {paragraph}{Step 3: Calculate Daily Energy Consumption for Design B (TinyML Edge)}{486}{section*.748}%
+\contentsline {subsection}{\numberline {7.2.3}Cloud Connectivity Protocols: MQTT vs.\ HTTP}{487}{subsection.7.2.3}%
+\contentsline {subsubsection}{HTTP / REST for Cloud Inference}{487}{section*.749}%
+\contentsline {subsubsection}{MQTT for Constrained Telemetry Pipelines}{488}{section*.750}%
+\contentsline {subsection}{\numberline {7.2.4}Python Implementations: Cloud Server and Edge MQTT Client}{488}{subsection.7.2.4}%
+\contentsline {paragraph}{Line-by-Line Code Explanation}{490}{section*.751}%
+\contentsline {section}{\numberline {7.3}The TinyML Toolchain}{493}{section.7.3}%
+\contentsline {subsection}{\numberline {7.3.1}TensorFlow Lite vs.\ TensorFlow Lite for Microcontrollers}{494}{subsection.7.3.1}%
+\contentsline {paragraph}{Why Standard TFLite Cannot Run on a Microcontroller}{494}{section*.753}%
+\contentsline {paragraph}{How TFLM Solves These Constraints}{495}{section*.754}%
+\contentsline {subsection}{\numberline {7.3.2}The Conversion Pipeline: From Python to C Byte Array}{495}{subsection.7.3.2}%
+\contentsline {subsubsection}{Step 1: Training with Embedded Constraints in Mind}{495}{section*.755}%
+\contentsline {subsubsection}{Step 2: Exporting from PyTorch or Keras}{496}{section*.756}%
+\contentsline {subsubsection}{Step 3: Post-Training Quantization (PTQ)}{496}{section*.757}%
+\contentsline {paragraph}{The Need for a Representative Calibration Dataset}{496}{section*.758}%
+\contentsline {subsubsection}{Step 4: Converting \texttt {.tflite} to a C Header File}{496}{section*.759}%
+\contentsline {paragraph}{Problem Setup:}{497}{section*.760}%
+\contentsline {paragraph}{Step 1: Compute the Scale Factor ($S$)}{497}{section*.761}%
+\contentsline {paragraph}{Step 2: Compute the Integer Zero-Point ($Z$)}{497}{section*.762}%
+\contentsline {paragraph}{Step 3: Quantize a Concrete Sensor Value}{497}{section*.763}%
+\contentsline {paragraph}{Step 4: Verify with Dequantization}{498}{section*.764}%
+\contentsline {subsection}{\numberline {7.3.3}Anatomy of the TFLM C++ Runtime}{498}{subsection.7.3.3}%
+\contentsline {subsection}{\numberline {7.3.4}The Edge Impulse End-to-End Workflow}{499}{subsection.7.3.4}%
+\contentsline {subsection}{\numberline {7.3.5}Python Implementation: Converting PyTorch/Keras to Int8 TFLite}{500}{subsection.7.3.5}%
+\contentsline {paragraph}{Line-by-Line Code Explanation}{501}{section*.765}%
+\contentsline {subsection}{\numberline {7.3.6}Embedded C++ Implementation: Live Inference on ESP32}{501}{subsection.7.3.6}%
+\contentsline {paragraph}{1. Flash (ROM) Footprint}{503}{section*.766}%
+\contentsline {paragraph}{2. SRAM (RAM) Consumption and the Arena Tuning Rule}{503}{section*.767}%
+\contentsline {paragraph}{3. Hardware Execution Profiling}{504}{section*.768}%
+\contentsline {section}{\numberline {7.4}Model Compression}{507}{section.7.4}%
+\contentsline {subsection}{\numberline {7.4.1}The Model Compression Landscape}{507}{subsection.7.4.1}%
+\contentsline {subsection}{\numberline {7.4.2}Choosing and Designing Small Architectures}{508}{subsection.7.4.2}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{508}{section*.770}%
+\contentsline {paragraph}{Depthwise Separable Convolutions (MobileNet)}{508}{section*.771}%
+\contentsline {paragraph}{Theoretical Computational Savings}{509}{section*.772}%
+\contentsline {subsection}{\numberline {7.4.3}Quantization: Post-Training (PTQ) vs.\ Quantization-Aware Training (QAT)}{509}{subsection.7.4.3}%
+\contentsline {paragraph}{Why Post-Training Quantization Can Fail}{509}{section*.773}%
+\contentsline {paragraph}{Quantization-Aware Training (QAT)}{509}{section*.774}%
+\contentsline {subsection}{\numberline {7.4.4}Network Pruning: Cutting Dead Connections}{510}{subsection.7.4.4}%
+\contentsline {paragraph}{Magnitude-Based Pruning}{511}{section*.775}%
+\contentsline {paragraph}{Unstructured vs.\ Structured Pruning}{511}{section*.776}%
+\contentsline {paragraph}{Iterative Pruning and Fine-Tuning}{511}{section*.777}%
+\contentsline {subsection}{\numberline {7.4.5}Knowledge Distillation: The Teacher-Student Paradigm}{511}{subsection.7.4.5}%
+\contentsline {paragraph}{Why It Exists: The Limit of Hard Training Labels}{511}{section*.778}%
+\contentsline {paragraph}{The Teacher-Student Mathematical Formulation}{512}{section*.779}%
+\contentsline {paragraph}{The Distillation Loss Function}{512}{section*.780}%
+\contentsline {paragraph}{Part A: Softmax Temperature Scaling}{513}{section*.781}%
+\contentsline {subparagraph}{1. Standard Softmax ($T = 1$):}{513}{section*.782}%
+\contentsline {subparagraph}{2. Softened Softmax ($T = 2$):}{513}{section*.783}%
+\contentsline {paragraph}{Part B: Depthwise Separable FLOP Savings}{513}{section*.784}%
+\contentsline {subparagraph}{1. Standard 2D Convolution Multiplication Count:}{513}{section*.785}%
+\contentsline {subparagraph}{2. Depthwise Separable Convolution Multiplication Count:}{514}{section*.786}%
+\contentsline {subparagraph}{3. Ratio and Speedup Factor:}{514}{section*.787}%
+\contentsline {subsection}{\numberline {7.4.6}Python Implementations: Knowledge Distillation and Pruning}{514}{subsection.7.4.6}%
+\contentsline {paragraph}{Line-by-Line Code Explanation}{516}{section*.788}%
+\contentsline {section}{\numberline {7.5}Deployment on Hardware}{519}{section.7.5}%
+\contentsline {subsection}{\numberline {7.5.1}Running a Real-Time Model on the ESP32}{519}{subsection.7.5.1}%
+\contentsline {paragraph}{The Dual-Core FreeRTOS Advantage}{520}{section*.790}%
+\contentsline {subsection}{\numberline {7.5.2}Benchmarking and Profiling on Hardware}{520}{subsection.7.5.2}%
+\contentsline {paragraph}{1. Measuring Latency with Microsecond Determinism}{520}{section*.791}%
+\contentsline {paragraph}{2. Profiling Memory: Flash vs.\ SRAM}{521}{section*.792}%
+\contentsline {subsection}{\numberline {7.5.3}Power Consumption and Low-Power Inference}{521}{subsection.7.5.3}%
+\contentsline {paragraph}{The Physics of Energy Consumption}{521}{section*.793}%
+\contentsline {paragraph}{Why Digital Multimeters Fail to Measure TinyML Power}{522}{section*.794}%
+\contentsline {paragraph}{Specialized Power Measurement Tools}{522}{section*.795}%
+\contentsline {paragraph}{Given Operational Profile (One Complete 10-Second Cycle):}{522}{section*.796}%
+\contentsline {paragraph}{Step 1: Calculate Charge Consumed in a Normal 10-Second Cycle}{523}{section*.797}%
+\contentsline {paragraph}{Step 2: Calculate Average Base Current ($I_{\text {avg\_base}}$)}{523}{section*.798}%
+\contentsline {paragraph}{Step 3: Add Daily Anomaly Transmission Charge}{523}{section*.799}%
+\contentsline {paragraph}{Step 4: Calculate Battery Lifespan}{523}{section*.800}%
+\contentsline {subsection}{\numberline {7.5.4}On-Device Anomaly Detection}{523}{subsection.7.5.4}%
+\contentsline {paragraph}{Why Anomaly Detection Dominates TinyML}{523}{section*.801}%
+\contentsline {paragraph}{The Autoencoder Reconstruction Paradigm}{524}{section*.802}%
+\contentsline {subsection}{\numberline {7.5.5}Over-The-Air (OTA) Model Updates}{524}{subsection.7.5.5}%
+\contentsline {paragraph}{The Dual-Bank OTA Partition Scheme}{524}{section*.803}%
+\contentsline {paragraph}{The Four-Stage Safe OTA Protocol}{524}{section*.804}%
+\contentsline {subsection}{\numberline {7.5.6}Federated Learning: Edge-Assisted Distributed Intelligence}{525}{subsection.7.5.6}%
+\contentsline {paragraph}{Why It Exists: The Dual Crisis of Privacy and Bandwidth}{525}{section*.805}%
+\contentsline {paragraph}{The Federated Averaging (FedAvg) Algorithm}{526}{section*.806}%
+\contentsline {paragraph}{TinyML Constraints on Federated Learning}{526}{section*.807}%
+\contentsline {subsection}{\numberline {7.5.7}Complete Implementation: ESP32 Anomaly Detector with Telemetry Profiling}{526}{subsection.7.5.7}%
+\contentsline {paragraph}{Line-by-Line Code Explanation}{529}{section*.808}%
+\contentsline {chapter}{\numberline {8}MLOps and Deployment}{533}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Experiment Management}{533}{section.8.1}%
+\contentsline {subsection}{\numberline {8.1.1}Experiment Tracking: The Laboratory Notebook of Machine Learning}{533}{subsection.8.1.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{534}{section*.810}%
+\contentsline {paragraph}{The Three Core Primitives of Experiment Tracking}{534}{section*.811}%
+\contentsline {paragraph}{Python Code with MLflow}{534}{lstlisting.8.-236}%
+\contentsline {paragraph}{Line-by-Line Explanation}{535}{section*.813}%
+\contentsline {subsection}{\numberline {8.1.2}Dataset and Model Versioning: Lineage and Registries}{536}{subsection.8.1.2}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{536}{section*.814}%
+\contentsline {paragraph}{The Cryptographic Checksum (SHA-256)}{536}{section*.815}%
+\contentsline {paragraph}{Hand Calculation Demonstration: The Avalanche Effect}{537}{section*.816}%
+\contentsline {paragraph}{The Model Lifecycle Stages}{537}{section*.817}%
+\contentsline {paragraph}{Python Code}{537}{lstlisting.8.-238}%
+\contentsline {subsection}{\numberline {8.1.3}Reproducibility: Seeds, Containers, and Dependency Locking}{538}{subsection.8.1.3}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{538}{section*.819}%
+\contentsline {paragraph}{The Three Sources of Non-Determinism}{538}{section*.820}%
+\contentsline {paragraph}{Hand Calculation Demonstration: The Linear Congruential PRNG}{538}{section*.821}%
+\contentsline {paragraph}{Python Code: The Unified Seed Harness}{539}{lstlisting.8.-240}%
+\contentsline {paragraph}{Environment Pinning via \texttt {requirements.txt}}{539}{section*.823}%
+\contentsline {subsection}{\numberline {8.1.4}Check Yourself}{540}{subsection.8.1.4}%
+\contentsline {section}{\numberline {8.2}Serving Models}{541}{section.8.2}%
+\contentsline {subsection}{\numberline {8.2.1}Wrapping a Model in a FastAPI Service}{541}{subsection.8.2.1}%
+\contentsline {paragraph}{Why FastAPI Over Flask and Django?}{541}{section*.825}%
+\contentsline {paragraph}{The Lifespan Pattern: Loading Models Once}{542}{section*.826}%
+\contentsline {subsection}{\numberline {8.2.2}Docker Basics: Packaging the Machine Learning Runtime}{543}{subsection.8.2.2}%
+\contentsline {paragraph}{Containers vs.\ Virtual Machines (VMs)}{543}{section*.827}%
+\contentsline {paragraph}{Core Docker Terminology}{544}{section*.828}%
+\contentsline {subsection}{\numberline {8.2.3}Cloud Capacity Planning and Concurrency}{544}{subsection.8.2.3}%
+\contentsline {paragraph}{Little's Law in Queuing Theory}{544}{section*.829}%
+\contentsline {paragraph}{Given System Parameters:}{544}{section*.830}%
+\contentsline {paragraph}{Step 1: Calculate Total Request Arrival Rate ($\lambda $)}{545}{section*.831}%
+\contentsline {paragraph}{Step 2: Calculate Average Concurrent Requests ($L$)}{545}{section*.832}%
+\contentsline {paragraph}{Step 3: Calculate Worker Throughput Capacity ($\mu $)}{545}{section*.833}%
+\contentsline {paragraph}{Step 4: Determine Required Worker Threads}{545}{section*.834}%
+\contentsline {paragraph}{Step 5: Translate to Container Sizing}{545}{section*.835}%
+\contentsline {subsection}{\numberline {8.2.4}Python Implementation: Production-Grade Model Server}{545}{subsection.8.2.4}%
+\contentsline {paragraph}{Line-by-Line Code Explanation}{547}{section*.836}%
+\contentsline {subsection}{\numberline {8.2.5}Dockerizing the Model Server}{547}{subsection.8.2.5}%
+\contentsline {paragraph}{Building and Running the Container}{548}{section*.837}%
+\contentsline {subsection}{\numberline {8.2.6}Deploying to Cloud Services}{548}{subsection.8.2.6}%
+\contentsline {paragraph}{1. Serverless Containers (Google Cloud Run / AWS App Runner)}{549}{section*.838}%
+\contentsline {paragraph}{2. Managed Kubernetes (EKS / GKE)}{549}{section*.839}%
+\contentsline {paragraph}{The Cascaded Architecture in Practice:}{549}{section*.840}%
+\contentsline {section}{\numberline {8.3}Operations}{552}{section.8.3}%
+\contentsline {subsection}{\numberline {8.3.1}The Reality of Production ML: The Day-2 Challenge}{552}{subsection.8.3.1}%
+\contentsline {subsection}{\numberline {8.3.2}Continuous Integration, Delivery, and Training (CI/CD/CT)}{553}{subsection.8.3.2}%
+\contentsline {paragraph}{1. Continuous Integration (CI) for ML}{553}{section*.842}%
+\contentsline {paragraph}{2. Continuous Delivery (CD) for ML}{554}{section*.843}%
+\contentsline {paragraph}{3. Continuous Training (CT)}{554}{section*.844}%
+\contentsline {subsection}{\numberline {8.3.3}Model Monitoring: The Three-Tier Architecture}{555}{subsection.8.3.3}%
+\contentsline {paragraph}{The Challenge of Delayed Ground Truth}{555}{section*.845}%
+\contentsline {subsection}{\numberline {8.3.4}Data Drift, Concept Drift, and Covariate Shift}{556}{subsection.8.3.4}%
+\contentsline {paragraph}{1. Data Drift (Covariate Shift)}{556}{section*.846}%
+\contentsline {paragraph}{2. Concept Drift}{556}{section*.847}%
+\contentsline {paragraph}{3. Prior Probability Shift (Label Drift)}{556}{section*.848}%
+\contentsline {subsection}{\numberline {8.3.5}Quantifying Drift: Population Stability Index and Statistical Tests}{556}{subsection.8.3.5}%
+\contentsline {paragraph}{1. The Population Stability Index (PSI)}{557}{section*.849}%
+\contentsline {paragraph}{Mathematical Properties of PSI:}{557}{section*.850}%
+\contentsline {paragraph}{Standard Industry Decision Thresholds for PSI:}{557}{section*.851}%
+\contentsline {paragraph}{2. The Two-Sample Kolmogorov-Smirnov (KS) Test}{558}{section*.852}%
+\contentsline {subsection}{\numberline {8.3.6}Step-by-Step Calculation: Evaluating Feature Drift on Sensor Telemetry}{558}{subsection.8.3.6}%
+\contentsline {paragraph}{Observed Sample Counts:}{558}{section*.853}%
+\contentsline {paragraph}{Step 1: Compute Proportions ($Q_k$ and $P_k$)}{558}{section*.854}%
+\contentsline {paragraph}{Step 2: Compute Bin Differences, Ratios, and Natural Logarithms}{558}{section*.855}%
+\contentsline {paragraph}{Step 3: Sum the Contributions}{559}{section*.856}%
+\contentsline {paragraph}{Step 4: Operational Interpretation}{559}{section*.857}%
+\contentsline {subsection}{\numberline {8.3.7}Python Implementation: Automated Drift Detection Pipeline}{559}{subsection.8.3.7}%
+\contentsline {paragraph}{Automating Model Validation in GitHub Actions}{561}{section*.858}%
+\contentsline {subsection}{\numberline {8.3.8}Model Retraining Strategies and Safeguards}{562}{subsection.8.3.8}%
+\contentsline {paragraph}{1. Scheduled (Periodic) Retraining}{562}{section*.859}%
+\contentsline {paragraph}{2. Event-Driven (Triggered) Retraining}{562}{section*.860}%
+\contentsline {paragraph}{3. Continuous / Online Learning}{562}{section*.861}%
+\contentsline {paragraph}{The Champion-Challenger Gate}{562}{section*.862}%
+\contentsline {paragraph}{1. Physical and Electrical Hardware Degradation:}{563}{section*.863}%
+\contentsline {paragraph}{2. The Edge-Cloud Closed-Loop Retraining Architecture:}{563}{section*.864}%
+\contentsline {part}{IV\hspace {1em}Practice and Research}{568}{part.4}%
+\contentsline {chapter}{\numberline {9}Projects}{569}{chapter.9}%
+\contentsline {section}{\numberline {9.1}Project 1: Classical ML on a Public Dataset}{569}{section.9.1}%
+\contentsline {subsection}{\numberline {9.1.1}Project Charter and Problem Formulation}{570}{subsection.9.1.1}%
+\contentsline {paragraph}{Why It Exists: The Real-World Problem}{570}{section*.866}%
+\contentsline {paragraph}{The Physical Problem: Milling Machine Tool Wear}{570}{section*.867}%
+\contentsline {paragraph}{The Machine Learning Task}{571}{section*.868}%
+\contentsline {paragraph}{Data Asset: The AI4I 2020 Predictive Maintenance Dataset}{571}{section*.869}%
+\contentsline {subsection}{\numberline {9.1.2}Phase 1: Exploratory Data Analysis and Data Auditing}{571}{subsection.9.1.2}%
+\contentsline {paragraph}{Self-Contained Data Acquisition and Loading}{571}{section*.870}%
+\contentsline {paragraph}{The Accuracy Paradox: Why Raw Accuracy is a Dangerous Trap}{572}{section*.871}%
+\contentsline {paragraph}{Summary Statistics and Physical Correlations}{573}{section*.872}%
+\contentsline {paragraph}{Physical Interpretation of the Negative Correlation}{573}{section*.873}%
+\contentsline {subsection}{\numberline {9.1.3}Phase 2: Physics-Informed Feature Engineering}{573}{subsection.9.1.3}%
+\contentsline {paragraph}{Hand-Worked Calculation: Engineering Features for a Sample Point}{574}{section*.874}%
+\contentsline {paragraph}{Python Implementation of Feature Engineering and Encoding}{575}{lstlisting.9.-251}%
+\contentsline {subsection}{\numberline {9.1.4}Phase 3: Stratified Splitting and Leakage Prevention}{575}{subsection.9.1.4}%
+\contentsline {paragraph}{The Critical Requirement: Stratified Splitting}{575}{section*.876}%
+\contentsline {paragraph}{Preventing Data Leakage During Feature Scaling}{575}{section*.877}%
+\contentsline {paragraph}{Python Code for Leakage-Free Preprocessing}{575}{lstlisting.9.-253}%
+\contentsline {subsection}{\numberline {9.1.5}Phase 4: Mathematical Deep-Dive: Evaluation Metrics}{576}{subsection.9.1.5}%
+\contentsline {paragraph}{Definitions of Key Metrics}{576}{section*.879}%
+\contentsline {paragraph}{Hand-Worked Numeric Example}{577}{section*.880}%
+\contentsline {subsection}{\numberline {9.1.6}Phase 5: Model Selection and Cross-Validation}{577}{subsection.9.1.6}%
+\contentsline {paragraph}{Python Code for Cross-Validation Benchmarking}{578}{lstlisting.9.-255}%
+\contentsline {paragraph}{Analysis of Cross-Validation Benchmarks}{578}{section*.882}%
+\contentsline {subsection}{\numberline {9.1.7}Phase 6: Hyperparameter Tuning and Model Diagnostics}{578}{subsection.9.1.7}%
+\contentsline {paragraph}{Final Test Evaluation}{579}{section*.883}%
+\contentsline {paragraph}{Feature Importance Analysis}{579}{section*.884}%
+\contentsline {subsection}{\numberline {9.1.8}Phase 7: TinyML Deployment: Exporting to Embedded C for Microcontrollers}{580}{subsection.9.1.8}%
+\contentsline {paragraph}{Decision Tree Rule Extraction}{580}{lstlisting.9.-263}%
+\contentsline {paragraph}{Production Embedded C Header: \texttt {predictive_maintenance.h}}{581}{section*.886}%
+\contentsline {subsection}{\numberline {9.1.9}Phase 8: Writing the Professional Technical Report}{582}{subsection.9.1.9}%
+\contentsline {subsection}{\numberline {9.1.10}Summary and Best Practices}{583}{subsection.9.1.10}%
+\contentsline {subsection}{\numberline {9.1.11}Check Yourself}{584}{subsection.9.1.11}%
+\contentsline {section}{\numberline {9.2}Project 2: Image Classifier}{586}{section.9.2}%
+\contentsline {subsection}{\numberline {9.2.1}Project Charter and Problem Formulation}{586}{subsection.9.2.1}%
+\contentsline {paragraph}{Why Transfer Learning is Mandatory}{587}{section*.893}%
+\contentsline {subsection}{\numberline {9.2.2}Dataset Exploration and the Input Augmentation Pipeline}{587}{subsection.9.2.2}%
+\contentsline {paragraph}{The Critical Danger of Laboratory Background Bias}{588}{section*.894}%
+\contentsline {subsection}{\numberline {9.2.3}Transfer Learning Architecture Design}{588}{subsection.9.2.3}%
+\contentsline {paragraph}{The Inverted Residual Block}{588}{section*.895}%
+\contentsline {paragraph}{The Custom Classification Head}{589}{section*.896}%
+\contentsline {subsection}{\numberline {9.2.4}The Two-Phase Training Protocol}{589}{subsection.9.2.4}%
+\contentsline {paragraph}{Phase 1: Feature Extraction (Frozen Backbone)}{589}{section*.897}%
+\contentsline {paragraph}{Phase 2: Gentle Fine-Tuning (Selective Unfreezing)}{590}{section*.898}%
+\contentsline {subsection}{\numberline {9.2.5}Mathematical Foundations and Hand Calculation}{590}{subsection.9.2.5}%
+\contentsline {paragraph}{1. Global Average Pooling (GAP)}{590}{section*.899}%
+\contentsline {paragraph}{2. Logit Linear Projection}{590}{section*.900}%
+\contentsline {paragraph}{3. Softmax Normalization}{590}{section*.901}%
+\contentsline {paragraph}{4. Categorical Cross-Entropy Loss}{591}{section*.902}%
+\contentsline {paragraph}{Given Values:}{591}{section*.903}%
+\contentsline {paragraph}{Step 1: Compute Raw Logits ($\hat {y} = W z + b$)}{591}{section*.904}%
+\contentsline {paragraph}{Step 2: Exponentiate Logits}{591}{section*.905}%
+\contentsline {paragraph}{Step 3: Compute Softmax Probabilities ($\hat {p}_k$)}{592}{section*.906}%
+\contentsline {paragraph}{Step 4: Compute Categorical Cross-Entropy Loss}{592}{section*.907}%
+\contentsline {paragraph}{Step 5: Compute Error Gradient with Respect to Logits}{592}{section*.908}%
+\contentsline {subsection}{\numberline {9.2.6}Complete Python Implementation: End-to-End Pipeline}{592}{subsection.9.2.6}%
+\contentsline {subsection}{\numberline {9.2.7}Embedded Edge Deployment on Hardware: ESP32-CAM}{595}{subsection.9.2.7}%
+\contentsline {paragraph}{Memory Budget Architecture: Overcoming the SRAM Bottleneck}{595}{section*.909}%
+\contentsline {paragraph}{Embedded C++ Inference Harness}{596}{section*.910}%
+\contentsline {subsection}{\numberline {9.2.8}Common Mistakes and Field Pitfalls}{597}{subsection.9.2.8}%
+\contentsline {section}{\numberline {9.3}Project 3: On-Device Sensor Model}{601}{section.9.3}%
+\contentsline {subsection}{\numberline {9.3.1}Project Charter and Operational Architecture}{602}{subsection.9.3.1}%
+\contentsline {subsection}{\numberline {9.3.2}Everyday Analogy: The Seasoned Mechanic vs.\ The Recording Studio}{602}{subsection.9.3.2}%
+\contentsline {subsection}{\numberline {9.3.3}Hardware Wiring and Deterministic Signal Acquisition}{603}{subsection.9.3.3}%
+\contentsline {paragraph}{Physical Circuit Interfacing}{603}{section*.912}%
+\contentsline {paragraph}{Vibration Physics and the Nyquist-Shannon Sampling Theorem}{603}{section*.913}%
+\contentsline {paragraph}{Eliminating Timing Jitter via Hardware Timers}{604}{section*.914}%
+\contentsline {subsection}{\numberline {9.3.4}Signal Processing: Sliding Windowing Pipeline}{604}{subsection.9.3.4}%
+\contentsline {subsection}{\numberline {9.3.5}Model Architecture: Deep 1D Convolutional Autoencoder}{605}{subsection.9.3.5}%
+\contentsline {paragraph}{Why Unsupervised Anomaly Detection?}{605}{section*.915}%
+\contentsline {paragraph}{How the Autoencoder Detects Anomalies}{605}{section*.916}%
+\contentsline {paragraph}{Mathematical Anomaly Decision Rule}{605}{section*.917}%
+\contentsline {subsection}{\numberline {9.3.6}Worked Hand Calculation: Anomaly Scoring}{606}{subsection.9.3.6}%
+\contentsline {paragraph}{Given Values:}{606}{section*.918}%
+\contentsline {paragraph}{Step 1: Compute Pointwise Residual Differences $(X_{i,c} - \hat {X}_{i,c})$}{606}{section*.919}%
+\contentsline {paragraph}{Step 2: Compute Squared Residuals $(X_{i,c} - \hat {X}_{i,c})^2$}{606}{section*.920}%
+\contentsline {paragraph}{Step 3: Sum Squared Errors across All $W \times C = 8$ Elements}{607}{section*.921}%
+\contentsline {paragraph}{Step 4: Compute Window Mean Squared Error ($e$)}{607}{section*.922}%
+\contentsline {paragraph}{Step 5: Compute Statistical Threshold ($\tau $) and Execute Decision}{607}{section*.923}%
+\contentsline {subsection}{\numberline {9.3.7}Complete Python Pipeline: Simulation, Training, and Int8 Quantization}{607}{subsection.9.3.7}%
+\contentsline {subsection}{\numberline {9.3.8}Production Embedded Firmware: ESP32 Implementation}{610}{subsection.9.3.8}%
+\contentsline {subsection}{\numberline {9.3.9}Energy Budgeting and Ultra-Low-Power Battery Optimization}{613}{subsection.9.3.9}%
+\contentsline {paragraph}{Power Consumption by Operational State}{613}{section*.924}%
+\contentsline {paragraph}{Architecture A: Cloud Streaming Node (Continuous Wi-Fi)}{613}{section*.925}%
+\contentsline {paragraph}{Architecture B: TinyML Duty-Cycled Edge Node}{614}{section*.926}%
+\contentsline {paragraph}{Step 1: Compute Total Electrical Charge Consumed per 60-Second Cycle ($Q_{\text {cycle}}$)}{614}{section*.927}%
+\contentsline {paragraph}{Step 2: Compute Average Operating Current ($I_{\text {avg\_tinyml}}$)}{614}{section*.928}%
+\contentsline {paragraph}{Step 3: Compute Operating Battery Longevity}{614}{section*.929}%
+\contentsline {subsection}{\numberline {9.3.10}Common Mistakes and Field Pitfalls}{614}{subsection.9.3.10}%
+\contentsline {section}{\numberline {9.4}Kaggle and Your Portfolio}{618}{section.9.4}%
+\contentsline {subsection}{\numberline {9.4.1}The Proof-of-Work Imperative}{618}{subsection.9.4.1}%
+\contentsline {subsection}{\numberline {9.4.2}The 3-Dataset Kaggle Benchmark Progression}{619}{subsection.9.4.2}%
+\contentsline {paragraph}{1. Milestone 1: Titanic: Machine Learning from Disaster (Binary Classification)}{619}{section*.931}%
+\contentsline {paragraph}{2. Milestone 2: House Prices: Advanced Regression Techniques (Multi-Feature Regression)}{619}{section*.932}%
+\contentsline {paragraph}{3. Milestone 3: Digit Recognizer (Computer Vision / Spatial Tensors)}{619}{section*.933}%
+\contentsline {subsection}{\numberline {9.4.3}Evaluation Metrics in Competitions: Log Loss and RMSLE}{620}{subsection.9.4.3}%
+\contentsline {paragraph}{1. Logarithmic Loss (Cross-Entropy)}{620}{section*.934}%
+\contentsline {paragraph}{2. Root Mean Squared Logarithmic Error (RMSLE)}{620}{section*.935}%
+\contentsline {paragraph}{Why RMSLE Over Standard RMSE?}{620}{section*.936}%
+\contentsline {subsection}{\numberline {9.4.4}Worked Hand Calculation: Step-by-Step RMSLE Scoring}{620}{subsection.9.4.4}%
+\contentsline {paragraph}{Given Data:}{620}{section*.937}%
+\contentsline {paragraph}{Step 1: Compute Natural Logarithms of $(y_i + 1)$ and $(\hat {y}_i + 1)$}{621}{section*.938}%
+\contentsline {paragraph}{Step 2: Compute Logarithmic Differences}{621}{section*.939}%
+\contentsline {paragraph}{Step 3: Square Each Logarithmic Difference}{621}{section*.940}%
+\contentsline {paragraph}{Step 4: Compute Mean Squared Logarithmic Error (MSLE)}{621}{section*.941}%
+\contentsline {paragraph}{Step 5: Take the Square Root to Obtain RMSLE}{621}{section*.942}%
+\contentsline {subsection}{\numberline {9.4.5}Anatomy of a Production-Grade GitHub Repository and README}{621}{subsection.9.4.5}%
+\contentsline {paragraph}{The Seven Indispensable Elements of a Portfolio README}{621}{section*.943}%
+\contentsline {subsection}{\numberline {9.4.6}Translating Code into Career Capital: The Google XYZ Formula}{622}{subsection.9.4.6}%
+\contentsline {paragraph}{The Four-Project Portfolio Strategy}{623}{section*.944}%
+\contentsline {subsection}{\numberline {9.4.7}Common Mistakes and Portfolio Traps}{624}{subsection.9.4.7}%
+\contentsline {chapter}{\numberline {10}Research Skills}{628}{chapter.10}%
+\contentsline {section}{\numberline {10.1}Reading and Reproducing Papers}{628}{section.10.1}%
+\contentsline {subsection}{\numberline {10.1.1}The Anatomy of a Machine Learning Paper}{628}{subsection.10.1.1}%
+\contentsline {subsection}{\numberline {10.1.2}The Three-Pass Reading Strategy}{629}{subsection.10.1.2}%
+\contentsline {subsection}{\numberline {10.1.3}The Macro Map: Reading 5 Survey Papers on ML for IoT and TinyML}{631}{subsection.10.1.3}%
+\contentsline {subsection}{\numberline {10.1.4}Deep Dive: Reading 10 Papers in a Focused Trajectory}{632}{subsection.10.1.4}%
+\contentsline {subsection}{\numberline {10.1.5}The Paper Reproduction Methodology}{632}{subsection.10.1.5}%
+\contentsline {paragraph}{The Machine Learning Reproduction Crisis}{632}{section*.949}%
+\contentsline {paragraph}{The Five-Stage Reproduction Protocol}{633}{section*.950}%
+\contentsline {subsection}{\numberline {10.1.6}Worked Demonstration: Reproducing Post-Training Quantization}{633}{subsection.10.1.6}%
+\contentsline {paragraph}{The Mathematical Formulation}{633}{section*.951}%
+\contentsline {paragraph}{Hand-Worked Calculation}{633}{section*.952}%
+\contentsline {paragraph}{Python Code for Experimental Reproduction}{634}{section*.953}%
+\contentsline {paragraph}{Line-by-Line Explanation}{635}{section*.954}%
+\contentsline {subsection}{\numberline {10.1.7}Keeping a Systematic Reading Log}{635}{subsection.10.1.7}%
+\contentsline {paragraph}{The Structured Reading Log Template}{635}{section*.955}%
+\contentsline {subsection}{\numberline {10.1.8}Check Yourself}{636}{subsection.10.1.8}%
+\contentsline {section}{\numberline {10.2}Writing Up Research}{638}{section.10.2}%
+\contentsline {subsection}{\numberline {10.2.1}The Imperative of Scientific Communication}{638}{subsection.10.2.1}%
+\contentsline {subsection}{\numberline {10.2.2}The Anatomy of an Experimental Machine Learning Paper}{639}{subsection.10.2.2}%
+\contentsline {paragraph}{1. The Title and Abstract}{639}{section*.957}%
+\contentsline {paragraph}{2. The Introduction: The Funnel Model}{641}{section*.958}%
+\contentsline {paragraph}{3. Methodology: Mathematical and Mechanical Rigor}{641}{section*.959}%
+\contentsline {paragraph}{4. Experimental Setup, Results, and Ablation Studies}{641}{section*.960}%
+\contentsline {paragraph}{5. Discussion and Limitations}{642}{section*.961}%
+\contentsline {subsection}{\numberline {10.2.3}Statistical Rigor: Moving Beyond Point Estimates}{642}{subsection.10.2.3}%
+\contentsline {paragraph}{Recorded Observations (in milliseconds):}{642}{section*.962}%
+\contentsline {paragraph}{Step 1: Compute the Sample Mean ($\bar {x}$)}{643}{section*.963}%
+\contentsline {paragraph}{Step 2: Calculate Deviations from the Mean $(x_i - \bar {x})$ and Their Squares}{643}{section*.964}%
+\contentsline {paragraph}{Step 3: Compute Sample Variance ($s^2$) with Bessel's Correction}{643}{section*.965}%
+\contentsline {paragraph}{Step 4: Compute the Standard Error of the Mean ($SE$)}{643}{section*.966}%
+\contentsline {paragraph}{Step 5: Determine the Critical $t$-Value ($t_{\alpha /2, \, N-1}$)}{643}{section*.967}%
+\contentsline {paragraph}{Step 6: Compute the Margin of Error ($ME$) and Confidence Interval}{643}{section*.968}%
+\contentsline {paragraph}{Step 7: Professional Reporting in Your Paper}{644}{section*.969}%
+\contentsline {subsection}{\numberline {10.2.4}\LaTeX {} Essentials for Technical Publishing}{644}{subsection.10.2.4}%
+\contentsline {paragraph}{1. Document Structure and Hierarchy}{645}{section*.970}%
+\contentsline {paragraph}{2. Mathematical Environments}{645}{section*.971}%
+\contentsline {paragraph}{3. Floating Environments: Figures and Tables}{645}{section*.972}%
+\contentsline {paragraph}{4. Designing Professional Tables with \texttt {booktabs}}{646}{section*.973}%
+\contentsline {subsection}{\numberline {10.2.5}Citation Management with Zotero and Bib\TeX {}}{647}{subsection.10.2.5}%
+\contentsline {paragraph}{1. The Zotero Ecosystem}{647}{section*.974}%
+\contentsline {paragraph}{2. The Better Bib\TeX {} (BBT) Plugin}{647}{section*.975}%
+\contentsline {paragraph}{3. Anatomy of a Clean Bib\TeX {} Entry}{648}{section*.976}%
+\contentsline {paragraph}{4. Citation Mechanics in Text}{648}{section*.977}%
+\contentsline {subsection}{\numberline {10.2.6}Common Mistakes and Scientific Pitfalls}{649}{subsection.10.2.6}%
+\contentsline {section}{\numberline {10.3}Choosing a Direction}{653}{section.10.3}%
+\contentsline {subsection}{\numberline {10.3.1}The Specialization Dilemma and the T-Shaped Engineer}{653}{subsection.10.3.1}%
+\contentsline {subsection}{\numberline {10.3.2}Mapping the Frontier: Four Specialization Tracks}{654}{subsection.10.3.2}%
+\contentsline {paragraph}{Why TinyML and Edge AI is the Premier Track for Independent Researchers}{654}{section*.979}%
+\contentsline {subsection}{\numberline {10.3.3}The Mathematics of Direction Selection: Multi-Criteria Decision Analysis}{655}{subsection.10.3.3}%
+\contentsline {paragraph}{Step 1: Assign Raw Evaluation Scores ($S_{ij} \in [1, 10]$)}{656}{section*.980}%
+\contentsline {paragraph}{Step 2: Normalize Performance Scores ($r_{ij} = S_{ij} / 10.0$)}{657}{section*.981}%
+\contentsline {paragraph}{Step 3: Compute Expected Utility Scores ($U(P_i) = \DOTSB \sum@ \slimits@ _{j=1}^4 w_j \cdot r_{ij}$)}{657}{section*.982}%
+\contentsline {paragraph}{Step 4: Decision Analysis Conclusion}{657}{section*.983}%
+\contentsline {subsection}{\numberline {10.3.4}Formulating a Falsifiable Research Question}{657}{subsection.10.3.4}%
+\contentsline {paragraph}{The FINER Validation Rubric}{658}{section*.984}%
+\contentsline {subsection}{\numberline {10.3.5}Talking to a Professor or Research Advisor}{658}{subsection.10.3.5}%
+\contentsline {paragraph}{The Three-Paragraph Pitch Architecture}{658}{section*.985}%
+\contentsline {paragraph}{Conducting the Initial 20-Minute Meeting}{659}{section*.986}%
+\contentsline {subsection}{\numberline {10.3.6}IoT \& TinyML Connection: Why Edge AI Research Wins Grants}{660}{subsection.10.3.6}%
+\contentsline {subsection}{\numberline {10.3.7}Common Mistakes and Strategic Pitfalls}{660}{subsection.10.3.7}%
+\contentsline {chapter}{Glossary of Machine Learning and TinyML Terms}{664}{appendix*.988}%
+\contentsline {chapter}{Courses and Books}{683}{appendix*.1015}%
+\contentsline {section}{\numberline {.1}The Four-Stage Progressive Roadmap}{683}{section.Alph0.1}%
+\contentsline {section}{\numberline {.2}In-Depth Resource Evaluations}{684}{section.Alph0.2}%
+\contentsline {subsection}{\numberline {.2.1}Stage 1: Visual and Intuitive Foundations}{684}{subsection.Alph0.2.1}%
+\contentsline {paragraph}{1. 3Blue1Brown: Essence of Linear Algebra (Grant Sanderson)}{684}{section*.1016}%
+\contentsline {paragraph}{2. 3Blue1Brown: Essence of Calculus and Neural Networks (Grant Sanderson)}{685}{section*.1017}%
+\contentsline {subsection}{\numberline {.2.2}Stage 2: Applied Foundations and Production Practice}{685}{subsection.Alph0.2.2}%
+\contentsline {paragraph}{3. Machine Learning Specialization (Andrew Ng, DeepLearning.AI / Stanford, Coursera)}{685}{section*.1018}%
+\contentsline {paragraph}{4. Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow (Aurélien Géron)}{685}{section*.1019}%
+\contentsline {paragraph}{5. Kaggle Learn (Kaggle Micro-Courses)}{686}{section*.1020}%
+\contentsline {subsection}{\numberline {.2.3}Stage 3: Deep Representation Learning and Edge Systems}{686}{subsection.Alph0.2.3}%
+\contentsline {paragraph}{6. Deep Learning Specialization (Andrew Ng) vs.\ fast.ai (Jeremy Howard)}{686}{section*.1021}%
+\contentsline {paragraph}{7. Harvard TinyML Professional Certificate (Vijay Janapa Reddi et al., edX)}{686}{section*.1022}%
+\contentsline {subsection}{\numberline {.2.4}Stage 4: Mathematical Rigor and Theoretical Mastery}{686}{subsection.Alph0.2.4}%
+\contentsline {paragraph}{8. Mathematics for Machine Learning (Marc Peter Deisenroth, A. Aldo Faisal, Cheng Soon Ong)}{686}{section*.1023}%
+\contentsline {paragraph}{9. Deep Learning (Ian Goodfellow, Yoshua Bengio, Aaron Courville)}{687}{section*.1024}%
+\contentsline {section}{\numberline {.3}Curriculum Comparison and Decision Matrix}{687}{section.Alph0.3}%
+\contentsline {chapter}{Cheat Sheets}{690}{appendix*.1026}%
+\contentsline {section}{\numberline {.4}Cheat Sheet 1: Algorithm Selection Matrix}{690}{section.Alph0.4}%
+\contentsline {section}{\numberline {.5}Cheat Sheet 2: Universal Evaluation Metrics}{690}{section.Alph0.5}%
+\contentsline {section}{\numberline {.6}Cheat Sheet 3: Production PyTorch Training Pipeline}{690}{section.Alph0.6}%
+\contentsline {section}{\numberline {.7}Cheat Sheet 4: Essential NumPy and Pandas Syntax}{694}{section.Alph0.7}%
+\contentsline {section}{\numberline {.8}Cheat Sheet 5: The TinyML Microcontroller Deployment Checklist}{694}{section.Alph0.8}%
+\contentsline {chapter}{Answers to Check Yourself Exercises}{697}{appendix*.1030}%
+\contentsline {chapter}{Further Reading and Resources}{698}{appendix*.1031}%

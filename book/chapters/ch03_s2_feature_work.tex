@@ -17,8 +17,8 @@ As machine learning pioneer Andrew Ng famously observed: \textit{``Applied machi
 \centering
 \begin{tikzpicture}[
     scale=0.92,
-    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
-    step_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!8, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily},
+    step_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!8, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily},
     arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
 ]
     % Pipeline Nodes
@@ -314,11 +314,11 @@ Instead, we segment the stream into sliding windows (e.g., $W = 128$ samples wit
 % ==============================================================================
 \subsection{Feature Selection: Trimming the Noise}\label{subsec:feature_selection}
 
-More features do not equal a better model. In reality, adding irrelevant, noisy, or redundant features triggers the **Curse of Dimensionality**:
+More features do not equal a better model. In reality, adding irrelevant, noisy, or redundant features triggers the \textbf{Curse of Dimensionality}:
 \begin{enumerate}
     \item Data sparsity: As the number of dimensions $D$ increases, the volume of the feature space expands exponentially ($V \propto r^D$). Data points become isolated in empty space, making distance metrics meaningless.
     \item Overfitting: With hundreds of features, models discover spurious statistical coincidences that exist only in the training set.
-    \item Latency & Energy: Computing $200$ features on an edge microcontroller drains battery and slows inference down.
+    \item Latency \& Energy: Computing $200$ features on an edge microcontroller drains battery and slows inference down.
 \end{enumerate}
 
 Feature selection algorithms fall into three distinct architectural families:
@@ -327,7 +327,7 @@ Feature selection algorithms fall into three distinct architectural families:
 \centering
 \begin{tikzpicture}[
     scale=0.9,
-    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
+    box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!8, thick, rounded corners=2mm, minimum height=1.0cm, align=center, font=\small\sffamily},
     arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
 ]
     % Filter Methods
@@ -358,15 +358,15 @@ Filter methods evaluate the statistical properties of features independently of 
 \begin{itemize}
     \item \textbf{Variance Threshold}: Removes features whose variance falls below a threshold ($\text{Var}(X) \le \tau$). If a sensor pin reads $3.30\text{ V}$ in $99.9\%$ of samples, it carries zero information and should be discarded immediately.
     \item \textbf{Collinearity Filtering}: Computes the pairwise Pearson correlation matrix across all features. If two features correlate with $|r| > 0.90$ (e.g., Temperature in Celsius vs Fahrenheit), drop one.
-    \item \textbf{Hypothesis Testing & Mutual Information}: Evaluates statistical dependency between each feature $x_j$ and target $y$:
+    \item \textbf{Hypothesis Testing \& Mutual Information}: Evaluates statistical dependency between each feature $x_j$ and target $y$:
     \begin{itemize}
-        \item Continuous feature, Categorical target: **ANOVA $F$-Test** (\texttt{f\_classif}).
-        \item Categorical feature, Categorical target: **Chi-Square ($\chi^2$) Test** (\texttt{chi2}).
-        \item Non-linear dependencies: **Mutual Information** (\texttt{mutual\_info\_classif}), which captures non-linear associations using Shannon entropy.
+        \item Continuous feature, Categorical target: \textbf{ANOVA $F$-Test} (\texttt{f\_classif}).
+        \item Categorical feature, Categorical target: \textbf{Chi-Square ($\chi^2$) Test} (\texttt{chi2}).
+        \item Non-linear dependencies: \textbf{Mutual Information} (\texttt{mutual\_info\_classif}), which captures non-linear associations using Shannon entropy.
     \end{itemize}
 \end{itemize}
 
-\subsubsection{2. Wrapper Methods (Iterative & Accurate)}
+\subsubsection{2. Wrapper Methods (Iterative \& Accurate)}
 Wrapper methods treat a machine learning model as a scoring engine to evaluate candidate feature subsets:
 \begin{itemize}
     \item \textbf{Forward Selection}: Starts with an empty feature set. Tests every feature individually, adds the one that maximizes cross-validation accuracy, and repeats until accuracy stops improving.

@@ -26,9 +26,9 @@ Ensemble methods apply this exact principle to sensor telemetry and industrial d
 \centering
 \begin{tikzpicture}[
     scale=0.88,
-    box/.style={rectangle, draw=gray!70, fill=gray!5, thick, rounded corners=2mm, minimum height=0.9cm, text centered, font=\scriptsize\sffamily},
-    model_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=2mm, minimum height=0.75cm, text centered, font=\scriptsize\sffamily},
-    meta_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=0.8cm, text centered, font=\scriptsize\sffamily\bfseries},
+    box/.style={rectangle, draw=gray!70, fill=gray!5, thick, rounded corners=2mm, minimum height=0.9cm, align=center, font=\scriptsize\sffamily},
+    model_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=2mm, minimum height=0.75cm, align=center, font=\scriptsize\sffamily},
+    meta_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=0.8cm, align=center, font=\scriptsize\sffamily\bfseries},
     arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
 ]
     % 1. BAGGING (Parallel)
@@ -309,8 +309,8 @@ Developed by David Wolpert in 1992, **Stacking** replaces manual voting rules wi
 \begin{tikzpicture}[
     scale=0.9,
     layer_box/.style={rectangle, draw=gray!60, fill=gray!5, thick, rounded corners=2mm, minimum width=10.5cm, minimum height=1.5cm},
-    sub_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=2mm, minimum height=0.9cm, minimum width=2.4cm, text centered, font=\scriptsize\sffamily},
-    meta_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=0.9cm, minimum width=3.8cm, text centered, font=\scriptsize\sffamily\bfseries},
+    sub_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=2mm, minimum height=0.9cm, minimum width=2.4cm, align=center, font=\scriptsize\sffamily},
+    meta_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=0.9cm, minimum width=3.8cm, align=center, font=\scriptsize\sffamily\bfseries},
     arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
 ]
     % Level 0 Box
@@ -533,8 +533,8 @@ The compact student tree captures much of the non-linear decision boundary learn
     \item \textbf{Bagging (Bootstrap Aggregation)}: Trains independent deep trees in parallel on bootstrapped samples, reducing variance. OOB samples provide built-in validation without holding out data.
     \item \textbf{Random Forests}: De-correlates trees by randomly subsampling $m \approx \sqrt{D}$ features at each split, preventing dominant features from homogenizing tree structures.
     \item \textbf{Gradient Boosting}: Trains shallow trees sequentially, fitting each new base learner to the negative gradient of the loss function (the pseudo-residuals). Scaled by learning rate $\eta$.
-    \item \textbf{XGBoost & LightGBM}: XGBoost optimizes second-order Taylor expansions with built-in leaf regularization. LightGBM speeds up execution using histogram feature binning and best-first leaf-wise growth.
-    \item \textbf{Voting & Stacking}: Combines heterogeneous model families. Soft voting averages probability distributions; Stacking trains a meta-learner on out-of-fold cross-validated predictions.
+    \item \textbf{XGBoost \& LightGBM}: XGBoost optimizes second-order Taylor expansions with built-in leaf regularization. LightGBM speeds up execution using histogram feature binning and best-first leaf-wise growth.
+    \item \textbf{Voting \& Stacking}: Combines heterogeneous model families. Soft voting averages probability distributions; Stacking trains a meta-learner on out-of-fold cross-validated predictions.
 \end{itemize}
 \end{takeaways}
 

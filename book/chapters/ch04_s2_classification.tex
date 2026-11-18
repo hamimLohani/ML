@@ -65,7 +65,7 @@ In this section, we master the five foundational classical classification paradi
     \draw[dashed, gray!70] (2.0, 1.1) to[out=60, in=180] (2.8, 2.6) to[out=0, in=120] (3.6, 1.1);
     \node[sample_a] at (2.5, 2.2) {}; \node[sample_a] at (3.1, 2.2) {};
     \node[sample_b] at (2.0, 2.9) {}; \node[sample_b] at (3.6, 2.9) {};
-    \node[font=\tiny\sffamily, text=gray!80] at (2.8, 1.05) {Max margin & kernels};
+    \node[font=\tiny\sffamily, text=gray!80] at (2.8, 1.05) {Max margin \& kernels};
 
     % Panel 5: Decision Tree
     \node[box_panel] at (5.6, 2.2) {};
@@ -503,9 +503,9 @@ A decision tree consists of three structural components:
 \centering
 \begin{tikzpicture}[
     scale=0.9,
-    tree_node/.style={rectangle, draw=keyideablue!80, fill=keyideablue!10, thick, rounded corners=2mm, minimum height=0.8cm, text centered, font=\scriptsize\sffamily},
-    leaf_healthy/.style={rectangle, draw=analogygreen!80, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=0.7cm, text centered, font=\scriptsize\sffamily\bfseries},
-    leaf_fault/.style={rectangle, draw=warningred!80, fill=warningred!20, thick, rounded corners=2mm, minimum height=0.7cm, text centered, font=\scriptsize\sffamily\bfseries},
+    tree_node/.style={rectangle, draw=keyideablue!80, fill=keyideablue!10, thick, rounded corners=2mm, minimum height=0.8cm, align=center, font=\scriptsize\sffamily},
+    leaf_healthy/.style={rectangle, draw=analogygreen!80, fill=analogygreen!20, thick, rounded corners=2mm, minimum height=0.7cm, align=center, font=\scriptsize\sffamily\bfseries},
+    leaf_fault/.style={rectangle, draw=warningred!80, fill=warningred!20, thick, rounded corners=2mm, minimum height=0.7cm, align=center, font=\scriptsize\sffamily\bfseries},
     arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
 ]
     % Tree Structure

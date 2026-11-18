@@ -20,8 +20,8 @@ There are no target labels $y$, no teacher, and no reward signals. The mission o
 \centering
 \begin{tikzpicture}[
     scale=0.9,
-    box/.style={rectangle, draw=gray!70, fill=gray!5, thick, rounded corners=2mm, minimum height=1.0cm, text centered, font=\small\sffamily},
-    task_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    box/.style={rectangle, draw=gray!70, fill=gray!5, thick, rounded corners=2mm, minimum height=1.0cm, align=center, font=\small\sffamily},
+    task_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!15, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily},
     arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
 ]
     % Central Input
@@ -84,7 +84,7 @@ Instead, **Lloyd's Algorithm** finds an exceptionally high-quality local minimum
 \centering
 \begin{tikzpicture}[
     scale=0.9,
-    step_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!10, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    step_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!10, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily},
     arrow/.style={-{Stealth[length=2.5mm]}, very thick, draw=gray!80}
 ]
     \node[step_box, minimum width=3.8cm] (init) at (-4.8, 0) {\textbf{0. Initialization}\\Select $K$ initial centroids\\$\boldsymbol{\mu}_1, \dots, \boldsymbol{\mu}_K$ ($k$-Means++)};
@@ -770,7 +770,7 @@ This C routine executes in under $2\text{ }\mu\text{s}$ on an inexpensive microc
     \item \textbf{DBSCAN}: Density-based clustering defined by radius $\varepsilon$ and $\text{MinPts}$. Discovers arbitrary non-convex cluster shapes and isolates physical outliers as noise (label $-1$).
     \item \textbf{Gaussian Mixture Models (GMM)}: Soft clustering that models data as a linear combination of multivariate Gaussians via the Expectation-Maximization (EM) algorithm.
     \item \textbf{PCA for Anomaly Detection}: Projects data onto principal orthogonal axes. Measuring Squared Prediction Error (SPE) reconstruction error flags samples that violate normal physical sensor correlations.
-    \item \textbf{Manifold Visualization (t-SNE & UMAP)}: Projects complex high-dimensional embeddings into 2D/3D. t-SNE uses heavy-tailed Student-t distributions to solve the crowding problem; UMAP preserves global structure and projects new streaming observations.
+    \item \textbf{Manifold Visualization (t-SNE \& UMAP)}: Projects complex high-dimensional embeddings into 2D/3D. t-SNE uses heavy-tailed Student-t distributions to solve the crowding problem; UMAP preserves global structure and projects new streaming observations.
 \end{itemize}
 \end{takeaways}
 
@@ -956,7 +956,7 @@ Test your understanding of clustering mechanics, density reachability, and recon
         \item \textbf{Two Advantages of UMAP for Streaming Pipelines}:
         \begin{enumerate}
             \item **Out-of-Sample Projection**: UMAP learns an explicit parametric mathematical embedding, allowing new streaming sensor telemetry to be projected directly into an existing 2D visualization using \texttt{transform()}, whereas t-SNE requires re-optimizing all points from scratch.
-            \item **Computational Scalability & Global Structure**: UMAP scales with $\mathcal{O}(N^{1.14})$ compared to t-SNE's $\mathcal{O}(N^2)$, enabling real-time streaming processing while simultaneously preserving broader global distances between clusters.
+            \item \textbf{Computational Scalability \& Global Structure}: UMAP scales with $\mathcal{O}(N^{1.14})$ compared to t-SNE's $\mathcal{O}(N^2)$, enabling real-time streaming processing while simultaneously preserving broader global distances between clusters.
         \end{enumerate}
     \end{enumerate}
 \end{enumerate}

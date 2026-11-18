@@ -283,14 +283,14 @@ Introduced in 2015 by Olaf Ronneberger, Philipp Fischer, and Thomas Brox for bio
     \node[dec_block] (d1) at (10.8, 3) {UpConv\\($H \times W$)};
 
     % Downsampling connections (MaxPool)
-    \draw[pool] (e1.south) |- (e2.west) node[near start, left, font=\tiny\text=warningred] {MaxPool};
-    \draw[pool] (e2.south) |- (e3.west) node[near start, left, font=\tiny\text=warningred] {MaxPool};
-    \draw[pool] (e3.south) |- (b.west) node[near start, left, font=\tiny\text=warningred] {MaxPool};
+    \draw[pool] (e1.south) |- (e2.west) node[near start, left, font=\tiny, text=warningred] {MaxPool};
+    \draw[pool] (e2.south) |- (e3.west) node[near start, left, font=\tiny, text=warningred] {MaxPool};
+    \draw[pool] (e3.south) |- (b.west) node[near start, left, font=\tiny, text=warningred] {MaxPool};
 
     % Upsampling connections
-    \draw[up] (b.east) -| (d3.south) node[near start, right, font=\tiny\text=analogygreen] {UpSample};
-    \draw[up] (d3.east) -| (d2.south) node[near start, right, font=\tiny\text=analogygreen] {UpSample};
-    \draw[up] (d2.east) -| (d1.south) node[near start, right, font=\tiny\text=analogygreen] {UpSample};
+    \draw[up] (b.east) -| (d3.south) node[near start, right, font=\tiny, text=analogygreen] {UpSample};
+    \draw[up] (d3.east) -| (d2.south) node[near start, right, font=\tiny, text=analogygreen] {UpSample};
+    \draw[up] (d2.east) -| (d1.south) node[near start, right, font=\tiny, text=analogygreen] {UpSample};
 
     % Skip Connections
     \draw[skip] (e1) -- node[above, font=\tiny\bfseries] {Skip Connection (Copy \& Concat)} (d1);

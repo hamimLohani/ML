@@ -264,9 +264,9 @@ PyTorch decouples data loading from model architecture using two complementary a
 \begin{tikzpicture}[
     scale=0.92,
     disk_box/.style={cylinder, shape border rotate=90, draw=gray!80, fill=gray!15, thick, minimum height=1.2cm, minimum width=1.4cm, aspect=0.25, font=\small\sffamily},
-    dataset_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!12, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
-    loader_box/.style={rectangle, draw=exampleorange!80, fill=exampleorange!15, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
-    batch_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!15, thick, rounded corners=2mm, minimum height=1.1cm, text centered, font=\small\sffamily},
+    dataset_box/.style={rectangle, draw=keyideablue!80, fill=keyideablue!12, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily},
+    loader_box/.style={rectangle, draw=exampleorange!80, fill=exampleorange!15, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily},
+    batch_box/.style={rectangle, draw=analogygreen!80, fill=analogygreen!15, thick, rounded corners=2mm, minimum height=1.1cm, align=center, font=\small\sffamily},
     arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
 ]
     % Pipeline Nodes
@@ -516,7 +516,7 @@ A standard PyTorch training loop iterates through epochs. Each epoch contains tw
 \centering
 \begin{tikzpicture}[
     scale=0.88,
-    step_node/.style={rectangle, draw=keyideablue!80, fill=keyideablue!12, thick, rounded corners=2mm, minimum width=3.4cm, minimum height=0.9cm, text centered, font=\small\sffamily},
+    step_node/.style={rectangle, draw=keyideablue!80, fill=keyideablue!12, thick, rounded corners=2mm, minimum width=3.4cm, minimum height=0.9cm, align=center, font=\small\sffamily},
     arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!80}
 ]
     % Loop Steps
