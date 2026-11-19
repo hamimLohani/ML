@@ -1,7 +1,7 @@
 \documentclass[11pt,a4paper]{article}
 
 % Compile with: pdflatex linear_regression_from_scratch.tex
-\usepackage[margin=1in]{geometry}
+\usepackage[margin=1in,headheight=14pt]{geometry}
 \usepackage{amsmath,amssymb,mathtools}
 \usepackage{booktabs,array}
 \usepackage{graphicx}
@@ -27,15 +27,22 @@
 \setlength{\parskip}{5pt}
 \setlength{\parindent}{0pt}
 
-\title{\textbf{Linear Regression from Scratch}\\
-\large Understanding the Mathematics and Gradient Descent}
-\author{Noted by Md. Inzamamul Lohani\\
-Software Engineering, IIT, DU}
-\date{\today}
-
 \begin{document}
-\maketitle
-\newpage
+
+\begin{titlepage}
+    \centering
+    \vspace*{\fill}
+    {\Huge\bfseries Linear Regression\par}
+    \vspace{2.5em}
+    {\large Noted by Md. Inzamamul Lohani\par}
+    \vspace{0.4em}
+    {\large Software Engineering, IIT, DU\par}
+    \vspace{2em}
+    {\large \today\par}
+    \vspace*{\fill}
+\end{titlepage}
+\setcounter{page}{2}
+
 \tableofcontents
 \newpage
 
@@ -97,7 +104,7 @@ This has the same mathematical structure as the school equation $y=mx+c$.
 \item $\beta_1$ is the slope or coefficient.
 \end{itemize}
 
-\subsection{The intercept ($\beta_0$)}
+\subsection{The intercept (\texorpdfstring{$\beta_0$}{beta0})}
 
 The intercept is the model's predicted output when the input is zero:
 \[
@@ -105,7 +112,7 @@ The intercept is the model's predicted output when the input is zero:
 \]
 For example, in $\hat y=10+12x$, the intercept is $10$. The model predicts $10$ when $x=0$. Whether that prediction has a meaningful real-world interpretation depends on the problem and the range of the data.
 
-\subsection{The slope ($\beta_1$)}
+\subsection{The slope (\texorpdfstring{$\beta_1$}{beta1})}
 
 The slope describes the change in predicted output for a one-unit increase in the input:
 \[

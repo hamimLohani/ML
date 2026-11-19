@@ -1,0 +1,67 @@
+\contentsline {chapter}{\numberline {1}The problem: why do we need Ridge Regression?}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Start from what you already know}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}The hidden issue: fitting the observed data is not the whole goal}{1}{section.1.2}%
+\contentsline {section}{\numberline {1.3}The central question}{2}{section.1.3}%
+\contentsline {section}{\numberline {1.4}What Ridge is not}{2}{section.1.4}%
+\contentsline {chapter}{\numberline {2}Multicollinearity: when predictors are highly correlated}{3}{chapter.2}%
+\contentsline {section}{\numberline {2.1}What does correlation between predictors mean?}{3}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Why does this create a problem for OLS?}{3}{section.2.2}%
+\contentsline {section}{\numberline {2.3}The matrix explanation}{4}{section.2.3}%
+\contentsline {section}{\numberline {2.4}A simulation of coefficient instability}{4}{section.2.4}%
+\contentsline {chapter}{\numberline {3}Ridge intuition: how does Ridge address the problem?}{5}{chapter.3}%
+\contentsline {section}{\numberline {3.1}The idea before the formula}{5}{section.3.1}%
+\contentsline {section}{\numberline {3.2}What is shrinkage?}{5}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Why can smaller coefficients help?}{5}{section.3.3}%
+\contentsline {section}{\numberline {3.4}A key distinction}{5}{section.3.4}%
+\contentsline {chapter}{\numberline {4}Mathematical foundation: the Ridge cost function}{6}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Build the objective from the OLS objective}{6}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Understand each part}{6}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Why is it called an $L_2$ penalty?}{6}{section.4.3}%
+\contentsline {section}{\numberline {4.4}The role of lambda}{7}{section.4.4}%
+\contentsline {section}{\numberline {4.5}Why squares?}{7}{section.4.5}%
+\contentsline {chapter}{\numberline {5}Derivation: deriving the Ridge Regression estimator}{8}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Step 1: write the objective}{8}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Step 2: expand the residual term}{8}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Step 3: combine the quadratic terms}{8}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Step 4: differentiate}{9}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Step 5: set the gradient equal to zero}{9}{section.5.5}%
+\contentsline {section}{\numberline {5.6}Step 6: solve for the coefficient vector}{9}{section.5.6}%
+\contentsline {section}{\numberline {5.7}Why does adding $\lambda \mathbf I_p$ help?}{9}{section.5.7}%
+\contentsline {section}{\numberline {5.8}A proof of positive definiteness}{10}{section.5.8}%
+\contentsline {section}{\numberline {5.9}Dimensions check}{10}{section.5.9}%
+\contentsline {section}{\numberline {5.10}A tiny numerical example}{10}{section.5.10}%
+\contentsline {chapter}{\numberline {6}Lambda: understanding the regularization parameter}{11}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Lambda controls the compromise}{11}{section.6.1}%
+\contentsline {section}{\numberline {6.2}What happens at different values?}{11}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Coefficient paths}{11}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Does larger lambda always mean a better model?}{12}{section.6.4}%
+\contentsline {chapter}{\numberline {7}Geometrical intuition: Ridge using geometry}{13}{chapter.7}%
+\contentsline {section}{\numberline {7.1}The constrained version}{13}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Understand the contour picture}{13}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Why does Ridge shrink coefficients?}{14}{section.7.3}%
+\contentsline {section}{\numberline {7.4}A note about the intercept}{14}{section.7.4}%
+\contentsline {chapter}{\numberline {8}Bias--variance trade-off: why does Ridge introduce bias?}{15}{chapter.8}%
+\contentsline {section}{\numberline {8.1}First, understand bias}{15}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Why would we accept bias?}{15}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Prediction error decomposition}{15}{section.8.3}%
+\contentsline {section}{\numberline {8.4}The key lesson}{16}{section.8.4}%
+\contentsline {chapter}{\numberline {9}Standardization: why must we scale features?}{17}{chapter.9}%
+\contentsline {section}{\numberline {9.1}The problem with different units}{17}{section.9.1}%
+\contentsline {section}{\numberline {9.2}Standardization formula}{17}{section.9.2}%
+\contentsline {section}{\numberline {9.3}Why do we center the response?}{18}{section.9.3}%
+\contentsline {section}{\numberline {9.4}A critical rule: avoid data leakage}{18}{section.9.4}%
+\contentsline {chapter}{\numberline {10}Practical implementation: Ridge Regression in Python}{19}{chapter.10}%
+\contentsline {section}{\numberline {10.1}Install the libraries}{19}{section.10.1}%
+\contentsline {section}{\numberline {10.2}Create an illustrative dataset}{19}{section.10.2}%
+\contentsline {section}{\numberline {10.3}Why use a pipeline?}{19}{section.10.3}%
+\contentsline {section}{\numberline {10.4}Evaluate predictions}{20}{section.10.4}%
+\contentsline {section}{\numberline {10.5}Understand the metrics}{20}{section.10.5}%
+\contentsline {section}{\numberline {10.6}Compare Ridge with OLS}{20}{section.10.6}%
+\contentsline {chapter}{\numberline {11}Model evaluation: choosing the best lambda using cross-validation}{22}{chapter.11}%
+\contentsline {section}{\numberline {11.1}Why do we need to choose lambda?}{22}{section.11.1}%
+\contentsline {section}{\numberline {11.2}$K$-fold cross-validation}{22}{section.11.2}%
+\contentsline {section}{\numberline {11.3}Cross-validation score}{23}{section.11.3}%
+\contentsline {section}{\numberline {11.4}Use RidgeCV with a pipeline}{23}{section.11.4}%
+\contentsline {section}{\numberline {11.5}Final evaluation on the test set}{24}{section.11.5}%
+\contentsline {chapter}{Final review: the complete Ridge story}{25}{chapter*.2}%
+\contentsline {chapter}{Self-test}{26}{chapter*.3}%
