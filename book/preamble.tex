@@ -341,6 +341,20 @@
 \newcommand{\code}[1]{\texttt{\detokenize{#1}}}
 
 % ------------------------------------------------------------------------------
+% Paragraph & Heading Formatting (Ensure \paragraph has a newline / block display)
+% ------------------------------------------------------------------------------
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+                                    {2.5ex \@plus 0.8ex \@minus 0.2ex}%
+                                    {0.8ex}%
+                                    {\normalfont\normalsize\bfseries}}
+\renewcommand\subparagraph{\@startsection{subparagraph}{5}{\z@}%
+                                       {2ex \@plus 0.5ex \@minus 0.2ex}%
+                                       {0.6ex}%
+                                       {\normalfont\normalsize\bfseries}}
+\makeatother
+
+% ------------------------------------------------------------------------------
 % 9. Hyperlinks & Cross-Referencing
 % ------------------------------------------------------------------------------
 \usepackage{hyperref}
@@ -378,19 +392,23 @@
 \newcommand{\makecustomtitle}{
   \begin{titlepage}
     \centering
-    \vspace*{2.5cm}
+    \vspace*{2cm}
     {\fontsize{30}{36}\selectfont\bfseries\color{keyideablue} Machine Learning from Zero\par}
     \vspace{0.8cm}
     {\LARGE\itshape A Plain-Language Guide with IoT and TinyML\par}
-    \vspace{1.5cm}
+    \vspace{1.2cm}
     {\color{keyideablue}\rule{0.55\textwidth}{1.5pt}}\par
-    \vspace{1.5cm}
+    \vspace{1.2cm}
     {\large\sffamily An Intuitive, Math-Friendly, Hands-On Guide\\[0.4em]
     From Code and Calculations to Edge Intelligence\par}
+    \vspace{1.5cm}
+    {\Large\bfseries Md. Inzamamul Lohani\par}
+    \vspace{0.3cm}
+    {\large Software Engineering, IIT, DU\par}
     \vfill
     {\large\bfseries Complete Edition\par}
     \vspace{0.5cm}
     {\large\today\par}
-    \vspace*{2cm}
+    \vspace*{1.5cm}
   \end{titlepage}
 }

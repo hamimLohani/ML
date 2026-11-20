@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.11.18)  21 NOV 2026 02:21
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.11.18)  21 NOV 2026 02:35
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -914,7 +914,7 @@ Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
 )
 \Hy@SectionHShift=\skip58
 )
-Package hyperref Info: Option `colorlinks' set `true' on input line 356.
+Package hyperref Info: Option `colorlinks' set `true' on input line 370.
 )
 LaTeX Font Info:    Trying to load font information for T1+lmr on input line 9.
 
@@ -1234,7 +1234,7 @@ LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <9> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 85.
 [3{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}{/usr/local
 /texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}]
-Underfull \vbox (badness 10000) has occurred while \output is active []
+Underfull \vbox (badness 4981) has occurred while \output is active []
 
 [4] [5] [6] [7{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-mathex.
 enc}]
@@ -1246,9 +1246,6 @@ Overfull \hbox (21.71973pt too wide) in paragraph at lines 294--295
 lmr/m/n/10.95 44\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 8)\OML/lmm/m/it/10.95 ;
  [] $ 
  []
-
-
-Underfull \vbox (badness 5696) has occurred while \output is active []
 
 [8] [9] [10]
 Underfull \hbox (badness 10000) in paragraph at lines 427--428
@@ -1280,9 +1277,6 @@ Package microtype Info: Character `texttrademark ' is missing
 Package microtype Info: Character `texttrademark ' is missing
 (microtype)             in font `TS1/lmtt/m/it/9'.
 (microtype)             Ignoring protrusion settings for this character.
-
-Underfull \vbox (badness 4001) has occurred while \output is active []
-
 [12] [13] [14] [15]
 Overfull \hbox (34.7577pt too wide) in paragraph at lines 693--694
 []\T1/lmr/m/n/10.95 Lines 23--24: We in-stan-ti-ate two in-de-pen-dent ob-jects
@@ -1290,7 +1284,10 @@ Overfull \hbox (34.7577pt too wide) in paragraph at lines 693--694
 node\_server\_room
  []
 
-[16] [17] [18] [19]
+[16] [17]
+Underfull \vbox (badness 5954) has occurred while \output is active []
+
+[18] [19]
 Overfull \hbox (7.8356pt too wide) in paragraph at lines 893--894
 []\T1/lmr/m/n/10.95 Line 13: If \T1/lmtt/m/n/10.95 parts[1] \T1/lmr/m/n/10.95 c
 on-tains non-numeric text like \T1/lmtt/m/n/10.95 "NaN\_VAL"\T1/lmr/m/n/10.95 ,
@@ -1304,14 +1301,14 @@ Overfull \hbox (71.24301pt too wide) in paragraph at lines 947--948
 hereas \T1/lmtt/m/n/10.95 sum(x for x in range(10_000_000))
  []
 
-
+[21]
 Overfull \hbox (13.16115pt too wide) in paragraph at lines 976--977
 \T1/lmtt/m/n/10.95 len(node\_dict) \T1/lmr/m/n/10.95 eval-u-ates to $\OT1/lmr/m
 /n/10.95 0$\T1/lmr/m/n/10.95 . Di-vid-ing by zero raises an un-han-dled \T1/lmt
 t/m/n/10.95 ZeroDivisionError\T1/lmr/m/n/10.95 ,
  []
 
-[21]) (./chapters/ch01_s2_dev_environment.tex [22]
+) (./chapters/ch01_s2_dev_environment.tex [22]
 Overfull \hbox (5.3304pt too wide) in paragraph at lines 28--28
  []\T1/lmss/m/n/8 (\T1/lmtt/m/n/8 requirements.txt\T1/lmss/m/n/8 ) 
  []
@@ -1358,57 +1355,86 @@ d user di-rec-to-ries (un-der
 File: lstlang1.sty 2025/11/14 1.11b listings language file
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2025/11/14 1.11b listings language file
-)
+) [24]
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <12> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 132.
-[24] [25] [26]
+[25]
+Overfull \hbox (5.49425pt too wide) in paragraph at lines 204--205
+\T1/lmr/m/n/10.95 with-out ver-sion mis-matches? You pin your en-vi-ron-ment's 
+ex-act ver-sions into a \T1/lmtt/m/n/10.95 requirements.txt
+ []
+
+[26] [27]
 Underfull \hbox (badness 5490) in paragraph at lines 288--289
 \T1/lmr/m/n/10.95 If con-nected prop-erly, your mi-cro-con-troller ap-pears as 
 a se-rial de-vice (e.g.,
  []
 
-[27] [28]) (./chapters/ch01_s3_numpy.tex
+[28]) (./chapters/ch01_s3_numpy.tex
 Overfull \hbox (2.88347pt too wide) in paragraph at lines 10--11
 []\T1/lmr/bx/n/10.95 The $\OML/lmm/m/it/10.95 N$\T1/lmr/bx/n/10.95 -Dimensional
  Ar-ray (\T1/lmtt/b/n/10.95 ndarray\T1/lmr/bx/n/10.95 )\T1/lmr/m/n/10.95 : How 
 con-tigu-ous mem-ory al-lo-ca-tion solves Python's
  []
 
-[29] [30]
-Overfull \hbox (61.9959pt too wide) in paragraph at lines 138--139
- []\T1/lmr/bx/n/10.95 Multi-Dimensional Slic-ing Syn-tax[] \T1/lmr/m/n/10.95 To
- ex-tract sub-sets of an ar-ray, use slice no-ta-tion \T1/lmtt/m/n/10.95 [start
-:stop:step]
+[29] [30] [31] [32] [33]
+Overfull \hbox (2.07568pt too wide) in paragraph at lines 311--312
+[]\T1/lmr/m/n/10.95 Let us mea-sure the phys-i-cal ex-e-cu-tion time re-quired 
+to cal-cu-late the Eu-clidean norm $[]$
  []
 
-[31]
-Underfull \vbox (badness 5878) has occurred while \output is active []
-
-[32] [33] [34] [35] [36] [37] [38]) (./chapters/ch01_s4_pandas.tex
+[34] [35] [36] [37] [38]) (./chapters/ch01_s4_pandas.tex
 Overfull \hbox (11.67049pt too wide) in paragraph at lines 15--16
 []\T1/lmr/bx/n/10.95 The Split-Apply-Combine Pat-tern\T1/lmr/m/n/10.95 : Group-
 ing and multi-metric ag-gre-ga-tions with \T1/lmtt/m/n/10.95 groupby\T1/lmr/m/n
 /10.95 . 
  []
 
-[39] [40] [41] [42] [43]
-Overfull \hbox (16.7818pt too wide) in paragraph at lines 363--365
- []\T1/lmr/bx/n/10.95 Database-Style Joins (\T1/lmtt/b/n/10.95 pd.merge\T1/lmr/
-bx/n/10.95 )[] \T1/lmr/m/n/10.95 pan-das pro-vides re-la-tional database joins 
-via \T1/lmtt/m/n/10.95 pd.merge(left,
+[39]
+
+Package tcolorbox Warning: Using nobreak failed. Try to enlarge `lines before b
+reak' or set page breaks manually on input line 76.
+
+[40]
+Overfull \hbox (41.02536pt too wide) in paragraph at lines 162--163
+[]\T1/lmr/m/n/10.95 IoT gate-ways fre-quently trans-mit sen-sor read-ings as ne
+sted JSON pack-ets. Use \T1/lmtt/m/n/10.95 pd.json_normalize()
  []
 
-[44] [45] [46]
+[41]
+Overfull \hbox (5.6302pt too wide) in paragraph at lines 180--181
+[]\T1/lmr/m/n/10.95 By de-fault, pan-das loads nu-meric columns as heavy 64-bit
+ in-te-gers and floats (\T1/lmtt/m/n/10.95 int64\T1/lmr/m/n/10.95 , \T1/lmtt/m/
+n/10.95 float64\T1/lmr/m/n/10.95 ).
+ []
+
+[42]
+Underfull \vbox (badness 3271) has occurred while \output is active []
+
+[43] [44] [45] [46]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[47]
 Overfull \hbox (37.22289pt too wide) in paragraph at lines 506--507
 []\T1/lmr/bx/n/10.95 Boolean In-dex-ing Syn-tax\T1/lmr/m/n/10.95 : Ex-plain why
  the ex-pres-sion \T1/lmtt/m/n/10.95 df[df['temp'] > 25 & df['humidity']
  []
 
-[47]) (./chapters/ch01_s5_visualization.tex [48] [49] [50] [51] [52] [53] [54] 
-[55]) (./chapters/ch01_s6_git_sql.tex [56] [57] [58] [59] (/usr/local/texlive/2
-026/texmf-dist/tex/latex/listings/lstlang1.sty
+[48]) (./chapters/ch01_s5_visualization.tex
+Underfull \vbox (badness 1048) has occurred while \output is active []
+
+[49] [50] [51] [52] [53] [54] [55] [56]) (./chapters/ch01_s6_git_sql.tex
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[57] [58] [59]
+Overfull \hbox (6.9991pt too wide) in paragraph at lines 169--170
+[]\T1/lmr/m/n/10.95 Never com-mit tem-po-rary files, mas-sive datasets, or se-c
+rets into a Git repos-i-tory. A \T1/lmtt/m/n/10.95 .gitignore
+ []
+
+[60] (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2025/11/14 1.11b listings language file
-) [60]
+)
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 261.
 [61] [62] [63] [64]) (./chapters/ch02_s1_linear_algebra.tex [65]
@@ -1421,72 +1447,62 @@ show-ing the quan-tity of each item:
 
 [66
 
-] [67] [68] [69] [70] [71] [72] [73] [74]
+] [67] [68]
+Underfull \vbox (badness 5622) has occurred while \output is active []
+
+[69] [70] [71]
+Underfull \vbox (badness 5189) has occurred while \output is active []
+
+[72] [73] [74] [75]
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <9> on input line 511.
-[75] [76] [77] [78] [79] [80] [81] [82]) (./chapters/ch02_s2_calculus.tex [83] 
-[84] [85]
+[76] [77] [78]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[79] [80] [81] [82] [83]) (./chapters/ch02_s2_calculus.tex [84] [85] [86] [87]
 
 Package tcolorbox Warning: Using nobreak failed. Try to enlarge `lines before b
-reak' or set page breaks manually on input line 138.
+reak' or set page breaks manually on input line 214.
 
-[86] [87] [88] [89]
+[88]
 
 Package tcolorbox Warning: Using nobreak failed. Try to enlarge `lines before b
-reak' or set page breaks manually on input line 334.
+reak' or set page breaks manually on input line 267.
 
-
-Overfull \hbox (6.82263pt too wide) in paragraph at lines 344--345
- []\T1/lmr/bx/n/10.95 Complete Hand-Worked Trace of 4 Op-ti-miza-tion Steps[] \
-T1/lmr/m/n/10.95 Let us min-i-mize the 1D quadratic
- []
-
-[90] [91] [92]
+[89] [90] [91] [92] [93]
 Overfull \hbox (9.92159pt too wide) detected at line 555
 []
  []
 
-[93]) (./chapters/ch02_s3_probability.tex [94]
-Underfull \vbox (badness 4303) has occurred while \output is active []
-
-[95] [96]
-Underfull \vbox (badness 2150) has occurred while \output is active []
-
-[97] [98] [99]
+) (./chapters/ch02_s3_probability.tex [94] [95] [96] [97] [98] [99] [100]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[100] [101] [102] [103] [104] [105]
-Overfull \hbox (17.66676pt too wide) in paragraph at lines 591--592
- []\T1/lmr/bx/n/10.95 Formal Def-i-ni-tion: Pois-son PMF and Mo-ments[] \T1/lmr
-/m/n/10.95 A dis-crete ran-dom vari-able $\OML/lmm/m/it/10.95 X \OMS/lmsy/m/n/1
-0.95 2 f\OT1/lmr/m/n/10.95 0\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 1\OML/lmm/
-m/it/10.95 ; \OT1/lmr/m/n/10.95 2\OML/lmm/m/it/10.95 ; [] \OMS/lmsy/m/n/10.95 g
-$
- []
+[101] [102]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
+[103] [104] [105] [106]
 Overfull \hbox (94.42099pt too wide) in paragraph at lines 636--646
  [][] 
  []
 
-[106]
+[107]
 Overfull \hbox (5.92978pt too wide) in paragraph at lines 667--668
 \T1/lmr/m/n/10.95 Assuming that our $\OML/lmm/m/it/10.95 n$ \T1/lmr/m/n/10.95 o
 b-ser-va-tions $\OML/lmm/m/it/10.95 x[]; x[]; [] ; x[]$ \T1/lmr/m/n/10.95 are \
 T1/lmr/bx/n/10.95 In-de-pen-dent and Iden-ti-cally Dis-tributed
  []
 
-[107] [108] [109] [110]
+[108] [109] [110] [111] [112]
 Overfull \hbox (5.56186pt too wide) in paragraph at lines 888--889
 []\T1/lmr/bx/n/10.95 Lines 12--14\T1/lmr/m/n/10.95 : We com-pute the an-a-lyt-i
 -cal MLE es-ti-mates us-ing \T1/lmtt/m/n/10.95 np.mean \T1/lmr/m/n/10.95 and \T
 1/lmtt/m/n/10.95 np.std(ddof=0)\T1/lmr/m/n/10.95 .
  []
 
-[111] [112] [113] [114]
-Underfull \vbox (badness 10000) has occurred while \output is active []
+[113] [114]
+Underfull \vbox (badness 1097) has occurred while \output is active []
 
-[115] [116]
+[115] [116] [117]
 Overfull \hbox (33.89668pt too wide) detected at line 1131
 \OML/lmm/m/it/10.95 P\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 X < \OT1/lmr/m/n/1
 0.95 2) = \OML/lmm/m/it/10.95 P\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 X \OT1/l
@@ -1498,17 +1514,17 @@ ML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 0183156 \OMS/lmsy/m/n/10.95 ^^Y []  \OT1/
 lmr/m/n/10.95 =[]\OMS/lmsy/m/n/10.95 )  []
  []
 
-[117]) (./chapters/ch02_s4_statistics.tex [118] [119] [120] [121]
+[118]) (./chapters/ch02_s4_statistics.tex [119] [120] [121] [122]
 Underfull \vbox (badness 1259) has occurred while \output is active []
 
-[122]
+[123]
 Underfull \hbox (badness 1005) in paragraph at lines 285--287
 \T1/lmr/bx/n/10.95 Analysis\T1/lmr/m/n/10.95 : De-mand-ing higher con-fi-dence 
 ($\OT1/lmr/m/n/10.95 99%$ \T1/lmr/m/n/10.95 vs $\OT1/lmr/m/n/10.95 95%$\T1/lmr/
 m/n/10.95 ) re-quires a wider in-ter-val
  []
 
-[123]
+[124]
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <12> on input line 292.
 
@@ -1519,46 +1535,39 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 292.
 
-[124] [125]
+[125] [126]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[126] [127] [128] [129] [130] [131] [132] [133]
+[127] [128] [129] [130] [131]
 Underfull \vbox (badness 1389) has occurred while \output is active []
 
-[134] [135]) (./chapters/ch02_s5_optimization_information.tex [136] [137] [138]
-[139] [140]
+[132] [133] [134]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[135] [136]) (./chapters/ch02_s5_optimization_information.tex [137]
+Underfull \vbox (badness 2512) has occurred while \output is active []
+
+[138] [139] [140] [141] [142]
 Overfull \hbox (36.91792pt too wide) detected at line 295
 []
  []
 
-[141]
+
 Overfull \hbox (128.09412pt too wide) in paragraph at lines 304--314
  [][] 
  []
 
+[143] [144] [145] [146] [147] [148] [149]
+Underfull \vbox (badness 1331) has occurred while \output is active []
 
-Underfull \vbox (badness 7685) has occurred while \output is active []
-
-[142] [143] [144]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[145] [146] [147] [148]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[149]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[150]
+[150] [151]
 Underfull \hbox (badness 1158) in paragraph at lines 714--715
 []\T1/lmr/bx/n/10.95 Entropy Mea-sures Fun-da-men-tal Un-cer-tainty\T1/lmr/m/n/
 10.95 : Claude Shan-non's en-tropy
  []
 
 
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[151]
-Underfull \vbox (badness 1024) has occurred while \output is active []
+Underfull \vbox (badness 6268) has occurred while \output is active []
 
 [152] [153]
 Overfull \hbox (10.97447pt too wide) in paragraph at lines 836--838
@@ -1585,17 +1594,8 @@ t/10.95 :\OT1/lmr/m/n/10.95 0\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 30\OML/lm
 m/m/it/10.95 :\OT1/lmr/m/n/10.95 0]$\T1/lmr/m/n/10.95 .
  []
 
-[157] [158] [159]
-Overfull \hbox (53.97696pt too wide) in paragraph at lines 207--208
- []\T1/lmr/bx/n/10.95 The Maths: Pear-son's Cor-re-la-tion For-mula[] \T1/lmr/m
-/n/10.95 Given paired ob-ser-va-tions $\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 
-x[]; y[]\OT1/lmr/m/n/10.95 )\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 (\OML/lmm/
-m/it/10.95 x[]; y[]\OT1/lmr/m/n/10.95 )\OML/lmm/m/it/10.95 ; [] ; \OT1/lmr/m/n/
-10.95 (\OML/lmm/m/it/10.95 x[]; y[]\OT1/lmr/m/n/10.95 )$\T1/lmr/m/n/10.95 : 
- []
-
-[160] [161] [162] [163] [164] [165] [166] [167] [168]) (./chapters/ch03_s2_feat
-ure_work.tex [169]
+[157] [158] [159] [160] [161] [162] [163] [164] [165] [166] [167] [168]) (./cha
+pters/ch03_s2_feature_work.tex [169]
 Overfull \hbox (5.17386pt too wide) in paragraph at lines 57--58
 []\T1/lmr/m/n/10.95 Feature 1 ($\OML/lmm/m/it/10.95 x[]$\T1/lmr/m/n/10.95 ): Ba
 ro-met-ric cham-ber pres-sure in Pas-cals, rang-ing from $\OT1/lmr/m/n/10.95 98
@@ -1618,9 +1618,8 @@ n/10.95 ) pe-nal-ize co-ef-fi-cient mag-ni-tudes ($\OML/lmm/m/it/10.95 ^^U [] w
 []$\T1/lmr/m/n/10.95 ).
  []
 
-[170] [171] [172] [173] [174] [175] [176] [177] [178] [179] [180] [181
-
-] [182] [183]
+[170] [171] [172] [173] [174] [175] [176] [177] [178] [179] [180] [181] [182] [
+183]
 Overfull \hbox (11.72688pt too wide) in paragraph at lines 749--750
 []\T1/lmr/m/n/10.95 Standard One-Hot En-cod-ing cre-ates ex-actly $\OML/lmm/m/i
 t/10.95 K \OT1/lmr/m/n/10.95 = \OT1/lmr/bx/n/10.95 4$ \T1/lmr/m/n/10.95 bi-nary
@@ -1635,8 +1634,8 @@ Overfull \hbox (38.6709pt too wide) in paragraph at lines 761--762
 scaler.transform(X_test)\T1/lmr/m/n/10.95 . 
  []
 
-) (./chapters/ch03_s3_splitting_pitfalls.tex [184] [185] [186] [187] [188] [189
-]
+[184]) (./chapters/ch03_s3_splitting_pitfalls.tex [185] [186] [187] [188] [189]
+
 Overfull \hbox (23.33781pt too wide) in paragraph at lines 327--328
 []\T1/lmr/bx/n/10.95 Preprocessing / Trans-form Leak-age\T1/lmr/m/n/10.95 : Com
 -put-ing trans-for-ma-tion pa-ram-e-ters ($\OML/lmm/m/it/10.95 ^^V; ^^[; x[]; x
@@ -1650,19 +1649,22 @@ r/m/n/10.95 is in-voked, the pipeline calls \T1/lmtt/m/n/10.95 scaler.fit_trans
 form()
  []
 
-
+[191]
 Overfull \hbox (103.57523pt too wide) in paragraph at lines 383--391
  [] 
  []
 
-[191]
+
 Overfull \hbox (59.279pt too wide) in paragraph at lines 418--420
 \T1/lmr/m/n/10.95 Scikit-Learn au-to-mat-i-cally com-putes in-versely pro-por-t
 ional bal-anced weights via \T1/lmtt/m/n/10.95 class_weight='balanced'\T1/lmr/m
 /n/10.95 : 
  []
 
-[192] [193] [194] [195] [196] [197] [198] [199] [200]) [201] [202
+[192] [193] [194] [195]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[196] [197] [198] [199] [200]) [201] [202
 
 ] (./chapters/ch04_s1_regression.tex
 Chapter 4.
@@ -1674,9 +1676,6 @@ Overfull \hbox (34.47456pt too wide) in paragraph at lines 171--172
 el.coef\_\T1/lmr/m/n/10.95 , and the in-ter-cept is stored in \T1/lmtt/m/n/10.9
 5 model.intercept\_\T1/lmr/m/n/10.95 . 
  []
-
-
-Underfull \vbox (badness 1803) has occurred while \output is active []
 
 [206] [207] [208] [209] [210]
 
@@ -1733,7 +1732,7 @@ Overfull \hbox (35.98076pt too wide) in paragraph at lines 698--710
  []
 
 
-Underfull \vbox (badness 2799) has occurred while \output is active []
+Underfull \vbox (badness 3872) has occurred while \output is active []
 
 [227] [228]
 Underfull \vbox (badness 4954) has occurred while \output is active []
@@ -1742,7 +1741,10 @@ Underfull \vbox (badness 4954) has occurred while \output is active []
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [230] [231] [232]) (./chapters/ch04_s3_ensembles.tex [233] [234] [235] [236] [2
-37] [238] [239] [240] [241] [242] [243]
+37] [238] [239] [240]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[241] [242] [243]
 Underfull \hbox (badness 1983) in paragraph at lines 587--590
 []\T1/lmr/bx/n/10.95 Soft Vot-ing ver-sus Hard Vot-ing Cal-cu-la-tion\T1/lmr/m/
 n/10.95 : Three di-verse clas-si-fiers
@@ -1757,7 +1759,14 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 64.
 
-[248] [249] [250] [251] [252] [253] [254] [255] [256]
+[248] [249] [250] [251] [252] [253] [254] [255]
+Overfull \hbox (18.0712pt too wide) in paragraph at lines 527--528
+\T1/lmr/m/n/10.95 **Kullback-Leibler (KL) Di-ver-gence** be-tween high-dimensio
+nal dis-tri-bu-tion $\OML/lmm/m/it/10.95 P$ \T1/lmr/m/n/10.95 and low-dimension
+al
+ []
+
+[256]
 Overfull \hbox (0.88194pt too wide) in paragraph at lines 546--547
 []\T1/lmr/bx/n/10.95 Dramatically Faster Ex-e-cu-tion\T1/lmr/m/n/10.95 : While 
 stan-dard t-SNE scales with $\OMS/lmsy/m/n/10.95 O\OT1/lmr/m/n/10.95 (\OML/lmm/
@@ -1768,10 +1777,10 @@ O\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 N [] N\OT1/lmr/m/n/10.95 )$
 [257]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[258] [259] [260]
-Underfull \vbox (badness 1910) has occurred while \output is active []
+[258] [259] [260] [261] [262]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[261] [262] [263] [264]) (./chapters/ch04_s5_anomaly_detection.tex [265]
+[263] [264]) (./chapters/ch04_s5_anomaly_detection.tex [265]
 Overfull \hbox (7.21622pt too wide) in paragraph at lines 51--52
 []\T1/lmr/bx/n/10.95 Isolation For-est\T1/lmr/m/n/10.95 : An ef-fi-cient en-sem
 -ble method based on ran-dom re-cur-sive space-partitioning. 
@@ -1783,19 +1792,16 @@ Overfull \hbox (9.91228pt too wide) in paragraph at lines 52--53
 0.95 : Bound-ary es-ti-ma-tion en-clos-ing healthy
  []
 
-[266]
+[266] [267]
 LaTeX Font Info:    Font shape `T1/lmss/m/it' in size <8> not available
 (Font)              Font shape `T1/lmss/m/sl' tried instead on input line 125.
-[267]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[268]
+[268] [269]
 LaTeX Font Info:    Font shape `T1/lmss/m/it' in size <9> not available
 (Font)              Font shape `T1/lmss/m/sl' tried instead on input line 234.
-[269] [270] [271] [272] [273]
+[270] [271] [272] [273] [274]
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
 nput line 534.
-[274] [275]
+[275]
 Underfull \hbox (badness 10000) in paragraph at lines 636--636
 []\T1/lmr/bx/n/10 Complexity
  []
@@ -1851,11 +1857,10 @@ Underfull \hbox (badness 2142) in paragraph at lines 656--657
 e-ter sam-pled at $\OT1/lmr/m/n/10.95 10[]$ \T1/lmr/m/n/10.95 gen-er-ates
  []
 
+[276] [277]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-Underfull \vbox (badness 2635) has occurred while \output is active []
-
-[276] [277] [278] [279]) (./chapters/ch04_s6_model_quality.tex [280] [281] [282
-]
+[278] [279]) (./chapters/ch04_s6_model_quality.tex [280] [281] [282]
 Underfull \hbox (badness 1642) in paragraph at lines 174--175
 \TS1/lmr/m/n/10 ˆ \T1/lmr/m/n/10 De-crease reg-u-lar-iza-tion strength
  []
@@ -1866,14 +1871,14 @@ Underfull \hbox (badness 1142) in paragraph at lines 176--177
 h\T1/lmr/m/n/10 ,
  []
 
-[283]
+[283] [284]
 Overfull \hbox (23.07509pt too wide) in paragraph at lines 229--230
 []\T1/lmr/m/n/10.95 The one-dimensional co-or-di-nate de-scent up-date for weig
 ht $\OML/lmm/m/it/10.95 w[]$ \T1/lmr/m/n/10.95 in-cor-po-rates the \T1/lmr/bx/n
 /10.95 soft-thresholding
  []
 
-[284] [285] [286] [287] [288] [289] [290]
+[285] [286] [287] [288] [289] [290] [291]
 Overfull \hbox (0.86679pt too wide) in paragraph at lines 670--671
 []\T1/lmr/m/n/10.95 When \T1/lmtt/m/n/10.95 pipeline.predict(X_test) \T1/lmr/m/
 n/10.95 is called, in-ter-me-di-ate trans-form-ers ex-e-cute \T1/lmtt/m/n/10.95
@@ -1886,7 +1891,7 @@ Overfull \hbox (9.9845pt too wide) in paragraph at lines 670--671
 he clean data to the es-ti-ma-tor's \T1/lmtt/m/n/10.95 predict()
  []
 
-[291] [292] [293] [294] [295] [296]
+[292] [293] [294] [295] [296]
 Overfull \hbox (3.79724pt too wide) detected at line 979
 [] \OT1/lmr/m/n/10.95 = [] = [] = [] = []
  []
@@ -1907,53 +1912,53 @@ r.fit_transform(X_imputed)
 Chapter 5.
 [299
 
-] [300]
-Underfull \vbox (badness 10000) has occurred while \output is active []
+] [300] [301] [302]
+Overfull \hbox (120.01582pt too wide) in paragraph at lines 219--220
+[]\T1/lmr/m/n/10.95 Suppose an edge sound clas-si-fier out-puts three raw score
+s (log-its) for three classes: $\OT1/lmr/m/n/10.95 [[]\OML/lmm/m/it/10.95 ; [];
+ []\OT1/lmr/m/n/10.95 ]$\T1/lmr/m/n/10.95 : 
+ []
 
-[301] [302] [303]
-
-Package tcolorbox Warning: Using nobreak failed. Try to enlarge `lines before b
-reak' or set page breaks manually on input line 292.
-
-[304] [305] [306] [307] [308] [309]) (./chapters/ch05_s2_pytorch.tex
+[303] [304] [305] [306] [307] [308] [309]) (./chapters/ch05_s2_pytorch.tex [310
+]
 Overfull \hbox (13.59404pt too wide) in paragraph at lines 10--11
 \T1/lmr/m/n/10.95 Cortex-M, ESP32) re-quires ex-port-ing math-e-mat-i-cal graph
 s into language-independent, memory-
  []
 
-[310]
+[311]
 Overfull \hbox (5.96213pt too wide) in paragraph at lines 96--97
 []\T1/lmr/bx/n/10.95 Shape (\T1/lmtt/b/n/10.95 torch.Size\T1/lmr/bx/n/10.95 )\T
 1/lmr/m/n/10.95 : The tu-ple defin-ing the length of each di-men-sion (e.g., \T
 1/lmtt/m/n/10.95 torch.Size([64,
  []
 
-[311]
+
 Overfull \hbox (5.61594pt too wide) in paragraph at lines 132--133
 []\T1/lmr/bx/n/10.95 Broadcasting\T1/lmr/m/n/10.95 : When per-form-ing element-
 wise op-er-a-tions be-tween ten-sors of dif-fer-ent shapes,
  []
 
-[312] [313] [314] [315] [316] [317]
+[312] [313] [314] [315] [316] [317] [318]
 Overfull \hbox (127.59804pt too wide) in paragraph at lines 505--506
 []\T1/lmr/m/n/10.95 Step 5: Gra-di-ent clip-ping (op-tional but rec-om-mended):
  \T1/lmtt/m/n/10.95 torch.nn.utils.clip_grad_norm_(model.parameters(),
  []
 
-[318] [319]
+[319] [320]
 Overfull \hbox (1.33641pt too wide) in paragraph at lines 635--636
 []\T1/lmr/bx/n/10.95 Saving the State Dic-tio-nary \T1/lmr/m/n/10.95 (\T1/lmtt/
 m/n/10.95 torch.save(model.state_dict(), "weights.pth")\T1/lmr/m/n/10.95 ): Se-
 
  []
 
-[320]
+
 Underfull \hbox (badness 4899) in paragraph at lines 676--677
 []\T1/lmr/bx/n/10.95 TorchScript Trac-ing\T1/lmr/m/n/10.95 : Py-Torch mod-els r
 ely on a live Python run-time.
  []
 
-
+[321]
 Underfull \hbox (badness 6204) in paragraph at lines 701--702
 []\T1/lmr/bx/n/10.95 Disable Track-ing Dur-ing In-fer-ence\T1/lmr/m/n/10.95 : W
 rap eval-u-a-tion code in \T1/lmtt/m/n/10.95 with
@@ -1977,17 +1982,11 @@ Underfull \hbox (badness 1028) in paragraph at lines 705--706
 -serve clean ar-chi-tec-tural porta-
  []
 
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[321]
+[322]
 Underfull \hbox (badness 2828) in paragraph at lines 728--729
 []\T1/lmr/m/n/10.95 How many op-ti-mizer weight up-date steps oc-cur over $\OT1
 /lmr/m/n/10.95 10$ \T1/lmr/m/n/10.95 full epochs if
  []
-
-[322]
-Underfull \vbox (badness 1275) has occurred while \output is active []
 
 [323]
 Overfull \hbox (2.01147pt too wide) in paragraph at lines 802--804
@@ -2016,111 +2015,117 @@ Underfull \hbox (badness 10000) in paragraph at lines 601--603
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [337] [338]) (./chapters/ch05_s4_cnn.tex [339] [340]
+Overfull \hbox (14.77704pt too wide) in paragraph at lines 42--43
+[]\T1/lmr/m/n/10.95 In ma-chine learn-ing, the op-er-a-tion we call ``con-vo-lu
+-tion'' is tech-ni-cally the 2D \T1/lmr/bx/n/10.95 cross-correlation
+ []
+
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <14.4> on input line 99.
-[341] [342] [343
-
-] [344] [345] [346] [347] [348] [349] [350] [351] [352] [353]) (./chapters/ch05
-_s5_sequence_models.tex [354]
+[341] [342] [343] [344] [345] [346] [347] [348] [349] [350] [351] [352] [353]) 
+(./chapters/ch05_s5_sequence_models.tex [354] [355]
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <24.88> on input line 85.
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <20.74> on input line 85.
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <17.28> on input line 85.
-[355] [356] [357] [358] [359]
+[356] [357] [358] [359] [360]
 Overfull \hbox (48.45256pt too wide) in paragraph at lines 418--430
  [][] 
  []
 
-[360] [361]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[362] [363]
+[361] [362] [363]
 Underfull \hbox (badness 1127) in paragraph at lines 634--635
 []\T1/lmr/bx/n/10.95 The \T1/lmtt/b/n/10.95 batch_first \T1/lmr/bx/n/10.95 Di-m
 en-sion Trap\T1/lmr/m/n/10.95 : In Py-Torch, \T1/lmtt/m/n/10.95 nn.LSTM \T1/lmr
 /m/n/10.95 and \T1/lmtt/m/n/10.95 nn.GRU \T1/lmr/m/n/10.95 de-
  []
 
-[364] [365]) (./chapters/ch05_s6_transformers.tex [366] [367] [368] [369] [370]
-[371] [372]
+[364] [365] [366]) (./chapters/ch05_s6_transformers.tex [367] [368] [369] [370]
+[371] [372] [373]
 Overfull \hbox (61.14523pt too wide) in paragraph at lines 389--402
  [][] 
  []
 
-[373] [374]
+[374]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[375]
 Overfull \hbox (0.63771pt too wide) in paragraph at lines 519--520
 []\T1/lmr/bx/n/10.95 Line 35\T1/lmr/m/n/10.95 : \T1/lmtt/m/n/10.95 scores = tor
 ch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d\_k)\T1/lmr/m/n/10.95 .
  []
 
-[375] [376]
+[376]
 Underfull \hbox (badness 10000) in paragraph at lines 573--574
 []\T1/lmr/bx/n/10.95 Scaled Dot-Product For-mula\T1/lmr/m/n/10.95 : At-ten-tion
  com-putes com-pat-i-bil-ity via
  []
 
-[377] [378]) (./chapters/ch05_s7_other_architectures.tex [379] [380] [381] [382
+[377]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[378] [379]) (./chapters/ch05_s7_other_architectures.tex [380] [381] [382] [383
 ]
 Overfull \hbox (10.7991pt too wide) in paragraph at lines 248--249
 \T1/lmr/m/n/10.95 In 2014, Ian Good-fel-low and col-leagues in-tro-duced \T1/lm
 r/bx/n/10.95 Gen-er-a-tive Ad-ver-sar-ial Net-works (GANs)\T1/lmr/m/n/10.95 .
  []
 
-[383] [384]
+[384] [385]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[385] [386]
+[386] [387]
 Overfull \hbox (9.03395pt too wide) in paragraph at lines 412--413
 \T1/lmr/m/n/10.95 Instead of trans-mit-ting raw high-frequency wave-forms (e.g.
 , 64 floating-point sam-ples $\OT1/lmr/m/n/10.95 = 256[]$\T1/lmr/m/n/10.95 ),
  []
 
-[387]
+[388]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[388]) (./chapters/ch06_s1_time_series.tex [389]
+[389]) (./chapters/ch06_s1_time_series.tex [390]
 Chapter 6.
-[390
+[391
 
-] [391]
-Underfull \vbox (badness 10000) has occurred while \output is active []
+] [392]
+Underfull \vbox (badness 2894) has occurred while \output is active []
 
-[392] [393] (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstlang1.sty
+[393] [394] (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2025/11/14 1.11b listings language file
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2025/11/14 1.11b listings language file
 ) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2025/11/14 1.11b (Carsten Heinz)
-) [394] [395] [396] [397]
+) [395] [396] [397] [398] [399] [400] [401] [402]) (./chapters/ch06_s2_computer
+_vision.tex
+Underfull \vbox (badness 1137) has occurred while \output is active []
+
+[403] [404] [405] [406] [407] [408]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[398] [399] [400]) (./chapters/ch06_s2_computer_vision.tex [401] [402] [403] [4
-04] [405] [406] [407]
+[409]
 Overfull \hbox (18.19708pt too wide) in paragraph at lines 414--415
 []\T1/lmr/bx/n/10.95 Lines 8--11\T1/lmr/m/n/10.95 : \T1/lmtt/m/n/10.95 x1 = tor
 ch.max(boxes1[:, 0].unsqueeze(1), boxes2[:, 0].unsqueeze(0))\T1/lmr/m/n/10.95 .
 
  []
 
-[408]
+[410]
 Overfull \hbox (2.28091pt too wide) in paragraph at lines 447--448
 []\T1/lmr/m/n/10.95 Instead of draw-ing boxes, FOMO marks cen-troids. It uses $
 \OT1/lmr/m/n/10.95 30\OMS/lmsy/m/n/10.95 ^^B$ \T1/lmr/bx/n/10.95 less mem-ory \
 T1/lmr/m/n/10.95 than MobileNet-
  []
 
-[409] [410] [411]) (./chapters/ch06_s3_nlp.tex [412]
-Overfull \hbox (22.83511pt too wide) in paragraph at lines 28--31
- []\T1/lmr/bx/n/10.95 Why It Ex-ists: The Real-World Prob-lem[] \T1/lmr/m/n/10.
-95 Con-sider the raw text string: \T1/lmtt/m/n/10.95 "Motor overheating!
- []
+[411]
+Underfull \vbox (badness 2573) has occurred while \output is active []
 
-[413] [414]
-Underfull \vbox (badness 10000) has occurred while \output is active []
+[412]) (./chapters/ch06_s3_nlp.tex [413] [414] [415]
+Underfull \vbox (badness 2088) has occurred while \output is active []
 
-[415]
+[416]
 Overfull \hbox (3.37526pt too wide) in paragraph at lines 156--158
 \T1/lmr/m/n/10.95 model be-lieves that \T1/lmtt/m/n/10.95 "motor" \T1/lmr/m/n/1
 0.95 and \T1/lmtt/m/n/10.95 "engine" \T1/lmr/m/n/10.95 are as com-pletely un-re
@@ -2128,45 +2133,41 @@ Overfull \hbox (3.37526pt too wide) in paragraph at lines 156--158
 banana"\T1/lmr/m/n/10.95 !
  []
 
-[416]
-Overfull \hbox (9.7829pt too wide) in paragraph at lines 236--239
- []\T1/lmr/bx/n/10.95 From Static to Con-tex-tual Em-bed-dings: The Trans-forme
-r Rev-o-lu-tion[] \T1/lmr/m/n/10.95 While Word2Vec
- []
-
-[417]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[418] [419] [420] [421] [422]) (./chapters/ch06_s4_llms.tex [423] [424]
+[417] [418] [419] [420] [421] [422] [423]) (./chapters/ch06_s4_llms.tex [424] [
+425] [426]
 Overfull \hbox (11.0954pt too wide) in paragraph at lines 121--122
 []\T1/lmr/m/n/10.95 Modern in-fer-ence frame-works (such as llama.cpp and Ope-n
 AI JSON mode) sup-port \T1/lmr/bx/n/10.95 Grammar-
  []
 
-
-Underfull \vbox (badness 1831) has occurred while \output is active []
-
-[425] [426]
+[427]
 Overfull \hbox (7.2456pt too wide) in paragraph at lines 202--203
 []\T1/lmr/m/n/10.95 The LLM gen-er-ates: \T1/lmtt/m/n/10.95 "The maximum torque
  for bolt M12 is 85 Nm (Section 4.2)."\T1/lmr/m/n/10.95 . 
  []
 
-[427] [428] [429]
+[428] [429] [430] [431]
 Overfull \hbox (8.10156pt too wide) in paragraph at lines 411--412
 []\T1/lmr/bx/n/10.95 Line 34\T1/lmr/m/n/10.95 : \T1/lmtt/m/n/10.95 similarity_s
 cores = torch.matmul(doc_embeddings, query_embedding)\T1/lmr/m/n/10.95 . Per-
  []
 
-[430] [431] [432] [433]) (./chapters/ch06_s5_generative_models.tex
-Underfull \vbox (badness 5893) has occurred while \output is active []
+[432]
+Underfull \vbox (badness 7796) has occurred while \output is active []
 
-[434] [435] [436] [437] [438]
+[433] [434]) (./chapters/ch06_s5_generative_models.tex [435]
+Overfull \hbox (10.11423pt too wide) in paragraph at lines 81--82
+\T1/lmr/m/n/10.95 anoma-lous pres-sure surge, or catas-trophic bear-ing frac-tu
+re) and \T1/lmr/bx/n/10.95 re-al-is-tic \T1/lmr/m/n/10.95 (re-tain-ing high-fre
+quency
+ []
+
+[436] [437] [438] [439] [440]
 Overfull \hbox (4.86346pt too wide) in paragraph at lines 334--335
  [][] 
  []
 
-[439]
+
 Underfull \hbox (badness 10000) in paragraph at lines 359--359
 []\T1/lmr/bx/n/10 Variational Au-toen-
  []
@@ -2296,56 +2297,36 @@ Underfull \hbox (badness 10000) in paragraph at lines 368--368
 \T1/lmr/m/n/10 ef-fi-ciently on edge
  []
 
-[440] [441]
+[441] [442] [443] [444] [445]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[442] [443]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[444]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[445] [446]) (./chapters/ch06_s6_rl_gnn.tex [447] [448] [449]
-Overfull \hbox (30.57973pt too wide) in paragraph at lines 123--125
- []\T1/lmr/bx/n/10.95 Formal MDP Def-i-ni-tion[] \T1/lmr/m/n/10.95 A Markov De-
-ci-sion Pro-cess is for-mally de-fined by a 5-tuple $\OT1/lmr/m/n/10.95 (\OMS/l
-msy/m/n/10.95 S\OML/lmm/m/it/10.95 ; \OMS/lmsy/m/n/10.95 A\OML/lmm/m/it/10.95 ;
- \OMS/lmsy/m/n/10.95 P\OML/lmm/m/it/10.95 ; \OMS/lmsy/m/n/10.95 R\OML/lmm/m/it/
-10.95 ; ^^M\OT1/lmr/m/n/10.95 )$\T1/lmr/m/n/10.95 : 
- []
-
-[450] [451]
+[446] [447]) (./chapters/ch06_s6_rl_gnn.tex [448] [449] [450] [451] [452]
 Underfull \hbox (badness 3354) in paragraph at lines 217--218
 []\T1/lmr/m/n/10.95 States $\OMS/lmsy/m/n/10.95 S \OT1/lmr/m/n/10.95 = \OMS/lms
 y/m/n/10.95 f\OML/lmm/m/it/10.95 S[] \OT1/lmr/m/n/10.95 : []\OML/lmm/m/it/10.95
  ;  S[] \OT1/lmr/m/n/10.95 : []\OML/lmm/m/it/10.95 ;  S[] \OT1/lmr/m/n/10.95 :
  []
 
-
+[453]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[452] [453] [454] [455] [456] [457] [458]
+[454] [455] [456] [457] [458] [459] [460]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[459] [460] [461]
+[461] [462]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[462]
-Underfull \vbox (badness 1466) has occurred while \output is active []
+[463]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[463]) [464] [465
+[464] [465]) [466] [467
 
 ] (./chapters/ch07_s1_sensor_pipeline.tex
 Chapter 7.
-[466
+[468
 
-] [467]
-Underfull \vbox (badness 1292) has occurred while \output is active []
-
-[468] [469]
-Underfull \vbox (badness 5302) has occurred while \output is active []
-
-[470] [471] [472] [473] [474]) (./chapters/ch07_s2_edge_vs_cloud.tex [475]
+] [469] [470] [471] [472] [473] [474] [475] [476]) (./chapters/ch07_s2_edge_vs_
+cloud.tex [477]
 Overfull \hbox (30.52931pt too wide) in paragraph at lines 84--85
  [][] 
  []
@@ -2357,14 +2338,14 @@ Overfull \hbox (32.16495pt too wide) in paragraph at lines 94--96
 
  []
 
-[476]
+[478]
 Overfull \hbox (15.47307pt too wide) in paragraph at lines 110--111
 []\T1/lmr/m/n/10.95 An in-dus-trial man-u-fac-tur-ing plant with 200 mon-i-tore
 d mo-tors would gen-er-ate over $\OT1/lmr/m/n/10.95 1\OML/lmm/m/it/10.95 :\OT1/
 lmr/m/n/10.95 03 []$
  []
 
-[477]
+[479]
 Underfull \hbox (badness 1281) in paragraph at lines 153--153
 []\T1/lmr/bx/n/10 Favor On-Device Edge In-fer-
  []
@@ -2415,20 +2396,20 @@ Underfull \hbox (badness 2894) in paragraph at lines 159--160
 []\T1/lmr/m/n/10 Non-sensitive en-vi-ron-men-tal data
  []
 
-[478]
+[480]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[479] [480]
+[481] [482]
 Overfull \hbox (138.25539pt too wide) in paragraph at lines 295--296
 []\T1/lmr/bx/n/10.95 Mechanism\T1/lmr/m/n/10.95 : The edge de-vice ini-ti-ates 
 a con-nec-tion to a spe-cific URL (e.g., \T1/lmtt/m/n/10.95 POST https://api.pl
 ant.com/v1/predict\T1/lmr/m/n/10.95 ),
  []
 
-[481] [482] [483] [484]
+[483] [484] [485] [486]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[485] [486]) (./chapters/ch07_s3_tinyml_toolchain.tex [487] [488]
+[487] [488]) (./chapters/ch07_s3_tinyml_toolchain.tex [489] [490]
 Overfull \hbox (8.458pt too wide) in paragraph at lines 135--136
  [][] 
  []
@@ -2446,17 +2427,11 @@ Overfull \hbox (1.85278pt too wide) in paragraph at lines 153--154
 a-tions as 32-bit single-precision floating-
  []
 
-
+[491]
 Overfull \hbox (11.56425pt too wide) in paragraph at lines 155--156
 []\T1/lmr/bx/n/10.95 Uniform Affine Quan-ti-za-tion \T1/lmr/m/n/10.95 maps con-
 tin-u-ous 32-bit floating-point num-bers $\OML/lmm/m/it/10.95 r \OMS/lmsy/m/n/1
 0.95 2 \OT1/lmr/m/n/10.95 [\OML/lmm/m/it/10.95 r[]; r[]\OT1/lmr/m/n/10.95 ]$
- []
-
-[489]
-Overfull \hbox (3.20876pt too wide) in paragraph at lines 177--178
- []\T1/lmr/bx/n/10.95 The Need for a Rep-re-sen-ta-tive Cal-i-bra-tion Dataset[
-] \T1/lmr/m/n/10.95 Quan-tiz-ing model weights is straight-
  []
 
 
@@ -2465,7 +2440,10 @@ Overfull \hbox (9.77036pt too wide) in paragraph at lines 182--183
 em path like \T1/lmtt/m/n/10.95 "/home/user/model.tflite"\T1/lmr/m/n/10.95 .
  []
 
-[490] [491]
+[492]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[493]
 Overfull \hbox (28.63957pt too wide) in paragraph at lines 313--314
 \T1/lmr/m/n/10.95 into the bi-nary. In TinyML, Flash stor-age is severely con-s
 trained. Us-ing \T1/lmtt/m/n/10.95 tflite::AllOpsResolver
@@ -2485,16 +2463,14 @@ Overfull \hbox (12.10689pt too wide) in paragraph at lines 313--314
 10.95 AddRelu()\T1/lmr/m/n/10.95 ,
  []
 
-
+[494]
 Overfull \hbox (60.7384pt too wide) in paragraph at lines 320--321
 \T1/lmr/m/n/10.95 copied into \T1/lmtt/m/n/10.95 interpreter->input(0)\T1/lmr/m
 /n/10.95 , and clas-si-fi-ca-tions are read di-rectly from \T1/lmtt/m/n/10.95 i
 nterpreter->output(0)\T1/lmr/m/n/10.95 . 
  []
 
-[492
 
-]
 Overfull \hbox (14.96129pt too wide) in paragraph at lines 336--337
 \T1/lmr/m/n/10.95 (ESP32, Ar-duino, Rasp-berry Pi Pico) con-nected via USB Se-r
 ial us-ing the \T1/lmtt/m/n/10.95 edge-impulse-daemon
@@ -2506,23 +2482,26 @@ Overfull \hbox (19.96936pt too wide) in paragraph at lines 340--341
 t-put to a neu-ral net-work clas-si-fier (Keras/TFLite)
  []
 
-[493] [494]
+[495] [496]
 Overfull \hbox (12.4706pt too wide) in paragraph at lines 436--437
 []\T1/lmtt/m/n/10.95 converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLI
 TE_BUILTINS_INT8]\T1/lmr/m/n/10.95 :
  []
 
-[495]
+[497]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[496]
+[498]
 Underfull \hbox (badness 2990) in paragraph at lines 560--561
 []\T1/lmr/bx/n/10.95 Measurement\T1/lmr/m/n/10.95 : In-spect-ing the com-piler 
 map file (\T1/lmtt/m/n/10.95 .map\T1/lmr/m/n/10.95 ) or run-ning \T1/lmtt/m/n/1
 0.95 size
  []
 
-[497]
+[499]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[500]
 Underfull \hbox (badness 10000) in paragraph at lines 622--623
 []\T1/lmr/bx/n/10.95 Architectural Anal-y-sis\T1/lmr/m/n/10.95 : What is the pr
 i-mary dif-fer-ence be-tween
@@ -2534,16 +2513,7 @@ Underfull \hbox (badness 2376) in paragraph at lines 622--623
 .95 tflite::MicroMutableOpResolver\T1/lmr/m/n/10.95 , and why is
  []
 
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[498] [499]) (./chapters/ch07_s4_model_compression.tex [500] [501]
-Overfull \hbox (13.23434pt too wide) in paragraph at lines 183--184
- []\T1/lmr/bx/n/10.95 Quantization-Aware Train-ing (QAT)[] \T1/lmr/m/n/10.95 To
- pre-vent ac-cu-racy col-lapse, we uti-lize \T1/lmr/bx/n/10.95 Quantization-
- []
-
-[502]
+[501]) (./chapters/ch07_s4_model_compression.tex [502] [503] [504] [505]
 Underfull \hbox (badness 10000) in paragraph at lines 252--252
 []\T1/lmr/bx/n/10 Post-Training Quan-ti-za-tion
  []
@@ -2563,20 +2533,20 @@ Underfull \hbox (badness 1127) in paragraph at lines 255--255
 []\T1/lmr/bx/n/10 Training Code Ac-
  []
 
-[503] [504] [505] [506] [507] [508]
+[506] [507] [508]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[509] [510]
 Overfull \hbox (14.78215pt too wide) in paragraph at lines 528--529
 []\T1/lmr/bx/n/10.95 Lines 65--75\T1/lmr/m/n/10.95 : We ap-ply struc-tured prun
 -ing us-ing \T1/lmtt/m/n/10.95 prune.ln_structured\T1/lmr/m/n/10.95 . Set-ting 
 \T1/lmtt/m/n/10.95 amount=0.25
  []
 
-
-Underfull \vbox (badness 2818) has occurred while \output is active []
-
-[509]
+[511]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[510] [511]) (./chapters/ch07_s5_hardware_deployment.tex
+[512] [513]) (./chapters/ch07_s5_hardware_deployment.tex [514]
 Overfull \hbox (1.17677pt too wide) in paragraph at lines 22--23
 \T1/lmr/m/n/10.95 The Espres-sif ESP32 has emerged as the workhorse mi-cro-con-
 troller of the IoT in-dus-try. Equipped
@@ -2584,41 +2554,36 @@ troller of the IoT in-dus-try. Equipped
 
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <8> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 42.
-[512]
+
 Overfull \hbox (10.57777pt too wide) in paragraph at lines 62--63
 \T1/lmr/m/n/10.95 driven ADC sam-pling, dig-i-tal fil-ter-ing, fea-ture ex-trac
 -tion, and call-ing \T1/lmtt/m/n/10.95 interpreter->Invoke()\T1/lmr/m/n/10.95 .
  
  []
 
-[513]
+[515]
 Overfull \hbox (48.14972pt too wide) in paragraph at lines 111--118
  [] 
  []
 
-[514] [515] [516]
-Overfull \hbox (6.43033pt too wide) in paragraph at lines 304--305
- []\T1/lmr/bx/n/10.95 The Dual-Bank OTA Par-ti-tion Scheme[] \T1/lmr/m/n/10.95 
-In stan-dard mi-cro-con-trollers, flash-ing new firmware
- []
-
+[516] [517] [518] [519]
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <6> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 345.
-[517] [518] [519]
+[520] [521] [522]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[520] [521] [522]
+[523] [524]
 Underfull \hbox (badness 2237) in paragraph at lines 635--636
 []\T1/lmr/bx/n/10.95 Hardware Pro-fil-ing\T1/lmr/m/n/10.95 : Pro-file ex-e-cu-t
 ion la-tency us-ing both soft-ware timers
  []
 
-[523]) (./chapters/ch08_s1_experiment_management.tex [524]
+[525] [526]) (./chapters/ch08_s1_experiment_management.tex [527]
 Chapter 8.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[525
+[528
 
 ]
 Overfull \hbox (35.55789pt too wide) in paragraph at lines 57--58
@@ -2627,7 +2592,7 @@ Overfull \hbox (35.55789pt too wide) in paragraph at lines 57--58
 0.95 window_size_ms = 500\T1/lmr/m/n/10.95 , \T1/lmtt/m/n/10.95 filter_type
  []
 
-[526]
+[529]
 Overfull \hbox (7.20677pt too wide) in paragraph at lines 133--134
 []\T1/lmr/m/n/10.95 Line 7: \T1/lmtt/m/n/10.95 mlflow.set_tracking_uri("sqlite:
 ///mlflow_edge.db") \T1/lmr/m/n/10.95 ini-tial-izes a lo-cal, server-
@@ -2640,7 +2605,7 @@ Overfull \hbox (55.10971pt too wide) in paragraph at lines 136--137
 lash_footprint_bytes\T1/lmr/m/n/10.95 ,
  []
 
-[527] [528] [529] [530] [531]
+[530] [531] [532] [533] [534]
 Overfull \hbox (1.05666pt too wide) in paragraph at lines 344--345
 []\T1/lmr/bx/n/10.95 Tracking Met-rics on Mi-cro-con-trollers\T1/lmr/m/n/10.95 
 : In an ex-per-i-ment track-ing dash-board for TinyML
@@ -2653,33 +2618,33 @@ ing the Lin-ear Con-gru-en-tial Gen-er-a-tor $\OML/lmm/m/it/10.95 X[] \OT1/lmr/
 m/n/10.95 =
  []
 
-[532]) (./chapters/ch08_s2_serving.tex [533]
-Underfull \vbox (badness 6808) has occurred while \output is active []
-
-[534] [535] [536] [537]
+[535]) (./chapters/ch08_s2_serving.tex [536] [537] [538] [539] [540]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[538]
+[541]
 Overfull \hbox (23.73378pt too wide) in paragraph at lines 321--322
 []\T1/lmr/bx/n/10.95 Lines 9--19\T1/lmr/m/n/10.95 : De-fines the \T1/lmtt/m/n/1
 0.95 SensorTelemetryRequest \T1/lmr/m/n/10.95 schema us-ing Py-dan-tic. No-tice
  \T1/lmtt/m/n/10.95 min_items=4,
  []
 
-[539] [540] [541]
+[542] [543] [544]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[542] [543]) (./chapters/ch08_s3_operations.tex [544] [545]
+[545] [546]) (./chapters/ch08_s3_operations.tex [547] [548]
 Overfull \hbox (10.52104pt too wide) in paragraph at lines 110--111
  [][] 
  []
 
-[546] [547]
+
+Underfull \vbox (badness 1354) has occurred while \output is active []
+
+[549] [550]
 Overfull \hbox (77.86992pt too wide) in paragraph at lines 197--207
  [][] 
  []
 
-[548]
+[551]
 Overfull \hbox (4.76118pt too wide) in paragraph at lines 225--226
 []$\OML/lmm/m/it/10.95 Q[]$ \T1/lmr/m/n/10.95 is the frac-tion of to-tal sam-pl
 es in bin $\OML/lmm/m/it/10.95 k$ \T1/lmr/m/n/10.95 from the \T1/lmr/bx/n/10.95
@@ -2695,21 +2660,23 @@ es in bin $\OML/lmm/m/it/10.95 k$ \T1/lmr/m/n/10.95 from the \T1/lmr/bx/n/10.95
 [] \OT1/lmr/m/n/10.95 =
  []
 
-[549]
-
-Package tcolorbox Warning: Using nobreak failed. Try to enlarge `lines before b
-reak' or set page breaks manually on input line 335.
-
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[550] [551] [552] [553] [554]
+[552] [553] [554]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [555]
-Underfull \vbox (badness 10000) has occurred while \output is active []
+Overfull \hbox (17.06642pt too wide) in paragraph at lines 432--433
+[]\T1/lmr/m/n/10.95 Listing [][]8.6[][] shows a prac-ti-cal Con-tin-u-ous In-te
+-gra-tion work-flow (\T1/lmtt/m/n/10.95 .github/workflows/ml_ci.yml\T1/lmr/m/n/
+10.95 ).
+ []
 
 [556] [557]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[558]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[559] [560]
 Overfull \hbox (12.57144pt too wide) in paragraph at lines 650--651
 []\T1/lmr/bx/n/10.95 Compiled Bi-nary Size Quota\T1/lmr/m/n/10.95 : Ver-i-fy-in
 g that the post-quantization Flat-Buffer (\T1/lmtt/m/n/10.95 .tflite\T1/lmr/m/n
@@ -2722,27 +2689,21 @@ Overfull \hbox (1.22824pt too wide) in paragraph at lines 652--653
 er-i-fy-ing that con-vert-ing weights from Float32
  []
 
-) [558] [559
+) [561] [562
 
 ] (./chapters/ch09_s1_project1_classical.tex
 Chapter 9.
 
 Underfull \vbox (badness 1112) has occurred while \output is active []
 
-[560
+[563
 
-]
-Overfull \hbox (0.20119pt too wide) in paragraph at lines 59--60
- []\T1/lmr/bx/n/10.95 Why It Ex-ists: The Real-World Prob-lem[] \T1/lmr/m/n/10.
-95 The ma-jor-ity of failed ma-chine learn-ing projects
- []
-
-[561] [562] [563] [564] [565] [566]
+] [564] [565] [566] [567] [568] [569]
 Overfull \hbox (57.2185pt too wide) in paragraph at lines 374--382
  [][] 
  []
 
-[567] [568]
+[570] [571]
 Overfull \hbox (9.39877pt too wide) in paragraph at lines 507--508
 []\T1/lmr/bx/n/10.95 Random For-est\T1/lmr/m/n/10.95 : Achieves the best per-fo
 r-mance across all met-rics ($\OML/lmm/m/it/10.95 F[] \OT1/lmr/m/n/10.95 = 0\OM
@@ -2750,73 +2711,78 @@ L/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 6912\OML/lmm/m/it/10.95 ; [] \OT1/lmr/m/n/
 10.95 =
  []
 
-[569] [570] [571]
+[572] [573] [574] [575] [576] [577] [578]) (./chapters/ch09_s2_project2_image.t
+ex [579] [580] [581] [582] [583] [584] [585] [586]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[572] [573] [574] [575]) (./chapters/ch09_s2_project2_image.tex [576] [577] [57
-8] [579] [580] [581] [582] [583]
+[587]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[584]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[585]
+[588]
 Overfull \hbox (12.30833pt too wide) in paragraph at lines 505--506
 []\T1/lmr/bx/n/10.95 The So-lu-tion\T1/lmr/m/n/10.95 : The ESP32-CAM in-cludes 
 $\OT1/lmr/m/n/10.95 4 []$ \T1/lmr/m/n/10.95 of ex-ter-nal \T1/lmr/bx/n/10.95 Ps
 eudo-Static RAM (PSRAM)
  []
 
-[586]
-Underfull \vbox (badness 3098) has occurred while \output is active []
-
-[587] [588]
+[589] [590]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[589] [590]) (./chapters/ch09_s3_project3_edge.tex [591]
+[591]
+Underfull \vbox (badness 7064) has occurred while \output is active []
+
+[592] [593] [594]) (./chapters/ch09_s3_project3_edge.tex
 Overfull \hbox (17.12186pt too wide) in paragraph at lines 8--9
 []\T1/lmr/m/n/10.95 In in-dus-trial man-u-fac-tur-ing, min-ing, en-ergy pro-duc
 -tion, and wa-ter util-i-ties, ro-tat-ing machinery---
  []
 
-[592] [593] [594]
+
+Underfull \vbox (badness 1616) has occurred while \output is active []
+
+[595] [596] [597] [598]
 Overfull \hbox (98.61763pt too wide) in paragraph at lines 254--255
  [][] 
  []
 
-[595] [596] [597] [598]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[599]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[600] [601]
+[599] [600] [601]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [602]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [603] [604]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[605]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[606] [607] [608]
 Underfull \hbox (badness 1210) in paragraph at lines 798--800
 []\T1/lmr/bx/n/10.95 Dynamic Mem-ory Heap Frag-men-ta-tion in Em-bed-ded Loops\
 T1/lmr/m/n/10.95 : Call-ing
  []
 
-[605]
+[609
+
+]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[606] [607]) (./chapters/ch09_s4_kaggle_portfolio.tex [608] [609] [610] [611]
+[610] [611]) (./chapters/ch09_s4_kaggle_portfolio.tex [612] [613] [614] [615]
 Overfull \hbox (17.78674pt too wide) in paragraph at lines 152--153
 \T1/lmr/m/n/10.95 within thirty sec-onds. If your repos-i-tory con-sists of a s
 in-gle note-book named \T1/lmtt/m/n/10.95 model_final_v2.ipynb
  []
 
-[612] [613]
+[616]
 Underfull \hbox (badness 4144) in paragraph at lines 279--279
 []\T1/lmr/bx/n/10 Constructed a stacked en-sem-ble re-gres-sion
  []
 
-[614] [615] [616]
+[617] [618]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[619] [620]
 Overfull \hbox (3.63159pt too wide) in paragraph at lines 404--406
 []\T1/lmr/bx/n/10.95 Relative Er-ror Com-par-i-son\T1/lmr/m/n/10.95 : Prop-erty
  A was over-predicted by $\OT1/lmr/m/n/10.95 +10\OML/lmm/m/it/10.95 :\OT1/lmr/m
@@ -2824,11 +2790,11 @@ Overfull \hbox (3.63159pt too wide) in paragraph at lines 404--406
 \OT1/lmr/m/n/10.95 $100[]$\T1/lmr/m/n/10.95 ).
  []
 
-) (./chapters/ch10_s1_reading_reproducing.tex [617]
+) (./chapters/ch10_s1_reading_reproducing.tex [621]
 Chapter 10.
-[618
+[622
 
-] [619] [620]
+] [623] [624]
 Overfull \hbox (0.36421pt too wide) in paragraph at lines 123--123
 []\T1/lmr/bx/n/12 The Macro Map: Read-ing 5 Sur-vey Pa-pers on ML for IoT and T
 inyML 
@@ -2924,7 +2890,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 144--144
 \T1/lmr/m/n/10 ment, en-ergy pro-fil-ing
  []
 
-[621]
+[625]
 Underfull \hbox (badness 10000) in paragraph at lines 168--168
 []\T1/lmr/bx/n/8 Target Hard-
  []
@@ -3055,7 +3021,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 179--180
 []\T1/lmr/m/n/8 High mem-ory
  []
 
-[622] [623] [624] [625]
+[626] [627] [628] [629]
 Overfull \hbox (67.03499pt too wide) in paragraph at lines 384--385
 []\T1/lmr/bx/n/10.95 Quantization Math-e-mat-ics by Hand\T1/lmr/m/n/10.95 : Giv
 en a con-tin-u-ous weight vec-tor $\OT1/lmr/bx/n/10.95 w \OT1/lmr/m/n/10.95 = [
@@ -3065,49 +3031,43 @@ en a con-tin-u-ous weight vec-tor $\OT1/lmr/bx/n/10.95 w \OT1/lmr/m/n/10.95 = [
 OT1/lmr/m/n/10.95 016]$\T1/lmr/m/n/10.95 ,
  []
 
-
-Underfull \vbox (badness 2326) has occurred while \output is active []
-
-[626]) (./chapters/ch10_s2_writing.tex [627] [628] [629] [630] [631]
+[630]) (./chapters/ch10_s2_writing.tex [631] [632] [633] [634] [635]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[632]
-Underfull \vbox (badness 1102) has occurred while \output is active []
-
-[633]
+[636] [637]
 Overfull \hbox (100.41711pt too wide) in paragraph at lines 266--267
 \T1/lmr/m/n/10.95 from single-column to double-column for-mat, you sim-ply swap
  the class file (\T1/lmtt/m/n/10.95 \\documentclass\{neurips\_2024\}
  []
 
-[634] [635] [636] [637]
+[638] [639]
+Underfull \vbox (badness 1953) has occurred while \output is active []
+
+[640] [641] [642]
 Underfull \hbox (badness 1038) in paragraph at lines 478--480
 []\T1/lmr/bx/n/10.95 The Un-cap-i-tal-ized BibT[]X Acronym Trap\T1/lmr/m/n/10.9
 5 : BibT[]X down-cases ti-tles by
  []
 
-[638] [639]
+[643]
 Underfull \hbox (badness 1337) in paragraph at lines 525--526
 []\T1/lmr/bx/n/10.95 BibT[]X Cas-ing\T1/lmr/m/n/10.95 : Why does the BibT[]X en
 -try \T1/lmtt/m/n/10.95 title = \{A Survey of IoT
  []
 
-[640] [641]) (./chapters/ch10_s3_direction.tex [642] [643]
+[644] [645]) (./chapters/ch10_s3_direction.tex [646] [647]
 Overfull \hbox (1.57721pt too wide) in paragraph at lines 110--110
 []\T1/lmr/bx/n/12 The Math-e-mat-ics of Di-rec-tion Se-lec-tion: Multi-Criteria
  De-ci-sion Anal-
  []
 
 
-Underfull \vbox (badness 1902) has occurred while \output is active []
+Underfull \vbox (badness 2205) has occurred while \output is active []
 
-[644] [645]
+[648] [649] [650] [651] [652] [653]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[646] [647] [648] [649]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-[650] [651]) [652] (./chapters/appA_glossary.tex
+[654] [655]) [656] (./chapters/appA_glossary.tex
 Overfull \hbox (14.98277pt too wide) in paragraph at lines 25--26
 []\T1/lmr/m/n/10.95 : The pro-por-tion of to-tal pre-dic-tions that are cor-rec
 t: $\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 TP \OT1/lmr/m/n/10.95 + \OML/lmm/m/
@@ -3115,7 +3075,7 @@ it/10.95 TN\OT1/lmr/m/n/10.95 )\OML/lmm/m/it/10.95 =\OT1/lmr/m/n/10.95 (\OML/lm
 m/m/it/10.95 TP \OT1/lmr/m/n/10.95 +
  []
 
-[653
+[657
 
 
 ]
@@ -3135,7 +3095,7 @@ Overfull \hbox (3.10309pt too wide) in paragraph at lines 42--43
 -batches
  []
 
-[654] [655]
+[658] [659]
 Overfull \hbox (12.18774pt too wide) in paragraph at lines 71--72
 []\T1/lmr/m/n/10.95 : Ar-ti-fi-cially in-flat-ing train-ing set di-ver-sity by 
 ap-ply-ing domain-
@@ -3153,7 +3113,7 @@ Overfull \hbox (12.90619pt too wide) in paragraph at lines 75--76
 ng microamp-
  []
 
-[656]
+[660]
 Overfull \hbox (13.7017pt too wide) in paragraph at lines 79--80
 \T1/lmr/m/n/10.95 run-time de-pen-den-cies, and sys-tem li-braries into an im-m
 utable, portable
@@ -3174,7 +3134,7 @@ Overfull \hbox (1.83615pt too wide) in paragraph at lines 89--90
 , in-te-ger quan-
  []
 
-[657] [658]
+[661] [662]
 Overfull \hbox (4.05556pt too wide) in paragraph at lines 124--125
 []\T1/lmr/m/n/10.95 : A pool-ing layer com-put-ing the av-er-age ac-ti-va-tion 
 across
@@ -3186,19 +3146,19 @@ Overfull \hbox (6.96721pt too wide) in paragraph at lines 128--129
 -ram-e-ter weights
  []
 
-[659]
+[663]
 Overfull \hbox (3.54274pt too wide) in paragraph at lines 150--151
 []\T1/lmr/m/n/10.95 : The set of struc-tural as-sump-tions and math-e-mat-i-cal
  con-straints
  []
 
-[660] [661] [662]
+[664] [665] [666]
 Overfull \hbox (15.30882pt too wide) in paragraph at lines 191--192
 []\T1/lmr/m/n/10.95 : A fast, memory-efficient gra-di-ent boost-ing frame-work 
 us-ing histogram-
  []
 
-[663]
+[667]
 Overfull \hbox (3.5699pt too wide) in paragraph at lines 210--211
 \T1/lmr/m/n/10.95 av-er-age squared dif-fer-ence be-tween pre-dic-tions and tar
 -gets: $[] []\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 y[] \OMS/lmsy/m/n/10.95 ^^
@@ -3217,19 +3177,19 @@ Overfull \hbox (7.43321pt too wide) in paragraph at lines 217--218
 ight publish-
  []
 
-[664]
+[668]
 Overfull \hbox (0.27446pt too wide) in paragraph at lines 230--231
 []\T1/lmr/m/n/10.95 : The de-fault base-line sta-tis-ti-cal hy-poth-e-sis posit
 -ing that there
  []
 
-[665]
+[669]
 Overfull \hbox (7.62453pt too wide) in paragraph at lines 248--249
 \T1/lmr/m/n/10.95 fore con-vo-lu-tion to pre-serve spa-tial out-put di-men-sion
 s (\T1/lmr/m/it/10.95 Same \T1/lmr/m/n/10.95 padding)
  []
 
-[666]
+[670]
 Overfull \hbox (3.94394pt too wide) in paragraph at lines 268--269
 []\T1/lmr/m/n/10.95 : A model-free, off-policy re-in-force-ment learn-ing al-go
 -rithm learn-
@@ -3242,7 +3202,7 @@ OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 s; a\OT1/lmr/m/n/10.95 )$ \T1/lmr/m/n/10
 .95 via it-er-a-tive Bell-man equa-
  []
 
-[667]
+[671]
 Overfull \hbox (0.53645pt too wide) in paragraph at lines 283--284
 []\T1/lmr/m/n/10.95 : A di-ag-nos-tic plot graph-ing True Pos-
  []
@@ -3254,7 +3214,7 @@ Overfull \hbox (17.8079pt too wide) in paragraph at lines 285--286
 /m/it/10.95 ; x\OT1/lmr/m/n/10.95 )$\T1/lmr/m/n/10.95 ,
  []
 
-[668]
+[672]
 Overfull \hbox (8.69661pt too wide) in paragraph at lines 299--300
 []\T1/lmr/m/n/10.95 : The fre-quency at which dis-crete mea-sure-ment sam-ples 
 are recorded
@@ -3273,7 +3233,7 @@ Overfull \hbox (9.83905pt too wide) in paragraph at lines 307--308
 igh-resolution
  []
 
-[669]
+[673]
 Overfull \hbox (9.2229pt too wide) in paragraph at lines 315--316
 \T1/lmr/m/n/10.95 sion of data points around their arith-metic mean: $\OML/lmm/
 m/it/10.95 ^^[ \OT1/lmr/m/n/10.95 = []$\T1/lmr/m/n/10.95 . 
@@ -3303,33 +3263,33 @@ ng log-its be-fore Soft-max: $[]\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 z[]=T\O
 T1/lmr/m/n/10.95 )$\T1/lmr/m/n/10.95 .
  []
 
-[670]
+[674]
 Overfull \hbox (1.0008pt too wide) in paragraph at lines 334--335
 []\T1/lmr/m/n/10.95 : The ma-chine learn-ing task of an-a-lyz-ing his-tor-i-cal
  chrono-
  []
 
-[671]
+[675]
 Overfull \hbox (6.08705pt too wide) in paragraph at lines 362--363
 []\T1/lmr/m/n/10.95 : An iso-lated di-rec-tory tree con-tain-ing a spe-cific Py
 thon
  []
 
-[672]
+[676]
 Overfull \hbox (1.65616pt too wide) in paragraph at lines 372--373
 []\T1/lmr/m/n/10.95 : A dense, low-dimensional con-tin-u-ous vec-tor rep-re-sen
 -ta-tion of words
  []
 
-[673]
+[677]
 Overfull \hbox (0.2481pt too wide) in paragraph at lines 393--394
 []\T1/lmr/m/n/10.95 : The ca-pa-bil-ity of a model to ac-cu-rately clas-sify no
 vel classes
  []
 
-) (./chapters/appB_courses_books.tex [674] [675
+) (./chapters/appB_courses_books.tex [678] [679
 
-] [676] [677] [678]
+] [680] [681] [682]
 Underfull \hbox (badness 3735) in paragraph at lines 180--180
 []\T1/lmr/m/n/10 Visual trans-for-ma-
  []
@@ -3379,16 +3339,16 @@ Underfull \hbox (badness 10000) in paragraph at lines 188--188
 []\T1/lmr/m/n/10 Theoretical rep-re-
  []
 
-[679]
+[683]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[680]
+[684]
 Overfull \hbox (21.38925pt too wide) in paragraph at lines 249--250
 \T1/lmr/m/n/10.95 data aug-men-ta-tion, and two-phase trans-fer learn-ing on Mo
 -bileNetV2 us-ing Keras/TensorFlow. 
  []
 
-) (./chapters/appC_cheat_sheets.tex [681]
+) (./chapters/appC_cheat_sheets.tex [685]
 Overfull \hbox (244.2097pt too wide) in paragraph at lines 88--102
  [][] 
  []
@@ -3469,7 +3429,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 149--149
 /8 ([]) + (1 \OMS/lmsy/m/n/8 ^^@
  []
 
-[682
+[686
 
 ]
 Underfull \hbox (badness 2547) in paragraph at lines 163--163
@@ -3556,10 +3516,10 @@ Overfull \hbox (8.16626pt too wide) in paragraph at lines 161--194
  [][] 
  []
 
-[683] [684]
+[687] [688]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[685]
+[689]
 Underfull \hbox (badness 10000) in paragraph at lines 302--302
 []\T1/lmtt/m/n/8 np.zeros((N, C),
  []
@@ -3639,7 +3599,7 @@ Overfull \hbox (3.7126pt too wide) in paragraph at lines 355--355
 []\T1/lmtt/m/n/8 pd.read_parquet("data.parquet")| 
  []
 
-[686]
+[690]
 Underfull \hbox (badness 10000) in paragraph at lines 388--389
 []\T1/lmr/bx/n/10.95 PyTorch Me-chan-ics\T1/lmr/m/n/10.95 : In the pro-duc-tion
  train-ing loop in List-ing [][]5[][],
@@ -3654,12 +3614,12 @@ e) \T1/lmr/m/n/10.95 pre-ferred over stan-dard
 
 Overfull \hbox (12.75706pt too wide) has occurred while \output is active
 \T1/lmr/m/sl/10.95 .8.  CHEAT SHEET 5: THE TINYML MICROCONTROLLER DEPLOYMENT CH
-ECKLIST \T1/lmr/m/n/10.95 687
+ECKLIST \T1/lmr/m/n/10.95 691
  []
 
-[687]) [688] [689
+[691]) [692] [693
 
-] [690
+] [694
 
 ] (./main.aux)
  ***********
@@ -3674,13 +3634,13 @@ Package rerunfilecheck Info: File `main.out' has not changed.
 
  ) 
 Here is how much of TeX's memory you used:
- 67986 strings out of 467525
- 1373703 string characters out of 5418981
- 2695562 words of memory out of 5000000
- 84615 multiletter control sequences out of 15000+600000
+ 67982 strings out of 467525
+ 1373599 string characters out of 5418981
+ 2612687 words of memory out of 5000000
+ 84607 multiletter control sequences out of 15000+600000
  875143 words of font info for 193 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 91i,22n,99p,1001b,2358s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 91i,22n,99p,1001b,2250s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/latxfont/lcir
 cle1.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmbx10.pfb><
 /usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/local
@@ -3726,10 +3686,10 @@ c/lm/lmtk10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmtt1
 ive/2026/texmf-dist/fonts/type1/public/lm/lmtti10.pfb></usr/local/texlive/2026/
 texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2
 026/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb>
-Output written on main.pdf (702 pages, 4138396 bytes).
+Output written on main.pdf (706 pages, 4140292 bytes).
 PDF statistics:
- 18405 PDF objects out of 18468 (max. 8388607)
- 17388 compressed objects within 174 object streams
- 11392 named destinations out of 12825 (max. 500000)
+ 18424 PDF objects out of 18468 (max. 8388607)
+ 17402 compressed objects within 175 object streams
+ 11396 named destinations out of 12825 (max. 500000)
  49829 words of extra memory for PDF output out of 51595 (max. 10000000)
 
