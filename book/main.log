@@ -1,36 +1,35 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.10.17)  18 NOV 2026 07:02
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.11.18)  21 NOV 2026 02:21
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
 **main.tex
 (./main.tex
-LaTeX2e <2024-11-01> patch level 2
-L3 programming layer <2025-01-18>
-(./preamble.tex (/usr/local/texlive/2025basic/texmf-dist/tex/latex/base/book.cl
-s
-Document Class: book 2024/06/29 v1.4n Standard LaTeX document class
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/base/bk11.clo
-File: bk11.clo 2024/06/29 v1.4n Standard LaTeX file (size option)
+LaTeX2e <2025-11-01>
+L3 programming layer <2026-01-19>
+(./preamble.tex (/usr/local/texlive/2026/texmf-dist/tex/latex/base/book.cls
+Document Class: book 2025/01/22 v1.4n Standard LaTeX document class
+(/usr/local/texlive/2026/texmf-dist/tex/latex/base/bk11.clo
+File: bk11.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
 )
-\c@part=\count196
-\c@chapter=\count197
-\c@section=\count198
-\c@subsection=\count199
-\c@subsubsection=\count266
-\c@paragraph=\count267
-\c@subparagraph=\count268
-\c@figure=\count269
-\c@table=\count270
+\c@part=\count275
+\c@chapter=\count276
+\c@section=\count277
+\c@subsection=\count278
+\c@subsubsection=\count279
+\c@paragraph=\count280
+\c@subparagraph=\count281
+\c@figure=\count282
+\c@table=\count283
 \abovecaptionskip=\skip49
 \belowcaptionskip=\skip50
-\bibindent=\dimen141
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/base/inputenc.sty
+\bibindent=\dimen148
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/base/inputenc.sty
 Package: inputenc 2024/02/08 v1.3d Input encoding file
 \inpenc@prehook=\toks17
 \inpenc@posthook=\toks18
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/base/fontenc.sty
-Package: fontenc 2021/04/29 v2.0v Standard LaTeX package
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/lm/lmodern.sty
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/base/fontenc.sty
+Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/lm/lmodern.sty
 Package: lmodern 2015/05/01 v1.6.1 Latin Modern Fonts
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
 (Font)                  OT1/cmr/m/n --> OT1/lmr/m/n on input line 22.
@@ -64,178 +63,176 @@ LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
 (Font)                  OT1/cmr/bx/it --> OT1/lmr/bx/it on input line 37.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 (Font)                  OT1/cmtt/m/n --> OT1/lmtt/m/n on input line 38.
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/microtype/microtype.sty
-Package: microtype 2025/02/11 v3.2a Micro-typographical refinements (RS)
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/graphics/keyval.sty
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/microtype/microtype.sty
+Package: microtype 2026/03/01 v3.2d Micro-typographical refinements (RS)
+(/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/keyval.sty
 Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
 \KV@toks@=\toks19
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/etoolbox/etoolbox.sty
-Package: etoolbox 2025/02/11 v2.5l e-TeX tools for LaTeX (JAW)
-\etb@tempcnta=\count271
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/etoolbox/etoolbox.sty
+Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count284
 )
 \MT@toks=\toks20
-\MT@tempbox=\box52
-\MT@count=\count272
-LaTeX Info: Redefining \noprotrusionifhmode on input line 1087.
-LaTeX Info: Redefining \leftprotrusion on input line 1088.
+\MT@tempbox=\box53
+\MT@count=\count285
+LaTeX Info: Redefining \noprotrusionifhmode on input line 1084.
+LaTeX Info: Redefining \leftprotrusion on input line 1085.
 \MT@prot@toks=\toks21
-LaTeX Info: Redefining \rightprotrusion on input line 1107.
+LaTeX Info: Redefining \rightprotrusion on input line 1104.
 LaTeX Info: Redefining \textls on input line 1449.
-\MT@outer@kern=\dimen142
+\MT@outer@kern=\dimen149
 LaTeX Info: Redefining \microtypecontext on input line 2053.
 LaTeX Info: Redefining \textmicrotypecontext on input line 2070.
-\MT@listname@count=\count273
-
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/microtype/microtype-pdftex.d
-ef
-File: microtype-pdftex.def 2025/02/11 v3.2a Definitions specific to pdftex (RS)
+\MT@listname@count=\count286
+(/usr/local/texlive/2026/texmf-dist/tex/latex/microtype/microtype-pdftex.def
+File: microtype-pdftex.def 2026/03/01 v3.2d Definitions specific to pdftex (RS)
 
 LaTeX Info: Redefining \lsstyle on input line 944.
 LaTeX Info: Redefining \lslig on input line 944.
 \MT@outer@space=\skip51
 )
 Package microtype Info: Loading configuration file microtype.cfg.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/microtype/microtype.cfg
-File: microtype.cfg 2025/02/11 v3.2a microtype main configuration file (RS)
+(/usr/local/texlive/2026/texmf-dist/tex/latex/microtype/microtype.cfg
+File: microtype.cfg 2026/03/01 v3.2d microtype main configuration file (RS)
 )
 LaTeX Info: Redefining \microtypesetup on input line 3065.
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/base/textcomp.sty
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/base/textcomp.sty
 Package: textcomp 2024/04/24 v2.1b Standard LaTeX package
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/upquote/upquote.sty
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/upquote/upquote.sty
 Package: upquote 2012/04/19 v1.3 upright-quote and grave-accent glyphs in verba
 tim
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/geometry/geometry.sty
-Package: geometry 2020/01/02 v5.9 Page Geometry
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/iftex/ifvtex.sty
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/geometry/geometry.sty
+Package: geometry 2026/03/07 v6.0 Page Geometry
+(/usr/local/texlive/2026/texmf-dist/tex/generic/iftex/ifvtex.sty
 Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/iftex/iftex.sty
+(/usr/local/texlive/2026/texmf-dist/tex/generic/iftex/iftex.sty
 Package: iftex 2024/12/12 v1.0g TeX engine tests
 ))
-\Gm@cnth=\count274
-\Gm@cntv=\count275
-\c@Gm@tempcnt=\count276
-\Gm@bindingoffset=\dimen143
-\Gm@wd@mp=\dimen144
-\Gm@odd@mp=\dimen145
-\Gm@even@mp=\dimen146
-\Gm@layoutwidth=\dimen147
-\Gm@layoutheight=\dimen148
-\Gm@layouthoffset=\dimen149
-\Gm@layoutvoffset=\dimen150
+\Gm@cnth=\count287
+\Gm@cntv=\count288
+\c@Gm@tempcnt=\count289
+\Gm@bindingoffset=\dimen150
+\Gm@wd@mp=\dimen151
+\Gm@odd@mp=\dimen152
+\Gm@even@mp=\dimen153
+\Gm@layoutwidth=\dimen154
+\Gm@layoutheight=\dimen155
+\Gm@layouthoffset=\dimen156
+\Gm@layoutvoffset=\dimen157
 \Gm@dimlist=\toks22
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsmath/amsmath.sty
-Package: amsmath 2024/11/05 v2.17t AMS math features
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/amsmath/amsmath.sty
+Package: amsmath 2025/07/09 v2.17z AMS math features
 \@mathmargin=\skip52
 For additional information on amsmath, use the `?' option.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsmath/amstext.sty
-Package: amstext 2021/08/26 v2.01 AMS text
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsmath/amsgen.sty
+(/usr/local/texlive/2026/texmf-dist/tex/latex/amsmath/amstext.sty
+Package: amstext 2024/11/17 v2.01 AMS text
+(/usr/local/texlive/2026/texmf-dist/tex/latex/amsmath/amsgen.sty
 File: amsgen.sty 1999/11/30 v2.0 generic functions
 \@emptytoks=\toks23
-\ex@=\dimen151
-)) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsmath/amsbsy.sty
+\ex@=\dimen158
+)) (/usr/local/texlive/2026/texmf-dist/tex/latex/amsmath/amsbsy.sty
 Package: amsbsy 1999/11/29 v1.2d Bold Symbols
-\pmbraise@=\dimen152
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsmath/amsopn.sty
+\pmbraise@=\dimen159
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/amsmath/amsopn.sty
 Package: amsopn 2022/04/08 v2.04 operator names
 )
-\inf@bad=\count277
+\inf@bad=\count290
 LaTeX Info: Redefining \frac on input line 233.
-\uproot@=\count278
-\leftroot@=\count279
+\uproot@=\count291
+\leftroot@=\count292
 LaTeX Info: Redefining \overline on input line 398.
 LaTeX Info: Redefining \colon on input line 409.
-\classnum@=\count280
-\DOTSCASE@=\count281
+\classnum@=\count293
+\DOTSCASE@=\count294
 LaTeX Info: Redefining \ldots on input line 495.
 LaTeX Info: Redefining \dots on input line 498.
 LaTeX Info: Redefining \cdots on input line 619.
-\Mathstrutbox@=\box53
-\strutbox@=\box54
+\Mathstrutbox@=\box54
+\strutbox@=\box55
 LaTeX Info: Redefining \big on input line 721.
 LaTeX Info: Redefining \Big on input line 722.
 LaTeX Info: Redefining \bigg on input line 723.
 LaTeX Info: Redefining \Bigg on input line 724.
-\big@size=\dimen153
+\big@size=\dimen160
 LaTeX Font Info:    Redeclaring font encoding OML on input line 742.
 LaTeX Font Info:    Redeclaring font encoding OMS on input line 743.
-\macc@depth=\count282
+\macc@depth=\count295
 LaTeX Info: Redefining \bmod on input line 904.
 LaTeX Info: Redefining \pmod on input line 909.
 LaTeX Info: Redefining \smash on input line 939.
 LaTeX Info: Redefining \relbar on input line 969.
 LaTeX Info: Redefining \Relbar on input line 970.
-\c@MaxMatrixCols=\count283
+\c@MaxMatrixCols=\count296
 \dotsspace@=\muskip17
-\c@parentequation=\count284
-\dspbrk@lvl=\count285
+\c@parentequation=\count297
+\dspbrk@lvl=\count298
 \tag@help=\toks24
-\row@=\count286
-\column@=\count287
-\maxfields@=\count288
+\row@=\count299
+\column@=\count300
+\maxfields@=\count301
 \andhelp@=\toks25
-\eqnshift@=\dimen154
-\alignsep@=\dimen155
-\tagshift@=\dimen156
-\tagwidth@=\dimen157
-\totwidth@=\dimen158
-\lineht@=\dimen159
+\eqnshift@=\dimen161
+\alignsep@=\dimen162
+\tagshift@=\dimen163
+\tagwidth@=\dimen164
+\totwidth@=\dimen165
+\lineht@=\dimen166
 \@envbody=\toks26
 \multlinegap=\skip53
 \multlinetaggap=\skip54
 \mathdisplay@stack=\toks27
-LaTeX Info: Redefining \[ on input line 2953.
-LaTeX Info: Redefining \] on input line 2954.
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsfonts/amssymb.sty
+LaTeX Info: Redefining \[ on input line 2950.
+LaTeX Info: Redefining \] on input line 2951.
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/amsfonts/amssymb.sty
 Package: amssymb 2013/01/14 v3.01 AMS font symbols
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsfonts/amsfonts.sty
+(/usr/local/texlive/2026/texmf-dist/tex/latex/amsfonts/amsfonts.sty
 Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
 \symAMSa=\mathgroup4
 \symAMSb=\mathgroup5
 LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
 LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
 (Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
-)) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/graphics/graphicx.sty
-Package: graphicx 2021/09/16 v1.2d Enhanced LaTeX Graphics (DPC,SPQR)
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/graphics/graphics.sty
+)) (/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/graphicx.sty
+Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
+(/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/graphics.sty
 Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/graphics/trig.sty
+(/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/trig.sty
 Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
 File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
 )
 Package graphics Info: Driver file: pdftex.def on input line 106.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/graphics-def/pdftex.def
-File: pdftex.def 2024/04/13 v1.2c Graphics/color driver for pdftex
+(/usr/local/texlive/2026/texmf-dist/tex/latex/graphics-def/pdftex.def
+File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
 ))
-\Gin@req@height=\dimen160
-\Gin@req@width=\dimen161
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/booktabs/booktabs.sty
+\Gin@req@height=\dimen167
+\Gin@req@width=\dimen168
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/booktabs/booktabs.sty
 Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
-\heavyrulewidth=\dimen162
-\lightrulewidth=\dimen163
-\cmidrulewidth=\dimen164
-\belowrulesep=\dimen165
-\belowbottomsep=\dimen166
-\aboverulesep=\dimen167
-\abovetopsep=\dimen168
-\cmidrulesep=\dimen169
-\cmidrulekern=\dimen170
-\defaultaddspace=\dimen171
-\@cmidla=\count289
-\@cmidlb=\count290
-\@aboverulesep=\dimen172
-\@belowrulesep=\dimen173
-\@thisruleclass=\count291
-\@lastruleclass=\count292
-\@thisrulewidth=\dimen174
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/xcolor/xcolor.sty
+\heavyrulewidth=\dimen169
+\lightrulewidth=\dimen170
+\cmidrulewidth=\dimen171
+\belowrulesep=\dimen172
+\belowbottomsep=\dimen173
+\aboverulesep=\dimen174
+\abovetopsep=\dimen175
+\cmidrulesep=\dimen176
+\cmidrulekern=\dimen177
+\defaultaddspace=\dimen178
+\@cmidla=\count302
+\@cmidlb=\count303
+\@aboverulesep=\dimen179
+\@belowrulesep=\dimen180
+\@thisruleclass=\count304
+\@lastruleclass=\count305
+\@thisrulewidth=\dimen181
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/xcolor/xcolor.sty
 Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/graphics-cfg/color.cfg
+(/usr/local/texlive/2026/texmf-dist/tex/latex/graphics-cfg/color.cfg
 File: color.cfg 2016/01/02 v1.6 sample color configuration
 )
 Package xcolor Info: Driver file: pdftex.def on input line 274.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/graphics/mathcolor.ltx)
+(/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/mathcolor.ltx)
 Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
 Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
 Package xcolor Info: Model `RGB' extended on input line 1365.
@@ -245,506 +242,687 @@ Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
 Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
 Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
 Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/pgf/frontendlayer/tikz.sty
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/pgf/basiclayer/pgf.sty (/usr
-/local/texlive/2025basic/texmf-dist/tex/latex/pgf/utilities/pgfrcs.sty
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/utilities/pgfutil-comm
-on.tex
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/multirow/multirow.sty
+Package: multirow 2024/11/12 v2.9 Span multiple rows of a table
+\multirow@colwidth=\skip55
+\multirow@cntb=\count306
+\multirow@dima=\skip56
+\bigstrutjot=\dimen182
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/pgf/frontendlayer/tikz.sty (/us
+r/local/texlive/2026/texmf-dist/tex/latex/pgf/basiclayer/pgf.sty (/usr/local/te
+xlive/2026/texmf-dist/tex/latex/pgf/utilities/pgfrcs.sty
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/utilities/pgfutil-common.te
+x
 \pgfutil@everybye=\toks28
-\pgfutil@tempdima=\dimen175
-\pgfutil@tempdimb=\dimen176
+\pgfutil@tempdima=\dimen183
+\pgfutil@tempdimb=\dimen184
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/utilities/pgfutil-late
-x.def
-\pgfutil@abb=\box55
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/utilities/pgfrcs.code.
-tex (/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/pgf.revision.tex)
-Package: pgfrcs 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/utilities/pgfutil-latex.def
+\pgfutil@abb=\box56
+) (/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/utilities/pgfrcs.code.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/pgf.revision.tex)
+Package: pgfrcs 2025-08-29 v3.1.11a (3.1.11a)
 ))
-Package: pgf 2023-01-15 v3.1.10 (3.1.10)
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/pgf/basiclayer/pgfcore.sty (
-/usr/local/texlive/2025basic/texmf-dist/tex/latex/pgf/systemlayer/pgfsys.sty
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/systemlayer/pgfsys.cod
-e.tex
-Package: pgfsys 2023-01-15 v3.1.10 (3.1.10)
-
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code
-.tex
+Package: pgf 2025-08-29 v3.1.11a (3.1.11a)
+(/usr/local/texlive/2026/texmf-dist/tex/latex/pgf/basiclayer/pgfcore.sty (/usr/
+local/texlive/2026/texmf-dist/tex/latex/pgf/systemlayer/pgfsys.sty
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/systemlayer/pgfsys.code.tex
+Package: pgfsys 2025-08-29 v3.1.11a (3.1.11a)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex
 \pgfkeys@pathtoks=\toks29
 \pgfkeys@temptoks=\toks30
 
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/utilities/pgfkeyslibra
-ryfiltered.code.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/utilities/pgfkeyslibraryfil
+tered.code.tex
 \pgfkeys@tmptoks=\toks31
 ))
-\pgf@x=\dimen177
-\pgf@y=\dimen178
-\pgf@xa=\dimen179
-\pgf@ya=\dimen180
-\pgf@xb=\dimen181
-\pgf@yb=\dimen182
-\pgf@xc=\dimen183
-\pgf@yc=\dimen184
-\pgf@xd=\dimen185
-\pgf@yd=\dimen186
+\pgf@x=\dimen185
+\pgf@y=\dimen186
+\pgf@xa=\dimen187
+\pgf@ya=\dimen188
+\pgf@xb=\dimen189
+\pgf@yb=\dimen190
+\pgf@xc=\dimen191
+\pgf@yc=\dimen192
+\pgf@xd=\dimen193
+\pgf@yd=\dimen194
 \w@pgf@writea=\write3
 \r@pgf@reada=\read2
-\c@pgf@counta=\count293
-\c@pgf@countb=\count294
-\c@pgf@countc=\count295
-\c@pgf@countd=\count296
+\c@pgf@counta=\count307
+\c@pgf@countb=\count308
+\c@pgf@countc=\count309
+\c@pgf@countd=\count310
 \t@pgf@toka=\toks32
 \t@pgf@tokb=\toks33
 \t@pgf@tokc=\toks34
-\pgf@sys@id@count=\count297
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/systemlayer/pgf.cfg
-File: pgf.cfg 2023-01-15 v3.1.10 (3.1.10)
+\pgf@sys@id@count=\count311
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/systemlayer/pgf.cfg
+File: pgf.cfg 2025-08-29 v3.1.11a (3.1.11a)
 )
 Driver file for pgf: pgfsys-pdftex.def
 
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-pdf
-tex.def
-File: pgfsys-pdftex.def 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-pdftex.d
+ef
+File: pgfsys-pdftex.def 2025-08-29 v3.1.11a (3.1.11a)
 
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-com
-mon-pdf.def
-File: pgfsys-common-pdf.def 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-common-p
+df.def
+File: pgfsys-common-pdf.def 2025-08-29 v3.1.11a (3.1.11a)
 )))
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/systemlayer/pgfsyssoft
-path.code.tex
-File: pgfsyssoftpath.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgfsyssoftpath@smallbuffer@items=\count298
-\pgfsyssoftpath@bigbuffer@items=\count299
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/systemlayer/pgfsyssoftpath.
+code.tex
+File: pgfsyssoftpath.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfsyssoftpath@smallbuffer@items=\count312
+\pgfsyssoftpath@bigbuffer@items=\count313
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/systemlayer/pgfsysprot
-ocol.code.tex
-File: pgfsysprotocol.code.tex 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/systemlayer/pgfsysprotocol.
+code.tex
+File: pgfsysprotocol.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 ))
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcore.cod
-e.tex
-Package: pgfcore 2023-01-15 v3.1.10 (3.1.10)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathutil.code.
-tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathparser.cod
-e.tex
-\pgfmath@dimen=\dimen187
-\pgfmath@count=\count300
-\pgfmath@box=\box56
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcore.code.tex
+Package: pgfcore 2025-08-29 v3.1.11a (3.1.11a)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex (/usr
+/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathutil.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathparser.code.tex
+\pgfmath@dimen=\dimen195
+\pgfmath@count=\count314
+\pgfmath@box=\box57
 \pgfmath@toks=\toks35
 \pgfmath@stack@operand=\toks36
 \pgfmath@stack@operation=\toks37
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.
-code.tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.
-basic.code.tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.
-trigonometric.code.tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.
-random.code.tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.
-comparison.code.tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.
-base.code.tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.
-round.code.tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.
-misc.code.tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.
-integerarithmetics.code.tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathcalc.code.
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.code.
 tex)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmathfloat.code
-.tex
-\c@pgfmathroundto@lastzeros=\count301
-)) (/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfint.code.te
-x)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepoin
-ts.code.tex
-File: pgfcorepoints.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgf@picminx=\dimen188
-\pgf@picmaxx=\dimen189
-\pgf@picminy=\dimen190
-\pgf@picmaxy=\dimen191
-\pgf@pathminx=\dimen192
-\pgf@pathmaxx=\dimen193
-\pgf@pathminy=\dimen194
-\pgf@pathmaxy=\dimen195
-\pgf@xx=\dimen196
-\pgf@xy=\dimen197
-\pgf@yx=\dimen198
-\pgf@yy=\dimen199
-\pgf@zx=\dimen256
-\pgf@zy=\dimen257
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.basic
+.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.trigo
+nometric.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.rando
+m.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.compa
+rison.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.base.
+code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.round
+.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.misc.
+code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.integ
+erarithmetics.code.tex) (/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/mat
+h/pgfmathcalc.code.tex) (/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/mat
+h/pgfmathfloat.code.tex
+\c@pgfmathroundto@lastzeros=\count315
+)) (/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/math/pgfint.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepoints.co
+de.tex
+File: pgfcorepoints.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@picminx=\dimen196
+\pgf@picmaxx=\dimen197
+\pgf@picminy=\dimen198
+\pgf@picmaxy=\dimen199
+\pgf@pathminx=\dimen256
+\pgf@pathmaxx=\dimen257
+\pgf@pathminy=\dimen258
+\pgf@pathmaxy=\dimen259
+\pgf@xx=\dimen260
+\pgf@xy=\dimen261
+\pgf@yx=\dimen262
+\pgf@yy=\dimen263
+\pgf@zx=\dimen264
+\pgf@zy=\dimen265
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepath
-construct.code.tex
-File: pgfcorepathconstruct.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgf@path@lastx=\dimen258
-\pgf@path@lasty=\dimen259
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathconst
+ruct.code.tex
+File: pgfcorepathconstruct.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@path@lastx=\dimen266
+\pgf@path@lasty=\dimen267
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepath
-usage.code.tex
-File: pgfcorepathusage.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgf@shorten@end@additional=\dimen260
-\pgf@shorten@start@additional=\dimen261
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathusage
+.code.tex
+File: pgfcorepathusage.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@shorten@end@additional=\dimen268
+\pgf@shorten@start@additional=\dimen269
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorescop
-es.code.tex
-File: pgfcorescopes.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgfpic=\box57
-\pgf@hbox=\box58
-\pgf@layerbox@main=\box59
-\pgf@picture@serial@count=\count302
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcorescopes.co
+de.tex
+File: pgfcorescopes.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfpic=\box58
+\pgf@hbox=\box59
+\pgf@layerbox@main=\box60
+\pgf@picture@serial@count=\count316
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcoregrap
-hicstate.code.tex
-File: pgfcoregraphicstate.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgflinewidth=\dimen262
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcoregraphicst
+ate.code.tex
+File: pgfcoregraphicstate.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgflinewidth=\dimen270
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretran
-sformations.code.tex
-File: pgfcoretransformations.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgf@pt@x=\dimen263
-\pgf@pt@y=\dimen264
-\pgf@pt@temp=\dimen265
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretransform
+ations.code.tex
+File: pgfcoretransformations.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@pt@x=\dimen271
+\pgf@pt@y=\dimen272
+\pgf@pt@temp=\dimen273
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorequic
-k.code.tex
-File: pgfcorequick.code.tex 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcorequick.cod
+e.tex
+File: pgfcorequick.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreobje
-cts.code.tex
-File: pgfcoreobjects.code.tex 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreobjects.c
+ode.tex
+File: pgfcoreobjects.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepath
-processing.code.tex
-File: pgfcorepathprocessing.code.tex 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathproce
+ssing.code.tex
+File: pgfcorepathprocessing.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorearro
-ws.code.tex
-File: pgfcorearrows.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgfarrowsep=\dimen266
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcorearrows.co
+de.tex
+File: pgfcorearrows.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfarrowsep=\dimen274
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreshad
-e.code.tex
-File: pgfcoreshade.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgf@max=\dimen267
-\pgf@sys@shading@range@num=\count303
-\pgf@shadingcount=\count304
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreshade.cod
+e.tex
+File: pgfcoreshade.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@max=\dimen275
+\pgf@sys@shading@range@num=\count317
+\pgf@shadingcount=\count318
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreimag
-e.code.tex
-File: pgfcoreimage.code.tex 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreimage.cod
+e.tex
+File: pgfcoreimage.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreexte
-rnal.code.tex
-File: pgfcoreexternal.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgfexternal@startupbox=\box60
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorelaye
-rs.code.tex
-File: pgfcorelayers.code.tex 2023-01-15 v3.1.10 (3.1.10)
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretran
-sparency.code.tex
-File: pgfcoretransparency.code.tex 2023-01-15 v3.1.10 (3.1.10)
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepatt
-erns.code.tex
-File: pgfcorepatterns.code.tex 2023-01-15 v3.1.10 (3.1.10)
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/basiclayer/pgfcorerdf.
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreexternal.
 code.tex
-File: pgfcorerdf.code.tex 2023-01-15 v3.1.10 (3.1.10)
-)))
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/modules/pgfmoduleshape
-s.code.tex
-File: pgfmoduleshapes.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgfnodeparttextbox=\box61
+File: pgfcoreexternal.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfexternal@startupbox=\box61
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/modules/pgfmoduleplot.
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcorelayers.co
+de.tex
+File: pgfcorelayers.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretranspare
+ncy.code.tex
+File: pgfcoretransparency.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepatterns.
 code.tex
-File: pgfmoduleplot.code.tex 2023-01-15 v3.1.10 (3.1.10)
+File: pgfcorepatterns.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-ve
-rsion-0-65.sty
-Package: pgfcomp-version-0-65 2023-01-15 v3.1.10 (3.1.10)
-\pgf@nodesepstart=\dimen268
-\pgf@nodesepend=\dimen269
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-ve
-rsion-1-18.sty
-Package: pgfcomp-version-1-18 2023-01-15 v3.1.10 (3.1.10)
-)) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/pgf/utilities/pgffor.sty 
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/pgf/utilities/pgfkeys.sty
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code
-.tex)) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/pgf/math/pgfmath.sty 
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex)
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/utilities/pgffor.code.
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/basiclayer/pgfcorerdf.code.
 tex
-Package: pgffor 2023-01-15 v3.1.10 (3.1.10)
-\pgffor@iter=\dimen270
-\pgffor@skip=\dimen271
+File: pgfcorerdf.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)))
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/modules/pgfmoduleshapes.cod
+e.tex
+File: pgfmoduleshapes.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfnodeparttextbox=\box62
+)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/modules/pgfmoduleplot.code.
+tex
+File: pgfmoduleplot.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(/usr/local/texlive/2026/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version
+-0-65.sty
+Package: pgfcomp-version-0-65 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@nodesepstart=\dimen276
+\pgf@nodesepend=\dimen277
+)
+(/usr/local/texlive/2026/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version
+-1-18.sty
+Package: pgfcomp-version-1-18 2025-08-29 v3.1.11a (3.1.11a)
+)) (/usr/local/texlive/2026/texmf-dist/tex/latex/pgf/utilities/pgffor.sty (/usr
+/local/texlive/2026/texmf-dist/tex/latex/pgf/utilities/pgfkeys.sty (/usr/local/
+texlive/2026/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex)) (/usr/loca
+l/texlive/2026/texmf-dist/tex/latex/pgf/math/pgfmath.sty (/usr/local/texlive/20
+26/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex)) (/usr/local/texlive/2026/
+texmf-dist/tex/generic/pgf/utilities/pgffor.code.tex
+Package: pgffor 2025-08-29 v3.1.11a (3.1.11a)
+\pgffor@iter=\dimen278
+\pgffor@skip=\dimen279
 \pgffor@stack=\toks38
 \pgffor@toks=\toks39
 ))
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/frontendlayer/tikz/tik
-z.code.tex
-Package: tikz 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/tikz.cod
+e.tex
+Package: tikz 2025-08-29 v3.1.11a (3.1.11a)
 
-(/usr/local/texlive/2025basic/texmf-sic/texmf-dist/tex/generic/pgf/libraries/pgflibrarypl
-othandlers.code.tex
-File: pgflibraryplothandlers.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgf@plot@mark@count=\count305
-\pgfplotmarksize=\dimen272
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/libraries/pgflibraryplothan
+dlers.code.tex
+File: pgflibraryplothandlers.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@plot@mark@count=\count319
+\pgfplotmarksize=\dimen280
 )
-\tikz@lastx=\dimen273
-\tikz@lasty=\dimen274
-\tikz@lastxsaved=\dimen275
-\tikz@lastysaved=\dimen276
-\tikz@lastmovetox=\dimen277
-\tikz@lastmovetoy=\dimen278
-\tikzleveldistance=\dimen279
-\tikzsiblingdistance=\dimen280
-\tikz@figbox=\box62
-\tikz@figbox@bg=\box63
-\tikz@tempbox=\box64
-\tikz@tempbox@bg=\box65
-\tikztreelevel=\count306
-\tikznumberofchildren=\count307
-\tikznumberofcurrentchild=\count308
-\tikz@fig@count=\count309
+\tikz@lastx=\dimen281
+\tikz@lasty=\dimen282
+\tikz@lastxsaved=\dimen283
+\tikz@lastysaved=\dimen284
+\tikz@lastmovetox=\dimen285
+\tikz@lastmovetoy=\dimen286
+\tikzleveldistance=\dimen287
+\tikzsiblingdistance=\dimen288
+\tikz@figbox=\box63
+\tikz@figbox@bg=\box64
+\tikz@tempbox=\box65
+\tikz@tempbox@bg=\box66
+\tikztreelevel=\count320
+\tikznumberofchildren=\count321
+\tikznumberofcurrentchild=\count322
+\tikz@fig@count=\count323
 
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/modules/pgfmodulematri
-x.code.tex
-File: pgfmodulematrix.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgfmatrixcurrentrow=\count310
-\pgfmatrixcurrentcolumn=\count311
-\pgf@matrix@numberofcolumns=\count312
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/modules/pgfmodulematrix.cod
+e.tex
+File: pgfmodulematrix.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfmatrixcurrentrow=\count324
+\pgfmatrixcurrentcolumn=\count325
+\pgf@matrix@numberofcolumns=\count326
 )
-\tikz@expandcount=\count313
+\tikz@expandcount=\count327
 
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/frontendlayer/tikz/lib
-raries/tikzlibrarytopaths.code.tex
-File: tikzlibrarytopaths.code.tex 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarytopaths.code.tex
+File: tikzlibrarytopaths.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+))) (/usr/local/texlive/2026/texmf-dist/tex/latex/pgfplots/pgfplots.sty (/usr/l
+ocal/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplots.revision.tex)
+Package: pgfplots 2025/08/14 v1.18.2 Data Visualization (1.18.2)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplots.code.tex (/us
+r/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplotscore.code.tex
+\t@pgfplots@toka=\toks40
+\t@pgfplots@tokb=\toks41
+\t@pgfplots@tokc=\toks42
+\pgfplots@tmpa=\dimen289
+\c@pgfplots@coordindex=\count328
+\c@pgfplots@scanlineindex=\count329
+
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/sys/pgfplotssysgeneric
+.code.tex))
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/libs/pgfplotslibrary.c
+ode.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/oldpgfcompatib/pgfplot
+soldpgfsupp_loader.code.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/libraries/pgflibraryfpu.cod
+e.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/oldpgfcompatib/pgfplot
+soldpgfsupp_pgfutil-common-lists.tex))
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/util/pgfplotsutil.code
+.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/liststructure/pgfplots
+liststructure.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/liststructure/pgfplots
+liststructureext.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/liststructure/pgfplots
+array.code.tex
+\c@pgfplotsarray@tmp=\count330
+)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/liststructure/pgfplots
+matrix.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/numtable/pgfplotstable
+shared.code.tex
+\c@pgfplotstable@counta=\count331
+\t@pgfplotstable@a=\toks43
+)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/liststructure/pgfplots
+deque.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/util/pgfplotsbinary.co
+de.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/util/pgfplotsbinary.da
+ta.code.tex))
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/util/pgfplotsutil.verb
+.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/libs/pgflibrarypgfplot
+s.surfshading.code.tex
+\c@pgfplotslibrarysurf@no=\count332
+
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/sys/pgflibrarypgfplots
+.surfshading.pgfsys-pdftex.def)))
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/util/pgfplotscolormap.
+code.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/util/pgfplotscolor.cod
+e.tex))
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplotsstackedplots.c
+ode.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplotsplothandlers.c
+ode.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplotsmeshplothandle
+r.code.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplotsmeshplotimage.
+code.tex)))
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplots.scaling.code.
+tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplotscoordprocessin
+g.code.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplots.errorbars.cod
+e.tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplots.markers.code.
+tex)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplotsticks.code.tex
+)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/pgfplots.paths.code.te
+x)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarydecorations.code.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/modules/pgfmoduledecoration
+s.code.tex
+\pgfdecoratedcompleteddistance=\dimen290
+\pgfdecoratedremainingdistance=\dimen291
+\pgfdecoratedinputsegmentcompleteddistance=\dimen292
+\pgfdecoratedinputsegmentremainingdistance=\dimen293
+\pgf@decorate@distancetomove=\dimen294
+\pgf@decorate@repeatstate=\count333
+\pgfdecorationsegmentamplitude=\dimen295
+\pgfdecorationsegmentlength=\dimen296
+)
+\tikz@lib@dec@box=\box67
+)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarydecorations.pathmorphing.code.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/libraries/decorations/pgfli
+brarydecorations.pathmorphing.code.tex))
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarydecorations.pathreplacing.code.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/libraries/decorations/pgfli
+brarydecorations.pathreplacing.code.tex))
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgfplots/libs/tikzlibrarypgfplo
+ts.contourlua.code.tex)
+\pgfplots@numplots=\count334
+\pgfplots@xmin@reg=\dimen297
+\pgfplots@xmax@reg=\dimen298
+\pgfplots@ymin@reg=\dimen299
+\pgfplots@ymax@reg=\dimen300
+\pgfplots@zmin@reg=\dimen301
+\pgfplots@zmax@reg=\dimen302
+)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibraryplotmarks.code.tex
+File: tikzlibraryplotmarks.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/libraries/pgflibraryplotmar
+ks.code.tex
+File: pgflibraryplotmarks.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 )))
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/libraries/pgflibraryar
-rows.meta.code.tex
-File: pgflibraryarrows.meta.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgfarrowinset=\dimen281
-\pgfarrowlength=\dimen282
-\pgfarrowwidth=\dimen283
-\pgfarrowlinewidth=\dimen284
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/libraries/pgflibraryarrows.
+meta.code.tex
+File: pgflibraryarrows.meta.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfarrowinset=\dimen303
+\pgfarrowlength=\dimen304
+\pgfarrowwidth=\dimen305
+\pgfarrowlinewidth=\dimen306
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/frontendlayer/tikz/lib
-raries/tikzlibrarypositioning.code.tex
-File: tikzlibrarypositioning.code.tex 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarypositioning.code.tex
+File: tikzlibrarypositioning.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/frontendlayer/tikz/lib
-raries/tikzlibraryshapes.geometric.code.tex
-File: tikzlibraryshapes.geometric.code.tex 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibraryshapes.geometric.code.tex
+File: tikzlibraryshapes.geometric.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/libraries/shapes/pgfli
-braryshapes.geometric.code.tex
-File: pgflibraryshapes.geometric.code.tex 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/libraries/shapes/pgflibrary
+shapes.geometric.code.tex
+File: pgflibraryshapes.geometric.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 ))
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/frontendlayer/tikz/lib
-raries/tikzlibrarybackgrounds.code.tex
-File: tikzlibrarybackgrounds.code.tex 2023-01-15 v3.1.10 (3.1.10)
-\pgf@layerbox@background=\box66
-\pgf@layerboxsaved@background=\box67
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarybackgrounds.code.tex
+File: tikzlibrarybackgrounds.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@layerbox@background=\box68
+\pgf@layerboxsaved@background=\box69
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/frontendlayer/tikz/lib
-raries/tikzlibrarycalc.code.tex
-File: tikzlibrarycalc.code.tex 2023-01-15 v3.1.10 (3.1.10)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarycalc.code.tex
+File: tikzlibrarycalc.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 )
-! Illegal parameter number in definition of \reserved@a.
-<to be read again> 
-                   1
-l.226 }
-       
-? x
- 
-Here is how much of TeX's memory you used:
- 16343 strings out of 474662
- 324740 string characters out of 5751108
- 728516 words of memory out of 5000000
- 39150 multiletter control sequences out of 15000+600000
- 559906 words of font info for 38 fonts, out of 8000000 for 9000
- 319 hyphenation exceptions out of 8191
- 89i,0n,90p,434b,101s stack positions out of 10000i,1000n,20000p,200000b,200000s
-No pages of output.
-PDF statistics:
- 3 PDF objects out of 1000 (max. 8388607)
- 0 named destinations out of 1000 (max. 500000)
- 1 words of extra memory for PDF output out of 10000 (max. 10000000)
-
-usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/libraries/decorations/
-pgflibrarydecorations.pathreplacing.code.tex))
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/frontendlayer/tikz/lib
-raries/tikzlibrarydecorations.markings.code.tex
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/pgf/libraries/decorations/
-pgflibrarydecorations.markings.code.tex)) (/usr/local/texlive/2025basic/texmf-d
-ist/tex/latex/listings/listings.sty
-\lst@mode=\count315
-\lst@gtempboxa=\box69
-\lst@token=\toks40
-\lst@length=\count316
-\lst@currlwidth=\dimen292
-\lst@column=\count317
-\lst@pos=\count318
-\lst@lostspace=\dimen293
-\lst@width=\dimen294
-\lst@newlines=\count319
-\lst@lineno=\count320
-\lst@maxwidth=\dimen295
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/listings/lstpatch.sty
-File: lstpatch.sty 2024/09/23 1.10c (Carsten Heinz)
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/listings/lstmisc.sty
-File: lstmisc.sty 2024/09/23 1.10c (Carsten Heinz)
-\c@lstnumber=\count321
-\lst@skipnumbers=\count322
-\lst@framebox=\box70
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/listings/listings.cfg
-File: listings.cfg 2024/09/23 1.10c listings configuration
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarydecorations.markings.code.tex
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/libraries/decorations/pgfli
+brarydecorations.markings.code.tex)) (/usr/local/texlive/2026/texmf-dist/tex/la
+tex/enumitem/enumitem.sty
+Package: enumitem 2025/02/06 v3.11 Customized lists
+\labelindent=\skip57
+\enit@outerparindent=\dimen307
+\enit@toks=\toks44
+\enit@inbox=\box70
+\enit@count@id=\count335
+\enitdp@description=\count336
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcolorbox.sty
+Package: tcolorbox 2025/11/28 version 6.9.0 text color boxes
+(/usr/local/texlive/2026/texmf-dist/tex/latex/tools/verbatim.sty
+Package: verbatim 2024-01-22 v1.5x LaTeX2e package for verbatim enhancements
+\every@verbatim=\toks45
+\verbatim@line=\toks46
+\verbatim@in@stream=\read3
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/environ/environ.sty
+Package: environ 2014/05/04 v0.3 A new way to define environments
+(/usr/local/texlive/2026/texmf-dist/tex/latex/trimspaces/trimspaces.sty
+Package: trimspaces 2009/09/17 v1.1 Trim spaces around a token list
 ))
-Package: listings 2024/09/23 1.10c (Carsten Heinz)
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/listings/lstlang1.sty
-File: lstlang1.sty 2024/09/23 1.10c listings language file
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/hyperref/hyperref.sty
-Package: hyperref 2024-11-05 v7.01l Hypertext links for LaTeX
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/kvsetkeys/kvsetkeys.sty
-Package: kvsetkeys 2022-10-05 v1.19 Key value parser (HO)
+\tcb@titlebox=\box71
+\tcb@upperbox=\box72
+\tcb@lowerbox=\box73
+\tcb@phantombox=\box74
+\c@tcbbreakpart=\count337
+\c@tcblayer=\count338
+\c@tcolorbox@number=\count339
+\l__tcobox_tmpa_box=\box75
+\l__tcobox_tmpa_dim=\dimen308
+\tcb@temp=\box76
+\tcb@temp=\box77
+\tcb@temp=\box78
+\tcb@temp=\box79
+(/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbraster.code.tex
+Library (tcolorbox): 'tcbraster.code.tex' version '6.9.0'
+\c@tcbrastercolumn=\count340
+\c@tcbrasterrow=\count341
+\c@tcbrasternum=\count342
+\c@tcbraster=\count343
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbskins.code.tex
+Library (tcolorbox): 'tcbskins.code.tex' version '6.9.0'
+(/usr/local/texlive/2026/texmf-dist/tex/latex/tikzfill/tikzfill.image.sty
+Package: tikzfill.image 2023/08/08 v1.0.1 Image filling library for TikZ
+(/usr/local/texlive/2026/texmf-dist/tex/latex/tikzfill/tikzfill-common.sty
+Package: tikzfill-common 2023/08/08 v1.0.1 Auxiliary code for tikzfill
 )
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.
-sty
-Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
-) (/usr/local/texlive/2025basic/texmf-dist/tex/generic/pdfescape/pdfescape.sty
-Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty
+(/usr/local/texlive/2026/texmf-dist/tex/latex/tikzfill/tikzlibraryfill.image.co
+de.tex
+File: tikzlibraryfill.image.code.tex 2023/08/08 v1.0.1 Image filling library
+\l__tikzfill_img_box=\box80
+))
+(/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbskinsjigsaw.code.tex
+Library (tcolorbox): 'tcbskinsjigsaw.code.tex' version '6.9.0'
+)) (/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbbreakable.code.te
+x
+Library (tcolorbox): 'tcbbreakable.code.tex' version '6.9.0'
+(/usr/local/texlive/2026/texmf-dist/tex/latex/pdfcol/pdfcol.sty
+Package: pdfcol 2022-09-21 v1.7 Handle new color stacks for pdfTeX (HO)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty
 Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
-) (/usr/local/texlive/2025basic/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.st
-y
-Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/infwarerr/infwarerr.sty
+) (/usr/local/texlive/2026/texmf-dist/tex/generic/infwarerr/infwarerr.sty
 Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
+))
+Package pdfcol Info: New color stack `tcb@breakable' = 1 on input line 23.
+\tcb@testbox=\box81
+\tcb@totalupperbox=\box82
+\tcb@totallowerbox=\box83
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbhooks.code.tex
+Library (tcolorbox): 'tcbhooks.code.tex' version '6.9.0'
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbtheorems.code.tex
+Library (tcolorbox): 'tcbtheorems.code.tex' version '6.9.0'
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbfitting.code.tex
+Library (tcolorbox): 'tcbfitting.code.tex' version '6.9.0'
+\tcbfitdim=\dimen309
+\tcb@lowerfitdim=\dimen310
+\tcb@upperfitdim=\dimen311
+\tcb@cur@hbadness=\count344
+)
+(/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcblistingsutf8.code.te
+x
+Library (tcolorbox): 'tcblistingsutf8.code.tex' version '6.9.0'
+(/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcblistings.code.tex
+Library (tcolorbox): 'tcblistings.code.tex' version '6.9.0'
+(/usr/local/texlive/2026/texmf-dist/tex/latex/listings/listings.sty
+\lst@mode=\count345
+\lst@gtempboxa=\box84
+\lst@token=\toks47
+\lst@length=\count346
+\lst@currlwidth=\dimen312
+\lst@column=\count347
+\lst@pos=\count348
+\lst@lostspace=\dimen313
+\lst@width=\dimen314
+\lst@newlines=\count349
+\lst@lineno=\count350
+\lst@maxwidth=\dimen315
+(/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstpatch.sty
+File: lstpatch.sty 2025/11/14 1.11b (Carsten Heinz)
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2025/11/14 1.11b (Carsten Heinz)
+\c@lstnumber=\count351
+\lst@skipnumbers=\count352
+\lst@framebox=\box85
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/listings.cfg
+File: listings.cfg 2025/11/14 1.11b listings configuration
+))
+Package: listings 2025/11/14 1.11b (Carsten Heinz)
+==> First Aid for listings.sty no longer applied!
+    Expected:
+        2024/09/23 1.10c (Carsten Heinz)
+    but found:
+        2025/11/14 1.11b (Carsten Heinz)
+    so I'm assuming it got fixed.
+
+(/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcblistingscore.code.te
+x
+Library (tcolorbox): 'tcblistingscore.code.tex' version '6.9.0'
+(/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbprocessing.code.tex
+Library (tcolorbox): 'tcbprocessing.code.tex' version '6.9.0'
+)
+\c@tcblisting=\count353
+)) (/usr/local/texlive/2026/texmf-dist/tex/latex/listingsutf8/listingsutf8.sty
+Package: listingsutf8 2019-12-10 v1.5 Allow UTF-8 in listings input (HO)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.sty
+Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO
 )
 Package pdftexcmds Info: \pdf@primitive is available.
 Package pdftexcmds Info: \pdf@ifprimitive is available.
 Package pdftexcmds Info: \pdfdraftmode found.
-)) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/hycolor/hycolor.sty
-Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/hyperref/nameref.sty
-Package: nameref 2023-11-26 v2.56 Cross-referencing by name of section
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/refcount/refcount.sty
-Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/gettitlestring/gettitlestr
-ing.sty
-Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/kvoptions/kvoptions.sty
-Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
-))
-\c@section@level=\count323
-) (/usr/local/texlive/2025basic/texmf-dist/tex/generic/stringenc/stringenc.sty
+) (/usr/local/texlive/2026/texmf-dist/tex/generic/stringenc/stringenc.sty
 Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
 )
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pdfescape/pdfescape.sty
+Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
+)))) (/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbexternal.code.t
+ex
+Library (tcolorbox): 'tcbexternal.code.tex' version '6.9.0'
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbmagazine.code.tex
+Library (tcolorbox): 'tcbmagazine.code.tex' version '6.9.0'
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbvignette.code.tex
+Library (tcolorbox): 'tcbvignette.code.tex' version '6.9.0'
+
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibraryfadings.code.tex
+File: tikzlibraryfadings.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+
+(/usr/local/texlive/2026/texmf-dist/tex/generic/pgf/libraries/pgflibraryfadings
+.code.tex
+File: pgflibraryfadings.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+))) (/usr/local/texlive/2026/texmf-dist/tex/latex/tcolorbox/tcbposter.code.tex
+Library (tcolorbox): 'tcbposter.code.tex' version '6.9.0'
+)) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2025/11/14 1.11b listings language file
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/hyperref/hyperref.sty
+Package: hyperref 2026-01-29 v7.01p Hypertext links for LaTeX
+(/usr/local/texlive/2026/texmf-dist/tex/latex/kvsetkeys/kvsetkeys.sty
+Package: kvsetkeys 2022-10-05 v1.19 Key value parser (HO)
+) (/usr/local/texlive/2026/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.sty
+Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/hycolor/hycolor.sty
+Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/hyperref/nameref.sty
+Package: nameref 2026-01-29 v2.58 Cross-referencing by name of section
+(/usr/local/texlive/2026/texmf-dist/tex/latex/refcount/refcount.sty
+Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
 )
-\@linkdim=\dimen296
-\Hy@linkcounter=\count324
-\Hy@pagecounter=\count325
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/hyperref/pd1enc.def
-File: pd1enc.def 2024-11-05 v7.01l Hyperref: PDFDocEncoding definition (HO)
+(/usr/local/texlive/2026/texmf-dist/tex/generic/gettitlestring/gettitlestring.s
+ty
+Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
+(/usr/local/texlive/2026/texmf-dist/tex/latex/kvoptions/kvoptions.sty
+Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
+))
+\c@section@level=\count354
+)
+\@linkdim=\dimen316
+\Hy@linkcounter=\count355
+\Hy@pagecounter=\count356
+(/usr/local/texlive/2026/texmf-dist/tex/latex/hyperref/pd1enc.def
+File: pd1enc.def 2026-01-29 v7.01p Hyperref: PDFDocEncoding definition (HO)
 Now handling font encoding PD1 ...
 ... no UTF-8 mapping file for font encoding PD1
-) (/usr/local/texlive/2025basic/texmf-dist/tex/generic/intcalc/intcalc.sty
+) (/usr/local/texlive/2026/texmf-dist/tex/generic/intcalc/intcalc.sty
 Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
 )
-\Hy@SavedSpaceFactor=\count326
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/hyperref/puenc.def
-File: puenc.def 2024-11-05 v7.01l Hyperref: PDF Unicode definition (HO)
+\Hy@SavedSpaceFactor=\count357
+(/usr/local/texlive/2026/texmf-dist/tex/latex/hyperref/puenc.def
+File: puenc.def 2026-01-29 v7.01p Hyperref: PDF Unicode definition (HO)
 Now handling font encoding PU ...
 ... no UTF-8 mapping file for font encoding PU
 )
-Package hyperref Info: Hyper figures OFF on input line 4157.
-Package hyperref Info: Link nesting OFF on input line 4162.
-Package hyperref Info: Hyper index ON on input line 4165.
-Package hyperref Info: Plain pages OFF on input line 4172.
-Package hyperref Info: Backreferencing OFF on input line 4177.
+Package hyperref Info: Hyper figures OFF on input line 4201.
+Package hyperref Info: Link nesting OFF on input line 4206.
+Package hyperref Info: Hyper index ON on input line 4209.
+Package hyperref Info: Plain pages OFF on input line 4216.
+Package hyperref Info: Backreferencing OFF on input line 4221.
 Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
-Package hyperref Info: Bookmarks ON on input line 4424.
-\c@Hy@tempcnt=\count327
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/url/url.sty
+Package hyperref Info: Bookmarks ON on input line 4468.
+\c@Hy@tempcnt=\count358
+(/usr/local/texlive/2026/texmf-dist/tex/latex/url/url.sty
 \Urlmuskip=\muskip18
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
 )
-LaTeX Info: Redefining \url on input line 4763.
-\XeTeXLinkMargin=\dimen297
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/bitset/bitset.sty
+LaTeX Info: Redefining \url on input line 4807.
+\XeTeXLinkMargin=\dimen317
+(/usr/local/texlive/2026/texmf-dist/tex/generic/bitset/bitset.sty
 Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty
+(/usr/local/texlive/2026/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty
 Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO
 )
 ))
-\Fld@menulength=\count328
-\Field@Width=\dimen298
-\Fld@charsize=\dimen299
-Package hyperref Info: Hyper figures OFF on input line 6042.
-Package hyperref Info: Link nesting OFF on input line 6047.
-Package hyperref Info: Hyper index ON on input line 6050.
-Package hyperref Info: backreferencing OFF on input line 6057.
-Package hyperref Info: Link coloring OFF on input line 6062.
-Package hyperref Info: Link coloring with OCG OFF on input line 6067.
-Package hyperref Info: PDF/A mode OFF on input line 6072.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/base/atbegshi-ltx.sty
-Package: atbegshi-ltx 2021/01/10 v1.0c Emulation of the original atbegshi
-package with kernel methods
-)
-\Hy@abspage=\count329
-\c@Item=\count330
-\c@Hfootnote=\count331
+\Fld@menulength=\count359
+\Field@Width=\dimen318
+\Fld@charsize=\dimen319
+Package hyperref Info: Hyper figures OFF on input line 6084.
+Package hyperref Info: Link nesting OFF on input line 6089.
+Package hyperref Info: Hyper index ON on input line 6092.
+Package hyperref Info: backreferencing OFF on input line 6099.
+Package hyperref Info: Link coloring OFF on input line 6104.
+Package hyperref Info: Link coloring with OCG OFF on input line 6109.
+Package hyperref Info: PDF/A mode OFF on input line 6114.
+\Hy@abspage=\count360
+\c@Item=\count361
+\c@Hfootnote=\count362
 )
 Package hyperref Info: Driver (autodetected): hpdftex.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/hyperref/hpdftex.def
-File: hpdftex.def 2024-11-05 v7.01l Hyperref driver for pdfTeX
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/base/atveryend-ltx.sty
-Package: atveryend-ltx 2020/08/19 v1.0a Emulation of the original atveryend pac
-kage
-with kernel methods
-)
-\Fld@listcount=\count332
-\c@bookmark@seq@number=\count333
+(/usr/local/texlive/2026/texmf-dist/tex/latex/hyperref/hpdftex.def
+File: hpdftex.def 2026-01-29 v7.01p Hyperref driver for pdfTeX
+\Fld@listcount=\count363
+\c@bookmark@seq@number=\count364
 
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/rerunfilecheck/rerunfilechec
-k.sty
-Package: rerunfilecheck 2022-07-10 v1.10 Rerun checks for auxiliary files (HO)
+(/usr/local/texlive/2026/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty
+Package: rerunfilecheck 2025-06-21 v1.11 Rerun checks for auxiliary files (HO)
 
-(/usr/local/texlive/2025basic/texmf-dist/tex/generic/uniquecounter/uniquecounte
-r.sty
+(/usr/local/texlive/2026/texmf-dist/tex/generic/uniquecounter/uniquecounter.sty
 Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
 )
 Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
-85.
+84.
 )
-\Hy@SectionHShift=\skip55
+\Hy@SectionHShift=\skip58
 )
 Package hyperref Info: Option `colorlinks' set `true' on input line 356.
 )
 LaTeX Font Info:    Trying to load font information for T1+lmr on input line 9.
 
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/lm/t1lmr.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/lm/t1lmr.fd
 File: t1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/l3backend/l3backend-pdftex.d
-ef
-File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count334
-\l__pdf_internal_box=\box71
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
+File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count365
 ) (./main.aux
 
 LaTeX Warning: Label `eq:pearson_r' multiply defined.
@@ -898,7 +1076,7 @@ Package microtype Info: No font expansion.
 Package microtype Info: No adjustment of tracking.
 Package microtype Info: No adjustment of interword spacing.
 Package microtype Info: No adjustment of character kerning.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/microtype/mt-cmr.cfg
+(/usr/local/texlive/2026/texmf-dist/tex/latex/microtype/mt-cmr.cfg
 File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman 
 (RS)
 )
@@ -936,31 +1114,31 @@ File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-(/usr/local/texlive/2025basic/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+(/usr/local/texlive/2026/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count335
-\scratchdimen=\dimen300
-\scratchbox=\box72
-\nofMPsegments=\count336
-\nofMParguments=\count337
-\everyMPshowfont=\toks41
-\MPscratchCnt=\count338
-\MPscratchDim=\dimen301
-\MPnumerator=\count339
-\makeMPintoPDFobject=\count340
-\everyMPtoPDFconversion=\toks42
-)
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.s
-ty
+\scratchcounter=\count366
+\scratchdimen=\dimen320
+\scratchbox=\box86
+\nofMPsegments=\count367
+\nofMParguments=\count368
+\everyMPshowfont=\toks48
+\MPscratchCnt=\count369
+\MPscratchDim=\dimen321
+\MPnumerator=\count370
+\makeMPintoPDFobject=\count371
+\everyMPtoPDFconversion=\toks49
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 85.
-
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
+(/usr/local/texlive/2026/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-\c@lstlisting=\count341
+Package pgfplots notification 'compat/show suggested version=true': document ha
+s been generated with the most recent feature set (\pgfplotsset{compat=1.18}).
+
+\c@lstlisting=\count372
 Package hyperref Info: Link coloring ON on input line 9.
 (./main.out) (./main.out)
 \@outlinefile=\write4
@@ -968,39 +1146,37 @@ Package hyperref Info: Link coloring ON on input line 9.
 
 LaTeX Font Info:    Trying to load font information for T1+lmss on input line 1
 5.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/lm/t1lmss.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/lm/t1lmss.fd
 File: t1lmss.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `lmss' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
-
-
 [1
 
 
 
-{/usr/local/texlive/2025basic/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/us
-r/local/texlive/2025basic/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}] (./main.toc
+{/usr/local/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/loc
+al/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}] (./main.toc
 LaTeX Font Info:    Trying to load font information for OT1+lmr on input line 3
 .
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/lm/ot1lmr.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/lm/ot1lmr.fd
 File: ot1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OML+lmm on input line 3
 .
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/lm/omllmm.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/lm/omllmm.fd
 File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 
 3.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/lm/omslmsy.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/lm/omslmsy.fd
 File: omslmsy.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 
 3.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/lm/omxlmex.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/lm/omxlmex.fd
 File: omxlmex.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    External font `lmex10' loaded for size
@@ -1010,89 +1186,59 @@ LaTeX Font Info:    External font `lmex10' loaded for size
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <6> on input line 3.
 LaTeX Font Info:    Trying to load font information for U+msa on input line 3.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsfonts/umsa.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/microtype/mt-msa.cfg
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/microtype/mt-msa.cfg
 File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
 )
 LaTeX Font Info:    Trying to load font information for U+msb on input line 3.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/amsfonts/umsb.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/microtype/mt-msb.cfg
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/microtype/mt-msb.cfg
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )
 LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 5
 9.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/lm/t1lmtt.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `lmtt' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
-
-
 [2
 
-]
-
-[3{/usr/local/texlive/2025basic/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}]
-
-[4{/usr/local/texlive/2025basic/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}]
-
-[5]
-
-[6]
-
-[7]
-
-[8]
-
-[9]
-
-[10])
+] [3{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}] [4{/
+usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}] [5] [6] [7] [8
+] [9] [10])
 \tf@toc=\write5
 \openout5 = `main.toc'.
 
+[11] [12
 
-
-[11]
-
-[12
-
-]
-
-[1
+] [1
 
 ] (./chapters/ch01_s1_python_fundamentals.tex
 Chapter 1.
-
-
 [2
 
 ]
 LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 5
 3.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/lm/ts1lmr.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10.95> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 53.
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <9> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 85.
+[3{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}{/usr/local
+/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-[3{/usr/local/texlive/2025basic/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}{/usr/
-local/texlive/2025basic/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}]
-
-[4]
-
-[5]
-
-[6]
-
-[7{/usr/local/texlive/2025basic/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}]
-Overfull \hbox (31.57474pt too wide) in paragraph at lines 294--295
+[4] [5] [6] [7{/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/lm/lm-mathex.
+enc}]
+Overfull \hbox (21.71973pt too wide) in paragraph at lines 294--295
 []\T1/lmr/m/n/10.95 Line 8: \T1/lmtt/m/n/10.95 enumerate(readings) \T1/lmr/m/n/
 10.95 pairs ev-ery el-e-ment with its in-te-ger po-si-tion: $\OT1/lmr/m/n/10.95
  (0\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 45\OML/lmm/m/it/10.95 :\OT1/lmr/m/n
@@ -1102,31 +1248,26 @@ lmr/m/n/10.95 44\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 8)\OML/lmm/m/it/10.95 ;
  []
 
 
+Underfull \vbox (badness 5696) has occurred while \output is active []
 
-[8]
-
-[9]
-
-[10]
-Overfull \hbox (2.67828pt too wide) in paragraph at lines 416--417
-[]\T1/lmr/bx/n/10.95 Dictionary\T1/lmr/m/n/10.95 : An un-ordered (insertion-ord
-ered in mod-ern Python) map of unique
- []
-
-
-Overfull \hbox (38.80429pt too wide) in paragraph at lines 427--428
+[8] [9] [10]
+Underfull \hbox (badness 10000) in paragraph at lines 427--428
 []\T1/lmr/bx/n/10.95 Tuple\T1/lmr/m/n/10.95 : The GPS co-or-di-nates stamped on
-to a stone mon-u-ment: $\OT1/lmr/m/n/10.95 (45\OML/lmm/m/it/10.95 :\OT1/lmr/m/n
-/10.95 5017[][]\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 73\OML/lmm/m/it/10.95 :
-\OT1/lmr/m/n/10.95 5673[][])$\T1/lmr/m/n/10.95 .
+to a stone mon-u-ment:
  []
 
 
+Underfull \hbox (badness 2012) in paragraph at lines 427--428
+\OT1/lmr/m/n/10.95 (45\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 5017[][]\OML/lmm/
+m/it/10.95 ; \OT1/lmr/m/n/10.95 73\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 5673[
+][])$\T1/lmr/m/n/10.95 . You can-not change the stone's co-or-di-nates with-out
+
+ []
 
 [11]
 LaTeX Font Info:    Trying to load font information for TS1+lmtt on input line 
 482.
-(/usr/local/texlive/2025basic/texmf-dist/tex/latex/lm/ts1lmtt.fd
+(/usr/local/texlive/2026/texmf-dist/tex/latex/lm/ts1lmtt.fd
 File: ts1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 Package microtype Info: Loading generic protrusion settings for font family
@@ -1140,83 +1281,41 @@ Package microtype Info: Character `texttrademark ' is missing
 (microtype)             in font `TS1/lmtt/m/it/9'.
 (microtype)             Ignoring protrusion settings for this character.
 
+Underfull \vbox (badness 4001) has occurred while \output is active []
 
-[12]
-
-[13]
-
-[14]
-
-[15]
-Overfull \hbox (44.61272pt too wide) in paragraph at lines 693--694
+[12] [13] [14] [15]
+Overfull \hbox (34.7577pt too wide) in paragraph at lines 693--694
 []\T1/lmr/m/n/10.95 Lines 23--24: We in-stan-ti-ate two in-de-pen-dent ob-jects
 . \T1/lmtt/m/n/10.95 node\_greenhouse \T1/lmr/m/n/10.95 and \T1/lmtt/m/n/10.95 
 node\_server\_room
  []
 
-
-
-[16]
-Overfull \hbox (8.76392pt too wide) in paragraph at lines 713--714
-[]\T1/lmr/bx/n/10.95 CSV (\T1/lmtt/b/n/10.95 .csv\T1/lmr/bx/n/10.95 )\T1/lmr/m/
-n/10.95 : Comma-Separated Val-ues, the stan-dard for-mat for tab-u-lar datasets
-. 
- []
-
-
-
-[17]
-
-[18]
-
-[19]
-Overfull \hbox (17.69061pt too wide) in paragraph at lines 893--894
+[16] [17] [18] [19]
+Overfull \hbox (7.8356pt too wide) in paragraph at lines 893--894
 []\T1/lmr/m/n/10.95 Line 13: If \T1/lmtt/m/n/10.95 parts[1] \T1/lmr/m/n/10.95 c
 on-tains non-numeric text like \T1/lmtt/m/n/10.95 "NaN\_VAL"\T1/lmr/m/n/10.95 ,
  \T1/lmtt/m/n/10.95 float() \T1/lmr/m/n/10.95 raises a \T1/lmtt/m/n/10.95 Value
 Error\T1/lmr/m/n/10.95 . 
  []
 
-
-Overfull \hbox (1.14378pt too wide) in paragraph at lines 894--895
-[]\T1/lmr/m/n/10.95 Lines 24--26: In-stead of crash-ing the en-tire script, Pyt
-hon jumps to the \T1/lmtt/m/n/10.95 except ValueError
- []
-
-
-
 [20]
-Overfull \hbox (3.31891pt too wide) in paragraph at lines 947--948
-[]\T1/lmr/bx/n/10.95 Memory & Gen-er-a-tors\T1/lmr/m/n/10.95 : Ex-plain why run
--ning \T1/lmtt/m/n/10.95 sum([x for x in range(10_000_000)])
+Overfull \hbox (71.24301pt too wide) in paragraph at lines 947--948
+\T1/lmr/m/n/10.95 might cause a resource-constrained edge com-puter to crash, w
+hereas \T1/lmtt/m/n/10.95 sum(x for x in range(10_000_000))
  []
 
 
-
-[21]
-Overfull \hbox (0.45822pt too wide) in paragraph at lines 976--977
-[]\T1/lmr/bx/n/10.95 Bug 2 (Di-vi-sion by Zero)\T1/lmr/m/n/10.95 : If an empty 
-dic-tio-nary (\T1/lmtt/m/n/10.95 \{\}\T1/lmr/m/n/10.95 ) is passed into \T1/lmt
-t/m/n/10.95 node\_dict\T1/lmr/m/n/10.95 ,
- []
-
-
-Overfull \hbox (29.58614pt too wide) in paragraph at lines 976--977
+Overfull \hbox (13.16115pt too wide) in paragraph at lines 976--977
 \T1/lmtt/m/n/10.95 len(node\_dict) \T1/lmr/m/n/10.95 eval-u-ates to $\OT1/lmr/m
 /n/10.95 0$\T1/lmr/m/n/10.95 . Di-vid-ing by zero raises an un-han-dled \T1/lmt
 t/m/n/10.95 ZeroDivisionError\T1/lmr/m/n/10.95 ,
  []
 
-
-
-[22]) (./chapters/ch01_s2_dev_environment.tex
+[21]) (./chapters/ch01_s2_dev_environment.tex [22]
 Overfull \hbox (5.3304pt too wide) in paragraph at lines 28--28
  []\T1/lmss/m/n/8 (\T1/lmtt/m/n/8 requirements.txt\T1/lmss/m/n/8 ) 
  []
 
-
-
-[23]
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <10> on input line 67.
 LaTeX Font Info:    External font `lmex10' loaded for size
@@ -1229,364 +1328,134 @@ Overfull \hbox (18.39514pt too wide) in paragraph at lines 67--80
  []
 
 
-Overfull \hbox (122.58908pt too wide) in paragraph at lines 85--86
+Overfull \hbox (112.73407pt too wide) in paragraph at lines 85--86
 []\T1/lmr/bx/n/10.95 Absolute Path\T1/lmr/m/n/10.95 : Starts from the very root
  of your hard drive (\T1/lmtt/m/n/10.95 /\T1/lmr/m/n/10.95 ). Ex-am-ple: \T1/lm
 tt/m/n/10.95 /Users/alex/Developer/ML/train.py\T1/lmr/m/n/10.95 . 
  []
 
 
-Overfull \hbox (12.82521pt too wide) in paragraph at lines 86--87
+Overfull \hbox (2.9702pt too wide) in paragraph at lines 86--87
 []\T1/lmr/bx/n/10.95 Relative Path\T1/lmr/m/n/10.95 : Starts from where your te
 r-mi-nal cur-rently stands. If you are in \T1/lmtt/m/n/10.95 /Users/alex\T1/lmr
 /m/n/10.95 ,
  []
 
-
-Overfull \hbox (15.74773pt too wide) in paragraph at lines 87--88
+[23]
+Overfull \hbox (5.89272pt too wide) in paragraph at lines 87--88
 []\T1/lmr/bx/n/10.95 The Tilde Short-cut (\T1/lmtt/b/n/10.95 \~\T1/lmr/bx/n/10.
 95 )\T1/lmr/m/n/10.95 : Rep-re-sents your user home di-rec-tory (\T1/lmtt/m/n/1
 0.95 /Users/<your_username>\T1/lmr/m/n/10.95 ).
  []
 
 
+Underfull \hbox (badness 1062) in paragraph at lines 96--97
+\T1/lmr/m/n/10.95 ware, com-pil-ers, and pro-gram-ming lan-guages into iso-late
+d user di-rec-to-ries (un-der
+ []
 
-[24] (/usr/local/texlive/2025basic/texmf-dist/tex/latex/listings/lstlang1.sty
-File: lstlang1.sty 2024/09/23 1.10c listings language file
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/listings/lstlang1.sty
-File: lstlang1.sty 2024/09/23 1.10c listings language file
+(/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2025/11/14 1.11b listings language file
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2025/11/14 1.11b listings language file
 )
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <12> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 132.
-
-Overfull \hbox (2.8118pt too wide) in paragraph at lines 135--136
-\T1/lmr/m/n/10.95 glob-ally, one project will in-evitably crash. A \T1/lmr/bx/n
-/10.95 vir-tual en-vi-ron-ment \T1/lmr/m/n/10.95 is a self-contained
- []
-
-
-
-[25]
-
-[26]
-
-[27]
-Overfull \hbox (80.3314pt too wide) in paragraph at lines 288--289
+[24] [25] [26]
+Underfull \hbox (badness 5490) in paragraph at lines 288--289
 \T1/lmr/m/n/10.95 If con-nected prop-erly, your mi-cro-con-troller ap-pears as 
-a se-rial de-vice (e.g., \T1/lmtt/m/n/10.95 /dev/cu.usbserial-0001\T1/lmr/m/n/1
-0.95 ),
+a se-rial de-vice (e.g.,
  []
 
-
-
-[28]) (./chapters/ch01_s3_numpy.tex
-
-[29]
-Overfull \hbox (12.73848pt too wide) in paragraph at lines 10--11
+[27] [28]) (./chapters/ch01_s3_numpy.tex
+Overfull \hbox (2.88347pt too wide) in paragraph at lines 10--11
 []\T1/lmr/bx/n/10.95 The $\OML/lmm/m/it/10.95 N$\T1/lmr/bx/n/10.95 -Dimensional
  Ar-ray (\T1/lmtt/b/n/10.95 ndarray\T1/lmr/bx/n/10.95 )\T1/lmr/m/n/10.95 : How 
 con-tigu-ous mem-ory al-lo-ca-tion solves Python's
  []
 
-
-
-[30]
-
-[31]
+[29] [30]
 Overfull \hbox (61.9959pt too wide) in paragraph at lines 138--139
  []\T1/lmr/bx/n/10.95 Multi-Dimensional Slic-ing Syn-tax[] \T1/lmr/m/n/10.95 To
  ex-tract sub-sets of an ar-ray, use slice no-ta-tion \T1/lmtt/m/n/10.95 [start
 :stop:step]
  []
 
+[31]
+Underfull \vbox (badness 5878) has occurred while \output is active []
 
-
-[32]
-
-[33]
-
-[34]
-
-[35]
-
-[36]
-
-[37]
-
-[38]) (./chapters/ch01_s4_pandas.tex
-
-[39]
-
-[40]
-Overfull \hbox (1.95288pt too wide) in paragraph at lines 129--130
-[]\T1/lmtt/m/n/10.95 df.dtypes\T1/lmr/m/n/10.95 : The data type as-signed to ea
-ch col-umn (\T1/lmtt/m/n/10.95 int64\T1/lmr/m/n/10.95 , \T1/lmtt/m/n/10.95 floa
-t64\T1/lmr/m/n/10.95 , \T1/lmtt/m/n/10.95 object\T1/lmr/m/n/10.95 , \T1/lmtt/m/
-n/10.95 datetime64\T1/lmr/m/n/10.95 ). 
+[32] [33] [34] [35] [36] [37] [38]) (./chapters/ch01_s4_pandas.tex
+Overfull \hbox (11.67049pt too wide) in paragraph at lines 15--16
+[]\T1/lmr/bx/n/10.95 The Split-Apply-Combine Pat-tern\T1/lmr/m/n/10.95 : Group-
+ing and multi-metric ag-gre-ga-tions with \T1/lmtt/m/n/10.95 groupby\T1/lmr/m/n
+/10.95 . 
  []
 
-
-
-[41]
-Overfull \hbox (5.96352pt too wide) in paragraph at lines 199--200
-[]\T1/lmtt/b/n/10.95 .iloc[row_integer, col_integer]\T1/lmr/m/n/10.95 : Se-lec-
-tion based on **zero-indexed in-te-ger po-si-tions**
- []
-
-
-
-[42]
-Overfull \hbox (13.04291pt too wide) in paragraph at lines 229--230
-[]\T1/lmr/m/n/10.95 Notice that slic-ing with \T1/lmtt/m/n/10.95 .loc['Node_Alp
-ha':'Node_Beta'] \T1/lmr/m/n/10.95 **in-cludes** \T1/lmtt/m/n/10.95 'Node_Beta'
-\T1/lmr/m/n/10.95 .
- []
-
-
-
-[43]
-
-[44]
-Overfull \hbox (16.7818pt too wide) in paragraph at lines 363--364
+[39] [40] [41] [42] [43]
+Overfull \hbox (16.7818pt too wide) in paragraph at lines 363--365
  []\T1/lmr/bx/n/10.95 Database-Style Joins (\T1/lmtt/b/n/10.95 pd.merge\T1/lmr/
 bx/n/10.95 )[] \T1/lmr/m/n/10.95 pan-das pro-vides re-la-tional database joins 
 via \T1/lmtt/m/n/10.95 pd.merge(left,
  []
 
-
-
-[45]
-
-[46]
-Overfull \hbox (10.02264pt too wide) in paragraph at lines 464--465
-[]\T1/lmr/bx/n/10.95 Ingestion\T1/lmr/m/n/10.95 : In-gests in-com-ing MQTT pack
--ets via \T1/lmtt/m/n/10.95 pd.DataFrame(packet_buffer)\T1/lmr/m/n/10.95 . 
- []
-
-
-Overfull \hbox (1.48544pt too wide) in paragraph at lines 465--466
-[]\T1/lmr/bx/n/10.95 Cleaning\T1/lmr/m/n/10.95 : Im-putes miss-ing pack-ets cau
-sed by wire-less packet loss us-ing forward-
- []
-
-
-
-[47]
-Overfull \hbox (47.0779pt too wide) in paragraph at lines 506--507
+[44] [45] [46]
+Overfull \hbox (37.22289pt too wide) in paragraph at lines 506--507
 []\T1/lmr/bx/n/10.95 Boolean In-dex-ing Syn-tax\T1/lmr/m/n/10.95 : Ex-plain why
  the ex-pres-sion \T1/lmtt/m/n/10.95 df[df['temp'] > 25 & df['humidity']
  []
 
-
-
-[48]) (./chapters/ch01_s5_visualization.tex
-
-[49]
-Overfull \hbox (0.92918pt too wide) in paragraph at lines 59--60
-\T1/lmr/m/n/10.95 Always use the **Object-Oriented (OO) API** (\T1/lmtt/m/n/10.
-95 fig, ax = plt.subplots()\T1/lmr/m/n/10.95 ) rather
- []
-
-
-
-[50]
-
-[51]
-
-[52]
-
-[53]
-Overfull \hbox (1.36449pt too wide) in paragraph at lines 312--313
-[]\T1/lmr/bx/n/10.95 Optimal Gen-er-al-iza-tion\T1/lmr/m/n/10.95 : Both curves 
-de-scend smoothly to-gether and plateau. 
- []
-
-
-
-[54]
-Overfull \hbox (30.2031pt too wide) in paragraph at lines 364--365
-[]\T1/lmr/m/n/10.95 In Mat-plotlib, al-ways use the Object-Oriented in-ter-face
- (\T1/lmtt/m/n/10.95 fig, ax = plt.subplots()\T1/lmr/m/n/10.95 )
- []
-
-
-Overfull \hbox (3.74228pt too wide) in paragraph at lines 365--366
-[]\T1/lmr/m/n/10.95 Use Seaborn for high-level sta-tis-ti-cal plot-ting (\T1/lm
-tt/m/n/10.95 histplot\T1/lmr/m/n/10.95 , \T1/lmtt/m/n/10.95 scatterplot\T1/lmr/
-m/n/10.95 , \T1/lmtt/m/n/10.95 boxplot\T1/lmr/m/n/10.95 ,
- []
-
-
-
-[55]
-Overfull \hbox (9.00026pt too wide) in paragraph at lines 394--395
-[]\T1/lmr/bx/n/10.95 Confusion Ma-trix Heatmap In-ter-pre-ta-tion\T1/lmr/m/n/10
-.95 : In a nor-mal-ized con-fu-sion ma-trix heatmap,
- []
-
-
-
-[56]
-Overfull \hbox (13.8556pt too wide) in paragraph at lines 424--425
-[]\T1/lmr/m/n/10.95 Use a 2D den-sity plot such as a hexag-o-nal bin-ning plot 
-(\T1/lmtt/m/n/10.95 ax.hexbin(x, y, gridsize=50,
- []
-
-) (./chapters/ch01_s6_git_sql.tex
-
-[57]
-
-[58]
-
-[59]
-
-[60] (/usr/local/texlive/2025basic/texmf-dist/tex/latex/listings/lstlang1.sty
-File: lstlang1.sty 2024/09/23 1.10c listings language file
-)
+[47]) (./chapters/ch01_s5_visualization.tex [48] [49] [50] [51] [52] [53] [54] 
+[55]) (./chapters/ch01_s6_git_sql.tex [56] [57] [58] [59] (/usr/local/texlive/2
+026/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2025/11/14 1.11b listings language file
+) [60]
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 261.
-
-
-[61]
-Overfull \hbox (6.99196pt too wide) detected at line 316
-[]
- []
-
-
-Overfull \hbox (6.47668pt too wide) in paragraph at lines 318--319
-[]\T1/lmtt/b/n/10.95 ORDER BY avg_temp DESC\T1/lmr/m/n/10.95 : Or-ders \T1/lmtt
-/m/n/10.95 Line_2_Milling \T1/lmr/m/n/10.95 ($\OT1/lmr/m/n/10.95 43\OML/lmm/m/i
-t/10.95 :\OT1/lmr/m/n/10.95 75$\T1/lmr/m/n/10.95 ) first, fol-lowed by \T1/lmtt
-/m/n/10.95 Line_1_Press
- []
-
-
-
-[62]
-
-[63]
-Overfull \hbox (12.18877pt too wide) in paragraph at lines 377--378
-[]\T1/lmr/m/n/10.95 Always de-velop new ma-chine learn-ing fea-tures on iso-lat
-ed branches (\T1/lmtt/m/n/10.95 git checkout
- []
-
-
-Overfull \hbox (32.33685pt too wide) in paragraph at lines 380--381
-\T1/lmr/m/n/10.95 the server layer be-fore load-ing clean fea-ture sets into pa
-n-das via \T1/lmtt/m/n/10.95 pd.read_sql_query()\T1/lmr/m/n/10.95 . 
- []
-
-
-
-[64]) (./chapters/ch02_s1_linear_algebra.tex
-
-[65]
+[61] [62] [63] [64]) (./chapters/ch02_s1_linear_algebra.tex [65]
 Chapter 2.
 
+Underfull \hbox (badness 2512) in paragraph at lines 30--31
+[]\T1/lmr/bx/n/10.95 Vector\T1/lmr/m/n/10.95 : Your shop-ping bas-ket re-ceipt 
+show-ing the quan-tity of each item:
+ []
 
 [66
 
-]
-
-[67]
-Overfull \hbox (14.41881pt too wide) in paragraph at lines 140--141
-[]\T1/lmr/m/n/10.95 Every in-er-tial mea-sure-ment unit (IMU) like the MPU-6050
- pro-duces a three-dimensional
- []
-
-
-
-[68]
-
-[69]
-
-[70]
-
-[71]
-
-[72]
-
-[73]
-
-[74]
-
-[75]
+] [67] [68] [69] [70] [71] [72] [73] [74]
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <9> on input line 511.
+[75] [76] [77] [78] [79] [80] [81] [82]) (./chapters/ch02_s2_calculus.tex [83] 
+[84] [85]
+
+Package tcolorbox Warning: Using nobreak failed. Try to enlarge `lines before b
+reak' or set page breaks manually on input line 138.
+
+[86] [87] [88] [89]
+
+Package tcolorbox Warning: Using nobreak failed. Try to enlarge `lines before b
+reak' or set page breaks manually on input line 334.
 
 
-[76]
-
-[77]
-
-[78]
-
-[79]
-
-[80]
-
-[81]
-
-[82]
-
-[83]) (./chapters/ch02_s2_calculus.tex
-
-[84]
-
-[85]
-
-[86]
-
-[87]
-
-[88]
-
-[89]
-
-[90]
 Overfull \hbox (6.82263pt too wide) in paragraph at lines 344--345
  []\T1/lmr/bx/n/10.95 Complete Hand-Worked Trace of 4 Op-ti-miza-tion Steps[] \
 T1/lmr/m/n/10.95 Let us min-i-mize the 1D quadratic
  []
 
-
-
-[91]
-
-[92]
-
-[93]
-
-[94]
-Overfull \hbox (26.34657pt too wide) detected at line 555
+[90] [91] [92]
+Overfull \hbox (9.92159pt too wide) detected at line 555
 []
  []
 
-) (./chapters/ch02_s3_probability.tex
+[93]) (./chapters/ch02_s3_probability.tex [94]
+Underfull \vbox (badness 4303) has occurred while \output is active []
 
-[95]
+[95] [96]
+Underfull \vbox (badness 2150) has occurred while \output is active []
 
-[96]
+[97] [98] [99]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[97]
-
-[98]
-
-[99]
-
-[100]
-
-[101]
-
-[102]
-
-[103]
-
-[104]
-
-[105]
-
-[106]
+[100] [101] [102] [103] [104] [105]
 Overfull \hbox (17.66676pt too wide) in paragraph at lines 591--592
  []\T1/lmr/bx/n/10.95 Formal Def-i-ni-tion: Pois-son PMF and Mo-ments[] \T1/lmr
 /m/n/10.95 A dis-crete ran-dom vari-able $\OML/lmm/m/it/10.95 X \OMS/lmsy/m/n/1
@@ -1596,54 +1465,29 @@ $
  []
 
 
-
-[107]
 Overfull \hbox (94.42099pt too wide) in paragraph at lines 636--646
  [][] 
  []
 
-
+[106]
 Overfull \hbox (5.92978pt too wide) in paragraph at lines 667--668
 \T1/lmr/m/n/10.95 Assuming that our $\OML/lmm/m/it/10.95 n$ \T1/lmr/m/n/10.95 o
 b-ser-va-tions $\OML/lmm/m/it/10.95 x[]; x[]; [] ; x[]$ \T1/lmr/m/n/10.95 are \
 T1/lmr/bx/n/10.95 In-de-pen-dent and Iden-ti-cally Dis-tributed
  []
 
-
-
-[108]
-
-[109]
-
-[110]
-
-[111]
-
-[112]
-Overfull \hbox (15.41687pt too wide) in paragraph at lines 888--889
+[107] [108] [109] [110]
+Overfull \hbox (5.56186pt too wide) in paragraph at lines 888--889
 []\T1/lmr/bx/n/10.95 Lines 12--14\T1/lmr/m/n/10.95 : We com-pute the an-a-lyt-i
 -cal MLE es-ti-mates us-ing \T1/lmtt/m/n/10.95 np.mean \T1/lmr/m/n/10.95 and \T
 1/lmtt/m/n/10.95 np.std(ddof=0)\T1/lmr/m/n/10.95 .
  []
 
+[111] [112] [113] [114]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-[113]
-Overfull \hbox (4.0767pt too wide) in paragraph at lines 903--904
-\T1/lmr/m/n/10.95 stan-dard al-go-rithm for mi-cro-con-troller nav-i-ga-tion an
-d state es-ti-ma-tion is the \T1/lmr/bx/n/10.95 Kalman
- []
-
-
-
-[114]
-
-[115]
-
-[116]
-
-[117]
-Overfull \hbox (50.32167pt too wide) detected at line 1131
+[115] [116]
+Overfull \hbox (33.89668pt too wide) detected at line 1131
 \OML/lmm/m/it/10.95 P\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 X < \OT1/lmr/m/n/1
 0.95 2) = \OML/lmm/m/it/10.95 P\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 X \OT1/l
 mr/m/n/10.95 = 0) + \OML/lmm/m/it/10.95 P\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.9
@@ -1654,30 +1498,17 @@ ML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 0183156 \OMS/lmsy/m/n/10.95 ^^Y []  \OT1/
 lmr/m/n/10.95 =[]\OMS/lmsy/m/n/10.95 )  []
  []
 
-
-
-[118]
-
-[119]) (./chapters/ch02_s4_statistics.tex
-Overfull \hbox (2.03404pt too wide) in paragraph at lines 40--41
-[]\T1/lmr/bx/n/10.95 Hypothesis Test-ing and $\OML/lmm/m/it/10.95 p$\T1/lmr/bx/
-n/10.95 -Values\T1/lmr/m/n/10.95 : The for-mal logic of fal-si-fi-ca-tion and d
-e-cid-ing whether
- []
-
-
-
-[120]
-
-[121]
+[117]) (./chapters/ch02_s4_statistics.tex [118] [119] [120] [121]
+Underfull \vbox (badness 1259) has occurred while \output is active []
 
 [122]
+Underfull \hbox (badness 1005) in paragraph at lines 285--287
+\T1/lmr/bx/n/10.95 Analysis\T1/lmr/m/n/10.95 : De-mand-ing higher con-fi-dence 
+($\OT1/lmr/m/n/10.95 99%$ \T1/lmr/m/n/10.95 vs $\OT1/lmr/m/n/10.95 95%$\T1/lmr/
+m/n/10.95 ) re-quires a wider in-ter-val
+ []
 
 [123]
-
-[124]
-
-[125]
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <12> on input line 292.
 
@@ -1688,124 +1519,64 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 292.
 
-
-
-[126]
-
-[127]
-
-[128]
-
-[129]
-
-[130]
+[124] [125]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
+[126] [127] [128] [129] [130] [131] [132] [133]
+Underfull \vbox (badness 1389) has occurred while \output is active []
 
-
-[131]
-
-[132]
-
-[133]
-Overfull \hbox (0.20605pt too wide) in paragraph at lines 730--732
-[]\T1/lmr/bx/n/10.95 Reporting Bench-mark Ac-cu-ra-cies With-out Con-fi-dence I
-n-ter-vals\T1/lmr/m/n/10.95 : Writ-
+[134] [135]) (./chapters/ch02_s5_optimization_information.tex [136] [137] [138]
+[139] [140]
+Overfull \hbox (36.91792pt too wide) detected at line 295
+[]
  []
-
-
-
-[134]
-
-[135]
-
-[136]
-
-[137]) (./chapters/ch02_s5_optimization_information.tex
-
-[138]
-Overfull \hbox (5.65729pt too wide) in paragraph at lines 49--50
-[]\T1/lmr/bx/n/10.95 Information The-ory Fun-da-men-tals\T1/lmr/m/n/10.95 : Sel
-f-information, Shan-non En-tropy, Cross-Entropy,
- []
-
-
-
-[139]
-Overfull \hbox (10.37267pt too wide) in paragraph at lines 134--135
-\T1/lmr/m/n/10.95 If a gra-di-ent op-ti-mizer finds a pa-ram-e-ter point $\OT1/
-lmr/bx/n/10.95 w[]$ \T1/lmr/m/n/10.95 where the gra-di-ent is zero ($\OMS/lmsy/
-m/n/10.95 r\OML/lmm/m/it/10.95 L\OT1/lmr/m/n/10.95 (\OT1/lmr/bx/n/10.95 w[]\OT1
-/lmr/m/n/10.95 ) =
- []
-
-
-
-[140]
 
 [141]
-
-[142]
-Overfull \hbox (13.74818pt too wide) detected at line 286
-[]
- []
-
-
-
-[143]
-Overfull \hbox (70.43059pt too wide) detected at line 295
-[]
- []
-
-
 Overfull \hbox (128.09412pt too wide) in paragraph at lines 304--314
  [][] 
  []
 
 
+Underfull \vbox (badness 7685) has occurred while \output is active []
 
-[144]
-
-[145]
-
-[146]
-
-[147]
-
-[148]
+[142] [143] [144]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
+[145] [146] [147] [148]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [149]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [150]
-
-[151]
-
-[152]
-Overfull \hbox (5.92308pt too wide) detected at line 745
-\OML/lmm/m/it/10.95 P\OT1/lmr/m/n/10.95 ([]) = []\OML/lmm/m/it/10.95 ;  P\OT1/l
-mr/m/n/10.95 ([]) = []\OML/lmm/m/it/10.95 ;  P\OT1/lmr/m/n/10.95 ([]) = []\OML/
-lmm/m/it/10.95 ;  P\OT1/lmr/m/n/10.95 ([]) = []
+Underfull \hbox (badness 1158) in paragraph at lines 714--715
+[]\T1/lmr/bx/n/10.95 Entropy Mea-sures Fun-da-men-tal Un-cer-tainty\T1/lmr/m/n/
+10.95 : Claude Shan-non's en-tropy
  []
 
 
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[153]
+[151]
+Underfull \vbox (badness 1024) has occurred while \output is active []
 
-[154]
+[152] [153]
+Overfull \hbox (10.97447pt too wide) in paragraph at lines 836--838
+[]\T1/lmr/bx/n/10.95 Cross-Entropy and KL Di-ver-gence Cal-cu-la-tion\T1/lmr/m/
+n/10.95 : Given $\OML/lmm/m/it/10.95 P \OT1/lmr/m/n/10.95 = [1\OML/lmm/m/it/10.
+95 :\OT1/lmr/m/n/10.95 0\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 0\OML/lmm/m/it
+/10.95 :\OT1/lmr/m/n/10.95 0]$ \T1/lmr/m/n/10.95 and $\OML/lmm/m/it/10.95 Q \OT
+1/lmr/m/n/10.95 = [0\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 80\OML/lmm/m/it/10.
+95 ; \OT1/lmr/m/n/10.95 0\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 20]$\T1/lmr/m/
+n/10.95 : 
+ []
 
-[155]) (./chapters/ch03_s1_exploring_cleaning.tex
-
-[156]
+[154]) (./chapters/ch03_s1_exploring_cleaning.tex [155]
 Chapter 3.
-
-
-[157
+[156
 
 ]
-Overfull \hbox (13.15378pt too wide) in paragraph at lines 70--73
+Overfull \hbox (3.29877pt too wide) in paragraph at lines 70--73
 []\T1/lmr/bx/n/10.95 Calculate the Me-dian\T1/lmr/m/n/10.95 : First, sort the v
 al-ues in as-cend-ing or-der: $\OT1/lmr/m/n/10.95 [20\OML/lmm/m/it/10.95 :\OT1/
 lmr/m/n/10.95 0\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 22\OML/lmm/m/it/10.95 :
@@ -1814,13 +1585,7 @@ t/10.95 :\OT1/lmr/m/n/10.95 0\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 30\OML/lm
 m/m/it/10.95 :\OT1/lmr/m/n/10.95 0]$\T1/lmr/m/n/10.95 .
  []
 
-
-
-[158]
-
-[159]
-
-[160]
+[157] [158] [159]
 Overfull \hbox (53.97696pt too wide) in paragraph at lines 207--208
  []\T1/lmr/bx/n/10.95 The Maths: Pear-son's Cor-re-la-tion For-mula[] \T1/lmr/m
 /n/10.95 Given paired ob-ser-va-tions $\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 
@@ -1829,100 +1594,56 @@ m/it/10.95 x[]; y[]\OT1/lmr/m/n/10.95 )\OML/lmm/m/it/10.95 ; [] ; \OT1/lmr/m/n/
 10.95 (\OML/lmm/m/it/10.95 x[]; y[]\OT1/lmr/m/n/10.95 )$\T1/lmr/m/n/10.95 : 
  []
 
-
-
-[161]
-
-[162]
-
-[163]
-
-[164]
-
-[165]
-
-[166]
-
-[167]
-
-[168]
-
-[169]) (./chapters/ch03_s2_feature_work.tex
-
-[170]
-
-[171]
-
-[172]
-Overfull \hbox (23.7996pt too wide) detected at line 140
-[]
+[160] [161] [162] [163] [164] [165] [166] [167] [168]) (./chapters/ch03_s2_feat
+ure_work.tex [169]
+Overfull \hbox (5.17386pt too wide) in paragraph at lines 57--58
+[]\T1/lmr/m/n/10.95 Feature 1 ($\OML/lmm/m/it/10.95 x[]$\T1/lmr/m/n/10.95 ): Ba
+ro-met-ric cham-ber pres-sure in Pas-cals, rang-ing from $\OT1/lmr/m/n/10.95 98
+[]000[]$ \T1/lmr/m/n/10.95 to $\OT1/lmr/m/n/10.95 104[]000[]$\T1/lmr/m/n/10.95 
+. 
  []
 
 
-
-[173]
-
-[174]
-
-[175]
-
-[176]
-
-[177]
-
-[178]
-
-[179]
-
-[180]
-
-[181]
-Overfull \hbox (8.54765pt too wide) in paragraph at lines 611--612
-[]\T1/lmr/bx/n/10.95 The Golden Rule\T1/lmr/m/n/10.95 : Al-ways fit scalers, en
--coders, and PCA trans-form-ers **strictly
+Overfull \hbox (7.44408pt too wide) in paragraph at lines 72--73
+[]\T1/lmr/bx/n/10.95 Distance-Based Mod-els\T1/lmr/m/n/10.95 : $\OML/lmm/m/it/1
+0.95 k$\T1/lmr/m/n/10.95 -Nearest Neigh-bors ($\OML/lmm/m/it/10.95 k$\T1/lmr/m/
+n/10.95 -NN), Sup-port Vec-tor Ma-chines (SVMs
  []
 
 
+Overfull \hbox (11.20818pt too wide) in paragraph at lines 74--75
+[]\T1/lmr/bx/n/10.95 Regularized Mod-els\T1/lmr/m/n/10.95 : Ridge ($\OML/lmm/m/
+it/10.95 L[]$\T1/lmr/m/n/10.95 ) and Lasso ($\OML/lmm/m/it/10.95 L[]$\T1/lmr/m/
+n/10.95 ) pe-nal-ize co-ef-fi-cient mag-ni-tudes ($\OML/lmm/m/it/10.95 ^^U [] w
+[]$\T1/lmr/m/n/10.95 ).
+ []
 
-[182]
-Overfull \hbox (3.0905pt too wide) in paragraph at lines 638--639
-[]\T1/lmr/bx/n/10.95 Feature Scal-ing is Model-Dependent\T1/lmr/m/n/10.95 : Dis
-tance-based mod-els ($\OML/lmm/m/it/10.95 k$\T1/lmr/m/n/10.95 -NN, SVM),
+[170] [171] [172] [173] [174] [175] [176] [177] [178] [179] [180] [181
+
+] [182] [183]
+Overfull \hbox (11.72688pt too wide) in paragraph at lines 749--750
+[]\T1/lmr/m/n/10.95 Standard One-Hot En-cod-ing cre-ates ex-actly $\OML/lmm/m/i
+t/10.95 K \OT1/lmr/m/n/10.95 = \OT1/lmr/bx/n/10.95 4$ \T1/lmr/m/n/10.95 bi-nary
+ columns (\T1/lmtt/m/n/10.95 Is_Sleep\T1/lmr/m/n/10.95 , \T1/lmtt/m/n/10.95 Is_
+Sensing\T1/lmr/m/n/10.95 ,
  []
 
 
-
-[183]
-
-[184]
-Overfull \hbox (55.09589pt too wide) in paragraph at lines 761--762
+Overfull \hbox (38.6709pt too wide) in paragraph at lines 761--762
 []\T1/lmr/bx/n/10.95 The Bug\T1/lmr/m/n/10.95 : Line 3 calls \T1/lmtt/m/n/10.95
  scaler.fit_transform(X_test) \T1/lmr/m/n/10.95 in-stead of \T1/lmtt/m/n/10.95 
 scaler.transform(X_test)\T1/lmr/m/n/10.95 . 
  []
 
-
-
-[185]) (./chapters/ch03_s3_splitting_pitfalls.tex
-
-[186]
-
-[187]
-
-[188]
-
-[189]
-
-[190]
-Overfull \hbox (33.19283pt too wide) in paragraph at lines 327--328
+) (./chapters/ch03_s3_splitting_pitfalls.tex [184] [185] [186] [187] [188] [189
+]
+Overfull \hbox (23.33781pt too wide) in paragraph at lines 327--328
 []\T1/lmr/bx/n/10.95 Preprocessing / Trans-form Leak-age\T1/lmr/m/n/10.95 : Com
 -put-ing trans-for-ma-tion pa-ram-e-ters ($\OML/lmm/m/it/10.95 ^^V; ^^[; x[]; x
 []$\T1/lmr/m/n/10.95 ,
  []
 
-
-
-[191]
+[190]
 Overfull \hbox (7.58878pt too wide) in paragraph at lines 356--357
 \T1/lmr/m/n/10.95 When \T1/lmtt/m/n/10.95 pipeline.fit(X_train, y_train) \T1/lm
 r/m/n/10.95 is in-voked, the pipeline calls \T1/lmtt/m/n/10.95 scaler.fit_trans
@@ -1930,83 +1651,34 @@ form()
  []
 
 
-
-[192]
 Overfull \hbox (103.57523pt too wide) in paragraph at lines 383--391
  [] 
  []
 
-
-
-[193]
+[191]
 Overfull \hbox (59.279pt too wide) in paragraph at lines 418--420
 \T1/lmr/m/n/10.95 Scikit-Learn au-to-mat-i-cally com-putes in-versely pro-por-t
 ional bal-anced weights via \T1/lmtt/m/n/10.95 class_weight='balanced'\T1/lmr/m
 /n/10.95 : 
  []
 
-
-
-[194]
-
-[195]
-
-[196]
-
-[197]
-Overfull \hbox (30.62767pt too wide) in paragraph at lines 646--648
-[]\T1/lmr/bx/n/10.95 Fitting Trans-for-ma-tions Be-fore the Train-Test Split\T1
-/lmr/m/n/10.95 : Call-ing \T1/lmtt/m/n/10.95 fit_transform()
- []
-
-
-
-[198]
-Overfull \hbox (27.72162pt too wide) in paragraph at lines 670--671
-[]\T1/lmr/bx/n/10.95 Cost-Sensitive Bal-anc-ing\T1/lmr/m/n/10.95 : In im-bal-an
-ced do-mains, use \T1/lmtt/m/n/10.95 class_weight='balanced'
- []
-
-
-
-[199]
-
-[200]
-
-[201])
-
-[202]
-
-[203
+[192] [193] [194] [195] [196] [197] [198] [199] [200]) [201] [202
 
 ] (./chapters/ch04_s1_regression.tex
 Chapter 4.
+[203
 
-
-[204
-
-]
-
-[205]
-
-[206]
-Overfull \hbox (44.32957pt too wide) in paragraph at lines 171--172
+] [204] [205]
+Overfull \hbox (34.47456pt too wide) in paragraph at lines 171--172
 []\T1/lmr/m/n/10.95 Lines 12--13: The slope is stored in \T1/lmtt/m/n/10.95 mod
 el.coef\_\T1/lmr/m/n/10.95 , and the in-ter-cept is stored in \T1/lmtt/m/n/10.9
 5 model.intercept\_\T1/lmr/m/n/10.95 . 
  []
 
 
+Underfull \vbox (badness 1803) has occurred while \output is active []
 
-[207]
-
-[208]
-
-[209]
-
-[210]
-
-[211]
+[206] [207] [208] [209] [210]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 447.
@@ -2031,35 +1703,8 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 447.
 
-
-
-[212]
-Overfull \hbox (6.5588pt too wide) detected at line 508
-[][] \OT1/lmr/m/n/10.95 = [](\OML/lmm/m/it/10.95 w[] \OT1/lmr/m/n/10.95 + \OML/
-lmm/m/it/10.95 w[]\OT1/lmr/m/n/10.95 ) = [](10\OML/lmm/m/it/10.95 :\OT1/lmr/m/n
-/10.95 0[] + (\OMS/lmsy/m/n/10.95 ^^@\OT1/lmr/m/n/10.95 10\OML/lmm/m/it/10.95 :
-\OT1/lmr/m/n/10.95 0)[]) = 0\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 25 \OMS/lms
-y/m/n/10.95 ^^B \OT1/lmr/m/n/10.95 (100\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 
-0 + 100\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 0) = 0\OML/lmm/m/it/10.95 :\OT1/
-lmr/m/n/10.95 25 \OMS/lmsy/m/n/10.95 ^^B \OT1/lmr/m/n/10.95 200\OML/lmm/m/it/10
-.95 :\OT1/lmr/m/n/10.95 0 = 50\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 0
- []
-
-
-
-[213]
-
-[214]
-
-[215]) (./chapters/ch04_s2_classification.tex
-
-[216]
-
-[217]
-
-[218]
-
-[219]
+[211] [212] [213] [214]) (./chapters/ch04_s2_classification.tex [215] [216] [21
+7]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 197.
@@ -2076,93 +1721,34 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 197.
 
-
-
-[220]
-
-[221]
-
-[222]
-
-[223]
-
-[224]
+[218] [219] [220] [221] [222] [223]
 Overfull \hbox (0.59991pt too wide) in paragraph at lines 492--493
 \T1/lmr/m/n/10.95 While SVMs and Neu-ral Net-works op-er-ate as opaque math-e-m
 at-i-cal equa-tions, **De-ci-sion Trees**
  []
 
-
-
-[225]
-
-[226]
-
-[227]
-
-[228]
-Overfull \hbox (62.92345pt too wide) in paragraph at lines 698--710
+[224] [225] [226]
+Overfull \hbox (35.98076pt too wide) in paragraph at lines 698--710
  [] 
  []
 
 
+Underfull \vbox (badness 2799) has occurred while \output is active []
+
+[227] [228]
+Underfull \vbox (badness 4954) has occurred while \output is active []
 
 [229]
-
-[230]
-
-[231]
-
-[232]
-Overfull \hbox (15.66466pt too wide) in paragraph at lines 924--926
-[]\T1/lmr/bx/n/10.95 Normalized Pos-te-rior and Pre-dic-tion\T1/lmr/m/n/10.95 :
- To-tal marginal prob-a-bil-ity $\OML/lmm/m/it/10.95 P\OT1/lmr/m/n/10.95 (\OML/
-lmm/m/it/10.95 x\OT1/lmr/m/n/10.95 ) = 0\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95
- 003506 +
- []
-
-
-
-[233]) (./chapters/ch04_s3_ensembles.tex
-
-[234]
-
-[235]
-
-[236]
-
-[237]
-
-[238]
-
-[239]
-
-[240]
-Overfull \hbox (52.93402pt too wide) in paragraph at lines 351--352
-\T1/lmr/m/n/10.95 us-ing **Out-Of-Fold (OOF) cross-validation pre-dic-tions**. 
-Scikit-Learn's \T1/lmtt/m/n/10.95 StackingClassifier
- []
-
-
-
-[241]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
+[230] [231] [232]) (./chapters/ch04_s3_ensembles.tex [233] [234] [235] [236] [2
+37] [238] [239] [240] [241] [242] [243]
+Underfull \hbox (badness 1983) in paragraph at lines 587--590
+[]\T1/lmr/bx/n/10.95 Soft Vot-ing ver-sus Hard Vot-ing Cal-cu-la-tion\T1/lmr/m/
+n/10.95 : Three di-verse clas-si-fiers
+ []
 
-
-[242]
-
-[243]
-
-[244]
-
-[245]
-
-[246]
-
-[247]) (./chapters/ch04_s4_unsupervised.tex
-
-[248]
+[244] [245] [246]) (./chapters/ch04_s4_unsupervised.tex [247]
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 64.
@@ -2171,155 +1757,45 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 64.
 
-
-
-[249]
-
-[250]
-
-[251]
-
-[252]
-
-[253]
-
-[254]
-
-[255]
-Overfull \hbox (3.86159pt too wide) in paragraph at lines 432--433
-[]\T1/lmr/bx/n/10.95 Convergence\T1/lmr/m/n/10.95 : Al-ter-nate E and M steps u
-n-til the to-tal log-likelihood $[][] [] \OML/lmm/m/it/10.95 p\OT1/lmr/m/n/10.9
-5 (\OT1/lmr/bx/n/10.95 x[]\OT1/lmr/m/n/10.95 )$ \T1/lmr/m/n/10.95 plateaus. 
- []
-
-
-
-[256]
-
-[257]
-Overfull \hbox (0.31853pt too wide) in paragraph at lines 534--535
-[]\T1/lmr/bx/n/10.95 Distances Be-tween Clus-ters are Mean-ing-less\T1/lmr/m/n/
-10.95 : t-SNE pre-serves lo-cal neigh-
- []
-
-
-Overfull \hbox (10.73695pt too wide) in paragraph at lines 546--547
+[248] [249] [250] [251] [252] [253] [254] [255] [256]
+Overfull \hbox (0.88194pt too wide) in paragraph at lines 546--547
 []\T1/lmr/bx/n/10.95 Dramatically Faster Ex-e-cu-tion\T1/lmr/m/n/10.95 : While 
 stan-dard t-SNE scales with $\OMS/lmsy/m/n/10.95 O\OT1/lmr/m/n/10.95 (\OML/lmm/
 m/it/10.95 N[]\OT1/lmr/m/n/10.95 )$ \T1/lmr/m/n/10.95 (or $\OMS/lmsy/m/n/10.95 
 O\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 N [] N\OT1/lmr/m/n/10.95 )$
  []
 
+[257]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
+[258] [259] [260]
+Underfull \vbox (badness 1910) has occurred while \output is active []
 
-[258]
-
-[259]
-
-[260]
-Overfull \hbox (6.18916pt too wide) in paragraph at lines 685--687
-\T1/lmr/m/n/10.95 If $\OML/lmm/m/it/10.95 d[] > ^^\[]$\T1/lmr/m/n/10.95 , the d
-e-vice im-me-di-ately flags an un-known me-chan-i-cal anomaly! 
- []
-
-
-
-[261]
-
-[262]
-Overfull \hbox (3.6402pt too wide) in paragraph at lines 769--770
-\T1/lmr/m/n/10.95 plete Den-dro-gram tree. Ward's link-age min-i-mizes within-c
-luster vari-ance growth,
- []
-
-
-Overfull \hbox (18.79668pt too wide) in paragraph at lines 773--774
-[]\T1/lmr/bx/n/10.95 Manifold Vi-su-al-iza-tion (t-SNE & UMAP)\T1/lmr/m/n/10.95
- : Projects com-plex high-dimensional
- []
-
-
-
-[263]
-Overfull \hbox (8.62329pt too wide) in paragraph at lines 810--811
-[]\T1/lmr/m/n/10.95 Determine the num-ber of neigh-bors in the $\OML/lmm/m/it/1
-0.95 "$\T1/lmr/m/n/10.95 -neighborhood of $\OML/lmm/m/it/10.95 P[]; P[]; P[]; P
-[]; P[]$\T1/lmr/m/n/10.95 ,
- []
-
-
-
-[264]
-Overfull \hbox (11.04741pt too wide) in paragraph at lines 885--886
-[]$\OML/lmm/m/it/10.95 P[]\OT1/lmr/m/n/10.95 (1\OML/lmm/m/it/10.95 ; \OT1/lmr/m
-/n/10.95 2)$\T1/lmr/m/n/10.95 : Neigh-bors are $\OML/lmm/m/it/10.95 P[]; P[]\OT
-1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 d \OT1/lmr/m/n/10.95 = 1\OML/lmm/m/it/10.9
-5 :\OT1/lmr/m/n/10.95 0)\OML/lmm/m/it/10.95 ; P[]\OT1/lmr/m/n/10.95 (\OML/lmm/m
-/it/10.95 d \OT1/lmr/m/n/10.95 = [] \OMS/lmsy/m/n/10.95 ^^Y \OT1/lmr/m/n/10.95 
-1\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 414)\OML/lmm/m/it/10.95 ; P[]\OT1/lmr/
-m/n/10.95 (\OML/lmm/m/it/10.95 d \OT1/lmr/m/n/10.95 = [] \OMS/lmsy/m/n/10.95 ^^
-Y
- []
-
-
-Overfull \hbox (11.04741pt too wide) in paragraph at lines 886--887
-[]$\OML/lmm/m/it/10.95 P[]\OT1/lmr/m/n/10.95 (2\OML/lmm/m/it/10.95 ; \OT1/lmr/m
-/n/10.95 1)$\T1/lmr/m/n/10.95 : Neigh-bors are $\OML/lmm/m/it/10.95 P[]; P[]\OT
-1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 d \OT1/lmr/m/n/10.95 = 1\OML/lmm/m/it/10.9
-5 :\OT1/lmr/m/n/10.95 0)\OML/lmm/m/it/10.95 ; P[]\OT1/lmr/m/n/10.95 (\OML/lmm/m
-/it/10.95 d \OT1/lmr/m/n/10.95 = [] \OMS/lmsy/m/n/10.95 ^^Y \OT1/lmr/m/n/10.95 
-1\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 414)\OML/lmm/m/it/10.95 ; P[]\OT1/lmr/
-m/n/10.95 (\OML/lmm/m/it/10.95 d \OT1/lmr/m/n/10.95 = [] \OMS/lmsy/m/n/10.95 ^^
-Y
- []
-
-
-
-[265]
-
-[266]
-Overfull \hbox (4.28624pt too wide) in paragraph at lines 959--960
-[]\T1/lmr/bx/n/10.95 Computational Scal-a-bil-ity & Global Struc-ture\T1/lmr/m/
-n/10.95 : UMAP scales with $\OMS/lmsy/m/n/10.95 O\OT1/lmr/m/n/10.95 (\OML/lmm/m
-/it/10.95 N[]\OT1/lmr/m/n/10.95 )$
- []
-
-) (./chapters/ch04_s5_anomaly_detection.tex
-
-[267]
-Overfull \hbox (17.07123pt too wide) in paragraph at lines 51--52
+[261] [262] [263] [264]) (./chapters/ch04_s5_anomaly_detection.tex [265]
+Overfull \hbox (7.21622pt too wide) in paragraph at lines 51--52
 []\T1/lmr/bx/n/10.95 Isolation For-est\T1/lmr/m/n/10.95 : An ef-fi-cient en-sem
 -ble method based on ran-dom re-cur-sive space-partitioning. 
  []
 
 
+Overfull \hbox (9.91228pt too wide) in paragraph at lines 52--53
+[]\T1/lmr/bx/n/10.95 One-Class Sup-port Vec-tor Ma-chines (OC-SVM)\T1/lmr/m/n/1
+0.95 : Bound-ary es-ti-ma-tion en-clos-ing healthy
+ []
 
-[268]
+[266]
 LaTeX Font Info:    Font shape `T1/lmss/m/it' in size <8> not available
 (Font)              Font shape `T1/lmss/m/sl' tried instead on input line 125.
+[267]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-[269]
-
-[270]
+[268]
 LaTeX Font Info:    Font shape `T1/lmss/m/it' in size <9> not available
 (Font)              Font shape `T1/lmss/m/sl' tried instead on input line 234.
-
-
-[271]
-
-[272]
-
-[273]
-
-[274]
-
-[275]
+[269] [270] [271] [272] [273]
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
 nput line 534.
-
-
-[276]
+[274] [275]
 Underfull \hbox (badness 10000) in paragraph at lines 636--636
 []\T1/lmr/bx/n/10 Complexity
  []
@@ -2370,25 +1846,16 @@ Overfull \hbox (45.88454pt too wide) in paragraph at lines 634--649
  []
 
 
-
-[277]
-Overfull \hbox (28.8079pt too wide) in paragraph at lines 655--656
-[]\T1/lmr/bx/n/10.95 Sub-Millisecond E-Stop\T1/lmr/m/n/10.95 : When a me-chan-i
--cal spin-dle bear-ing seizes at $\OT1/lmr/m/n/10.95 24[]000[]$\T1/lmr/m/n/10.9
-5 ,
+Underfull \hbox (badness 2142) in paragraph at lines 656--657
+[]\T1/lmr/bx/n/10.95 Bandwidth Sav-ings\T1/lmr/m/n/10.95 : A 3-axis ac-celerom-
+e-ter sam-pled at $\OT1/lmr/m/n/10.95 10[]$ \T1/lmr/m/n/10.95 gen-er-ates
  []
 
 
+Underfull \vbox (badness 2635) has occurred while \output is active []
 
-[278]
-
-[279]
-
-[280]
-
-[281]) (./chapters/ch04_s6_model_quality.tex
-
-[282]
+[276] [277] [278] [279]) (./chapters/ch04_s6_model_quality.tex [280] [281] [282
+]
 Underfull \hbox (badness 1642) in paragraph at lines 174--175
 \TS1/lmr/m/n/10 ˆ \T1/lmr/m/n/10 De-crease reg-u-lar-iza-tion strength
  []
@@ -2399,618 +1866,261 @@ Underfull \hbox (badness 1142) in paragraph at lines 176--177
 h\T1/lmr/m/n/10 ,
  []
 
-
-
 [283]
-
-[284]
-
-[285]
 Overfull \hbox (23.07509pt too wide) in paragraph at lines 229--230
 []\T1/lmr/m/n/10.95 The one-dimensional co-or-di-nate de-scent up-date for weig
 ht $\OML/lmm/m/it/10.95 w[]$ \T1/lmr/m/n/10.95 in-cor-po-rates the \T1/lmr/bx/n
 /10.95 soft-thresholding
  []
 
-
-
-[286]
-
-[287]
-Overfull \hbox (12.00528pt too wide) in paragraph at lines 385--386
-\T1/lmr/m/n/10.95 dard ran-dom par-ti-tion-ing may pro-duce folds con-tain-ing 
-zero fail-ure events. \T1/lmtt/m/n/10.95 StratifiedKFold
- []
-
-
-
-[288]
-
-[289]
-
-[290]
-
-[291]
-
-[292]
-Overfull \hbox (10.7218pt too wide) in paragraph at lines 670--671
+[284] [285] [286] [287] [288] [289] [290]
+Overfull \hbox (0.86679pt too wide) in paragraph at lines 670--671
 []\T1/lmr/m/n/10.95 When \T1/lmtt/m/n/10.95 pipeline.predict(X_test) \T1/lmr/m/
 n/10.95 is called, in-ter-me-di-ate trans-form-ers ex-e-cute \T1/lmtt/m/n/10.95
  transform()
  []
 
 
-
-[293]
-
-[294]
-
-[295]
-
-[296]
-
-[297]
-
-[298]
-Overfull \hbox (6.34853pt too wide) detected at line 965
-\OML/lmm/m/it/10.95 F[] \OT1/lmr/m/n/10.95 = (1 + 2[])[] = 5 \OMS/lmsy/m/n/10.9
-5 ^^A [] \OT1/lmr/m/n/10.95 = [] = [] \OMS/lmsy/m/n/10.95 ^^Y []
+Overfull \hbox (9.9845pt too wide) in paragraph at lines 670--671
+\T1/lmr/m/n/10.95 us-ing the frozen train-ing pa-ram-e-ters, be-fore pass-ing t
+he clean data to the es-ti-ma-tor's \T1/lmtt/m/n/10.95 predict()
  []
 
-
-Overfull \hbox (20.22223pt too wide) detected at line 979
+[291] [292] [293] [294] [295] [296]
+Overfull \hbox (3.79724pt too wide) detected at line 979
 [] \OT1/lmr/m/n/10.95 = [] = [] = [] = []
  []
 
 
-Overfull \hbox (84.22554pt too wide) detected at line 985
+Overfull \hbox (67.80055pt too wide) detected at line 985
 []
  []
 
-
-
-[299]
-Overfull \hbox (85.38382pt too wide) in paragraph at lines 1016--1017
+[297]
+Overfull \hbox (68.95883pt too wide) in paragraph at lines 1016--1017
 []\T1/lmr/bx/n/10.95 The Flaw\T1/lmr/m/n/10.95 : Call-ing \T1/lmtt/m/n/10.95 im
 puter.fit_transform(X_telemetry) \T1/lmr/m/n/10.95 and \T1/lmtt/m/n/10.95 scale
 r.fit_transform(X_imputed)
  []
 
-) (./chapters/ch05_s1_neural_network_basics.tex
-
-[300]
+) (./chapters/ch05_s1_neural_network_basics.tex [298]
 Chapter 5.
+[299
 
+] [300]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[301
+[301] [302] [303]
 
-]
+Package tcolorbox Warning: Using nobreak failed. Try to enlarge `lines before b
+reak' or set page breaks manually on input line 292.
 
-[302]
-
-[303]
-
-[304]
-
-[305]
-
-[306]
-
-[307]
-
-[308]
-
-[309]
-
-[310]
-
-[311]) (./chapters/ch05_s2_pytorch.tex
-Overfull \hbox (1.82652pt too wide) in paragraph at lines 10--11
-[]\T1/lmr/bx/n/10.95 Embedded De-ploy-ment\T1/lmr/m/n/10.95 : De-ploy-ing train
-ed mod-els to em-bed-ded mi-cro-con-trollers (ARM
+[304] [305] [306] [307] [308] [309]) (./chapters/ch05_s2_pytorch.tex
+Overfull \hbox (13.59404pt too wide) in paragraph at lines 10--11
+\T1/lmr/m/n/10.95 Cortex-M, ESP32) re-quires ex-port-ing math-e-mat-i-cal graph
+s into language-independent, memory-
  []
 
-
-
-[312]
-Overfull \hbox (15.81714pt too wide) in paragraph at lines 96--97
+[310]
+Overfull \hbox (5.96213pt too wide) in paragraph at lines 96--97
 []\T1/lmr/bx/n/10.95 Shape (\T1/lmtt/b/n/10.95 torch.Size\T1/lmr/bx/n/10.95 )\T
 1/lmr/m/n/10.95 : The tu-ple defin-ing the length of each di-men-sion (e.g., \T
 1/lmtt/m/n/10.95 torch.Size([64,
  []
 
-
-
-[313]
-
-[314]
-
-[315]
-Overfull \hbox (8.5732pt too wide) in paragraph at lines 225--226
-[]\T1/lmr/m/n/10.95 By de-fault, Py-Torch \T1/lmr/bx/n/10.95 ac-cu-mu-lates \T1
-/lmr/m/n/10.95 (sums) gra-di-ents into \T1/lmtt/m/n/10.95 .grad \T1/lmr/m/n/10.
-95 when-ever \T1/lmtt/m/n/10.95 .backward()
+[311]
+Overfull \hbox (5.61594pt too wide) in paragraph at lines 132--133
+[]\T1/lmr/bx/n/10.95 Broadcasting\T1/lmr/m/n/10.95 : When per-form-ing element-
+wise op-er-a-tions be-tween ten-sors of dif-fer-ent shapes,
  []
 
-
-
-[316]
-
-[317]
-
-[318]
-Overfull \hbox (32.20811pt too wide) in paragraph at lines 400--401
-\T1/lmr/m/n/10.95 the net-work. Py-Torch's \T1/lmtt/m/n/10.95 nn.CrossEntropyLo
-ss \T1/lmr/m/n/10.95 math-e-mat-i-cally com-bines \T1/lmtt/m/n/10.95 nn.LogSoft
-max()
- []
-
-
-
-[319]
-
-[320]
-Overfull \hbox (144.02303pt too wide) in paragraph at lines 505--506
+[312] [313] [314] [315] [316] [317]
+Overfull \hbox (127.59804pt too wide) in paragraph at lines 505--506
 []\T1/lmr/m/n/10.95 Step 5: Gra-di-ent clip-ping (op-tional but rec-om-mended):
  \T1/lmtt/m/n/10.95 torch.nn.utils.clip_grad_norm_(model.parameters(),
  []
 
+[318] [319]
+Overfull \hbox (1.33641pt too wide) in paragraph at lines 635--636
+[]\T1/lmr/bx/n/10.95 Saving the State Dic-tio-nary \T1/lmr/m/n/10.95 (\T1/lmtt/
+m/n/10.95 torch.save(model.state_dict(), "weights.pth")\T1/lmr/m/n/10.95 ): Se-
 
+ []
+
+[320]
+Underfull \hbox (badness 4899) in paragraph at lines 676--677
+[]\T1/lmr/bx/n/10.95 TorchScript Trac-ing\T1/lmr/m/n/10.95 : Py-Torch mod-els r
+ely on a live Python run-time.
+ []
+
+
+Underfull \hbox (badness 6204) in paragraph at lines 701--702
+[]\T1/lmr/bx/n/10.95 Disable Track-ing Dur-ing In-fer-ence\T1/lmr/m/n/10.95 : W
+rap eval-u-a-tion code in \T1/lmtt/m/n/10.95 with
+ []
+
+
+Underfull \hbox (badness 7685) in paragraph at lines 704--705
+[]\T1/lmr/bx/n/10.95 Leverage Ap-ple Sil-i-con UMA\T1/lmr/m/n/10.95 : On ma-cOS
+, ac-cel-er-ate train-ing us-ing
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 705--706
+[]\T1/lmr/bx/n/10.95 Save State Dic-tio-nar-ies\T1/lmr/m/n/10.95 : Al-ways se-r
+i-al-ize mod-els us-ing
+ []
+
+
+Underfull \hbox (badness 1028) in paragraph at lines 705--706
+\T1/lmtt/m/n/10.95 torch.save(model.state_dict(), ...) \T1/lmr/m/n/10.95 to pre
+-serve clean ar-chi-tec-tural porta-
+ []
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [321]
+Underfull \hbox (badness 2828) in paragraph at lines 728--729
+[]\T1/lmr/m/n/10.95 How many op-ti-mizer weight up-date steps oc-cur over $\OT1
+/lmr/m/n/10.95 10$ \T1/lmr/m/n/10.95 full epochs if
+ []
 
 [322]
-Overfull \hbox (58.35526pt too wide) in paragraph at lines 676--677
-[]\T1/lmr/bx/n/10.95 TorchScript Trac-ing\T1/lmr/m/n/10.95 : Py-Torch mod-els r
-ely on a live Python run-time. \T1/lmtt/m/n/10.95 torch.jit.trace()
- []
-
-
+Underfull \vbox (badness 1275) has occurred while \output is active []
 
 [323]
-Overfull \hbox (31.42053pt too wide) in paragraph at lines 699--700
-[]\T1/lmr/bx/n/10.95 Autograd Builds Dy-namic Graphs\T1/lmr/m/n/10.95 : Track-i
-ng op-er-a-tions via \T1/lmtt/m/n/10.95 requires_grad=True
- []
-
-
-Overfull \hbox (50.38348pt too wide) in paragraph at lines 701--702
-[]\T1/lmr/bx/n/10.95 Disable Track-ing Dur-ing In-fer-ence\T1/lmr/m/n/10.95 : W
-rap eval-u-a-tion code in \T1/lmtt/m/n/10.95 with torch.no_grad():
- []
-
-
-Overfull \hbox (70.95857pt too wide) in paragraph at lines 704--705
-[]\T1/lmr/bx/n/10.95 Leverage Ap-ple Sil-i-con UMA\T1/lmr/m/n/10.95 : On ma-cOS
-, ac-cel-er-ate train-ing us-ing \T1/lmtt/m/n/10.95 torch.device("mps")\T1/lmr/
-m/n/10.95 ,
- []
-
-
-Overfull \hbox (65.60555pt too wide) in paragraph at lines 705--706
-[]\T1/lmr/bx/n/10.95 Save State Dic-tio-nar-ies\T1/lmr/m/n/10.95 : Al-ways se-r
-i-al-ize mod-els us-ing \T1/lmtt/m/n/10.95 torch.save(model.state_dict(),
- []
-
-
-
-[324]
-Overfull \hbox (25.64098pt too wide) in paragraph at lines 755--756
-\T1/lmr/m/n/10.95 while Ap-ple Sil-i-con UMA does not move phys-i-cal mem-ory o
-n \T1/lmtt/m/n/10.95 tensor.to("mps")\T1/lmr/m/n/10.95 ? 
- []
-
-
-
-[325]
-Overfull \hbox (18.43646pt too wide) in paragraph at lines 802--804
+Overfull \hbox (2.01147pt too wide) in paragraph at lines 802--804
 []\T1/lmr/bx/n/10.95 Total Up-dates Across 10 Epochs\T1/lmr/m/n/10.95 : Each ba
 tch trig-gers ex-actly one \T1/lmtt/m/n/10.95 optimizer.step()\T1/lmr/m/n/10.95
  .
  []
 
-
-Overfull \hbox (0.21838pt too wide) in paragraph at lines 819--821
-[]\T1/lmr/bx/n/10.95 Intentional Ex-ploita-tion\T1/lmr/m/n/10.95 : When train-i
-ng mas-sive net-works on memory-constrained
+[324]) (./chapters/ch05_s3_training_techniques.tex [325] [326] [327] [328] [329
+] [330] [331] [332] [333] [334]
+Underfull \hbox (badness 2521) in paragraph at lines 570--571
+[]\T1/lmr/bx/n/10.95 Dynamic Sched-ules Beat Static Rates\T1/lmr/m/n/10.95 : De
+-ploy \T1/lmtt/m/n/10.95 CosineAnnealingLR \T1/lmr/m/n/10.95 or
  []
 
 
-
-[326]) (./chapters/ch05_s3_training_techniques.tex
-
-[327]
-
-[328]
-
-[329]
-
-[330]
-
-[331]
-
-[332]
-
-[333]
-
-[334]
+Underfull \vbox (badness 6691) has occurred while \output is active []
 
 [335]
+Underfull \hbox (badness 10000) in paragraph at lines 601--603
+[]\T1/lmr/bx/n/10.95 Cosine An-neal-ing Sched-ule Tra-jec-tory\T1/lmr/m/n/10.95
+ : An op-ti-mizer trains with
+ []
 
 [336]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[337]
-
-[338]
-Overfull \hbox (53.1384pt too wide) in paragraph at lines 601--603
-[]\T1/lmr/bx/n/10.95 Cosine An-neal-ing Sched-ule Tra-jec-tory\T1/lmr/m/n/10.95
- : An op-ti-mizer trains with \T1/lmtt/m/n/10.95 CosineAnnealingLR
- []
-
-
-Overfull \hbox (6.18636pt too wide) in paragraph at lines 619--620
-[]\T1/lmr/m/n/10.95 Normal Sam-ple $\OML/lmm/m/it/10.95 A$\T1/lmr/m/n/10.95 : $
-\OT1/lmr/bx/n/10.95 x[] \OT1/lmr/m/n/10.95 = [40\OML/lmm/m/it/10.95 :\OT1/lmr/m
-/n/10.95 0[][]\OML/lmm/m/it/10.95 ;  \OT1/lmr/m/n/10.95 1\OML/lmm/m/it/10.95 :\
-OT1/lmr/m/n/10.95 2[]][]$\T1/lmr/m/n/10.95 , one-hot la-bel $\OT1/lmr/bx/n/10.9
-5 y[] \OT1/lmr/m/n/10.95 = [1\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 0\OML/lmm/
-m/it/10.95 ;  \OT1/lmr/m/n/10.95 0\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 0][]$
-
- []
-
-
-Overfull \hbox (2.65836pt too wide) in paragraph at lines 620--621
-[]\T1/lmr/m/n/10.95 Faulty Sam-ple $\OML/lmm/m/it/10.95 B$\T1/lmr/m/n/10.95 : $
-\OT1/lmr/bx/n/10.95 x[] \OT1/lmr/m/n/10.95 = [80\OML/lmm/m/it/10.95 :\OT1/lmr/m
-/n/10.95 0[][]\OML/lmm/m/it/10.95 ;  \OT1/lmr/m/n/10.95 4\OML/lmm/m/it/10.95 :\
-OT1/lmr/m/n/10.95 8[]][]$\T1/lmr/m/n/10.95 , one-hot la-bel $\OT1/lmr/bx/n/10.9
-5 y[] \OT1/lmr/m/n/10.95 = [0\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 0\OML/lmm/
-m/it/10.95 ;  \OT1/lmr/m/n/10.95 1\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 0][]$
-
- []
-
-
-
-[339]
-
-[340]
-Overfull \hbox (3.05121pt too wide) in paragraph at lines 727--728
-[]\T1/lmr/bx/n/10.95 Double Soft-max Bug\T1/lmr/m/n/10.95 : The model ar-chi-te
-c-ture ap-plies an ex-plicit \T1/lmtt/m/n/10.95 nn.Softmax()
- []
-
-) (./chapters/ch05_s4_cnn.tex
-
-[341]
-
-[342]
+[337] [338]) (./chapters/ch05_s4_cnn.tex [339] [340]
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <14.4> on input line 99.
+[341] [342] [343
 
-
-[343]
-
-[344]
-
-[345]
-
-[346]
-
-[347]
-
-[348]
-
-[349]
-
-[350]
-
-[351]
-
-[352]
-
-[353]
-
-[354]
-
-[355]) (./chapters/ch05_s5_sequence_models.tex
-
-[356]
-
-[357]
+] [344] [345] [346] [347] [348] [349] [350] [351] [352] [353]) (./chapters/ch05
+_s5_sequence_models.tex [354]
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <24.88> on input line 85.
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <20.74> on input line 85.
 LaTeX Font Info:    External font `lmex10' loaded for size
 (Font)              <17.28> on input line 85.
-
-
-[358]
-
-[359]
-Overfull \hbox (10.52216pt too wide) in paragraph at lines 222--223
-[]\T1/lmr/m/n/10.95 Instead of forc-ing the en-tire mem-ory to un-dergo non-lin
-ear trans-for-ma-tions ($[]\OT1/lmr/m/n/10.95 (\OT1/lmr/bx/n/10.95 Wh\OT1/lmr/m
-/n/10.95 )$\T1/lmr/m/n/10.95 )
- []
-
-
-
-[360]
-
-[361]
-
-[362]
+[355] [356] [357] [358] [359]
 Overfull \hbox (48.45256pt too wide) in paragraph at lines 418--430
  [][] 
  []
 
-
-
-[363]
-
-[364]
+[360] [361]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-
-[365]
-Overfull \hbox (2.17569pt too wide) in paragraph at lines 596--597
-\T1/lmtt/m/n/10.95 batch_first=True \T1/lmr/m/n/10.95 en-sures our in-put ten-s
-ors fol-low the stan-dard for-mat \T1/lmtt/m/n/10.95 (batch, seq_len,
+[362] [363]
+Underfull \hbox (badness 1127) in paragraph at lines 634--635
+[]\T1/lmr/bx/n/10.95 The \T1/lmtt/b/n/10.95 batch_first \T1/lmr/bx/n/10.95 Di-m
+en-sion Trap\T1/lmr/m/n/10.95 : In Py-Torch, \T1/lmtt/m/n/10.95 nn.LSTM \T1/lmr
+/m/n/10.95 and \T1/lmtt/m/n/10.95 nn.GRU \T1/lmr/m/n/10.95 de-
  []
 
-
-Overfull \hbox (3.00139pt too wide) in paragraph at lines 599--600
-[]\T1/lmr/bx/n/10.95 Line 58\T1/lmr/m/n/10.95 : \T1/lmtt/m/n/10.95 torch.nn.uti
-ls.clip_grad_norm_(model.parameters(), max_norm=1.0) \T1/lmr/m/n/10.95 im-
- []
-
-
-
-[366]
-
-[367]
-
-[368]) (./chapters/ch05_s6_transformers.tex
-
-[369]
-
-[370]
-
-[371]
-
-[372]
-
-[373]
-
-[374]
-
-[375]
+[364] [365]) (./chapters/ch05_s6_transformers.tex [366] [367] [368] [369] [370]
+[371] [372]
 Overfull \hbox (61.14523pt too wide) in paragraph at lines 389--402
  [][] 
  []
 
-
-
-[376]
-
-[377]
-Overfull \hbox (10.49272pt too wide) in paragraph at lines 519--520
+[373] [374]
+Overfull \hbox (0.63771pt too wide) in paragraph at lines 519--520
 []\T1/lmr/bx/n/10.95 Line 35\T1/lmr/m/n/10.95 : \T1/lmtt/m/n/10.95 scores = tor
 ch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d\_k)\T1/lmr/m/n/10.95 .
  []
 
-
-Overfull \hbox (9.66716pt too wide) in paragraph at lines 520--521
-[]\T1/lmr/bx/n/10.95 Line 45\T1/lmr/m/n/10.95 : \T1/lmtt/m/n/10.95 context.tran
-spose(1, 2).contiguous().view(B, N, d\_model) \T1/lmr/m/n/10.95 con-cate-nates
- []
-
-
-
-[378]
-
-[379]
-Overfull \hbox (2.98108pt too wide) in paragraph at lines 560--561
-[]\T1/lmr/bx/n/10.95 Confusing Self-Attention with Cross-Attention\T1/lmr/m/n/1
-0.95 : In self-attention, $\OT1/lmr/bx/n/10.95 Q\OML/lmm/m/it/10.95 ; \OT1/lmr/
-bx/n/10.95 K\OML/lmm/m/it/10.95 ; \OT1/lmr/bx/n/10.95 V$
- []
-
-
-Overfull \hbox (52.96007pt too wide) in paragraph at lines 573--574
+[375] [376]
+Underfull \hbox (badness 10000) in paragraph at lines 573--574
 []\T1/lmr/bx/n/10.95 Scaled Dot-Product For-mula\T1/lmr/m/n/10.95 : At-ten-tion
- com-putes com-pat-i-bil-ity via $[] [] \OT1/lmr/bx/n/10.95 V$\T1/lmr/m/n/10.95
- ,
+ com-putes com-pat-i-bil-ity via
  []
 
-
-
-[380]
-
-[381]) (./chapters/ch05_s7_other_architectures.tex
-
-[382]
-
-[383]
-Overfull \hbox (1.91272pt too wide) in paragraph at lines 47--48
-[]\T1/lmr/bx/n/10.95 The En-coder ($\OML/lmm/m/it/10.95 f[]$\T1/lmr/bx/n/10.95 
-)\T1/lmr/m/n/10.95 : Com-presses the high-dimensional in-put $\OT1/lmr/bx/n/10.
-95 x \OMS/lmsy/m/n/10.95 2 \U/msb/m/n/10.95 R[]$ \T1/lmr/m/n/10.95 into a low-d
-imensional
- []
-
-
-
-[384]
-
-[385]
-
-[386]
+[377] [378]) (./chapters/ch05_s7_other_architectures.tex [379] [380] [381] [382
+]
 Overfull \hbox (10.7991pt too wide) in paragraph at lines 248--249
 \T1/lmr/m/n/10.95 In 2014, Ian Good-fel-low and col-leagues in-tro-duced \T1/lm
 r/bx/n/10.95 Gen-er-a-tive Ad-ver-sar-ial Net-works (GANs)\T1/lmr/m/n/10.95 .
  []
 
+[383] [384]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-[387]
-
-[388]
-
-[389]
+[385] [386]
 Overfull \hbox (9.03395pt too wide) in paragraph at lines 412--413
 \T1/lmr/m/n/10.95 Instead of trans-mit-ting raw high-frequency wave-forms (e.g.
 , 64 floating-point sam-ples $\OT1/lmr/m/n/10.95 = 256[]$\T1/lmr/m/n/10.95 ),
  []
 
-
-
-[390]
-
-[391]
-Overfull \hbox (53.97743pt too wide) in paragraph at lines 459--460
-\T1/lmr/m/n/10.95 sures $\OT1/lmr/bx/n/10.95 x \OT1/lmr/m/n/10.95 = [20\OML/lmm
-/m/it/10.95 :\OT1/lmr/m/n/10.95 0\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 50\OM
-L/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 0\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 
-101\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 3\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/
-10.95 0\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 4][]$\T1/lmr/m/n/10.95 . The au-
-toen-coder re-con-structs $[] \OT1/lmr/m/n/10.95 = [20\OML/lmm/m/it/10.95 :\OT1
-/lmr/m/n/10.95 2\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 49\OML/lmm/m/it/10.95 
-:\OT1/lmr/m/n/10.95 6\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 101\OML/lmm/m/it/
-10.95 :\OT1/lmr/m/n/10.95 0\OML/lmm/m/it/10.95 ; \OT1/lmr/m/n/10.95 0\OML/lmm/m
-/it/10.95 :\OT1/lmr/m/n/10.95 6][]$\T1/lmr/m/n/10.95 .
- []
-
-
-Overfull \hbox (3.57793pt too wide) in paragraph at lines 460--461
-[]\T1/lmr/bx/n/10.95 Bottleneck Com-pres-sion Ra-tio\T1/lmr/m/n/10.95 : An in-d
-us-trial mon-i-tor-ing sys-tem com-presses
- []
-
-
-
-[392]) (./chapters/ch06_s1_time_series.tex
-
-[393]
-Chapter 6.
-
-
-[394
-
-]
-
-[395]
-
-[396]
-
-[397] (/usr/local/texlive/2025basic/texmf-dist/tex/latex/listings/lstlang1.sty
-File: lstlang1.sty 2024/09/23 1.10c listings language file
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/listings/lstlang1.sty
-File: lstlang1.sty 2024/09/23 1.10c listings language file
-) (/usr/local/texlive/2025basic/texmf-dist/tex/latex/listings/lstmisc.sty
-File: lstmisc.sty 2024/09/23 1.10c (Carsten Heinz)
-)
-
-[398]
-
-[399]
-
-[400]
-
-[401]
-
-[402]
-Overfull \hbox (17.99156pt too wide) in paragraph at lines 455--456
-[]\T1/lmr/m/n/10.95 In time-series mod-el-ing, \T1/lmr/bx/n/10.95 you must neve
-r eval-u-ate mod-els us-ing ran-dom train/test
- []
-
-
-
-[403]
-
-[404]
-
-[405]) (./chapters/ch06_s2_computer_vision.tex
-
-[406]
-
-[407]
-
-[408]
-
-[409]
-
-[410]
-
-[411]
+[387]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
+[388]) (./chapters/ch06_s1_time_series.tex [389]
+Chapter 6.
+[390
 
+] [391]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[412]
-Overfull \hbox (28.0521pt too wide) in paragraph at lines 414--415
+[392] [393] (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2025/11/14 1.11b listings language file
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2025/11/14 1.11b listings language file
+) (/usr/local/texlive/2026/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2025/11/14 1.11b (Carsten Heinz)
+) [394] [395] [396] [397]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[398] [399] [400]) (./chapters/ch06_s2_computer_vision.tex [401] [402] [403] [4
+04] [405] [406] [407]
+Overfull \hbox (18.19708pt too wide) in paragraph at lines 414--415
 []\T1/lmr/bx/n/10.95 Lines 8--11\T1/lmr/m/n/10.95 : \T1/lmtt/m/n/10.95 x1 = tor
 ch.max(boxes1[:, 0].unsqueeze(1), boxes2[:, 0].unsqueeze(0))\T1/lmr/m/n/10.95 .
 
  []
 
-
-
-[413]
-Overfull \hbox (0.79942pt too wide) in paragraph at lines 457--458
-[]\T1/lmr/bx/n/10.95 Confusing Box Co-or-di-nate For-mats\T1/lmr/m/n/10.95 : Mi
-x-ing up the two stan-dard bounding-
+[408]
+Overfull \hbox (2.28091pt too wide) in paragraph at lines 447--448
+[]\T1/lmr/m/n/10.95 Instead of draw-ing boxes, FOMO marks cen-troids. It uses $
+\OT1/lmr/m/n/10.95 30\OMS/lmsy/m/n/10.95 ^^B$ \T1/lmr/bx/n/10.95 less mem-ory \
+T1/lmr/m/n/10.95 than MobileNet-
  []
 
-
-Overfull \hbox (7.60538pt too wide) in paragraph at lines 460--461
-[]\T1/lmr/bx/n/10.95 Center-Dimension for-mat\T1/lmr/m/n/10.95 : $\OT1/lmr/m/n/
-10.95 [\OML/lmm/m/it/10.95 x[]; y[]; []; []\OT1/lmr/m/n/10.95 ]$ \T1/lmr/m/n/10
-.95 (used by YOLO). 
- []
-
-
-
-[414]
-
-[415]) (./chapters/ch06_s3_nlp.tex
-
-[416]
+[409] [410] [411]) (./chapters/ch06_s3_nlp.tex [412]
 Overfull \hbox (22.83511pt too wide) in paragraph at lines 28--31
  []\T1/lmr/bx/n/10.95 Why It Ex-ists: The Real-World Prob-lem[] \T1/lmr/m/n/10.
 95 Con-sider the raw text string: \T1/lmtt/m/n/10.95 "Motor overheating!
  []
 
+[413] [414]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-Overfull \hbox (2.57692pt too wide) in paragraph at lines 31--32
-[]\T1/lmr/m/n/10.95 Should we split strictly on whites-pace? That leaves punc-t
-u-a-tion at-tached: \T1/lmtt/m/n/10.95 "overheating!"
- []
-
-
-
-[417]
-Overfull \hbox (0.28108pt too wide) in paragraph at lines 42--43
-[]\T1/lmr/bx/n/10.95 Character-Level To-k-eniza-tion\T1/lmr/m/n/10.95 : Slices 
-text into in-di-vid-ual char-ac-ters (\T1/lmtt/m/n/10.95 ['M', 'o', 't',
- []
-
-
-
-[418]
-
-[419]
-Overfull \hbox (10.69716pt too wide) in paragraph at lines 138--140
-\T1/lmr/m/n/10.95 Notice that \T1/lmtt/m/n/10.95 "temperature" \T1/lmr/m/n/10.9
-5 re-ceives a sig-nif-i-cantly higher weight ($\OT1/lmr/m/n/10.95 0\OML/lmm/m/i
-t/10.95 :\OT1/lmr/m/n/10.95 5644$\T1/lmr/m/n/10.95 ) than \T1/lmtt/m/n/10.95 "m
-otor"
- []
-
-
+[415]
 Overfull \hbox (3.37526pt too wide) in paragraph at lines 156--158
 \T1/lmr/m/n/10.95 model be-lieves that \T1/lmtt/m/n/10.95 "motor" \T1/lmr/m/n/1
 0.95 and \T1/lmtt/m/n/10.95 "engine" \T1/lmr/m/n/10.95 are as com-pletely un-re
@@ -3018,116 +2128,45 @@ Overfull \hbox (3.37526pt too wide) in paragraph at lines 156--158
 banana"\T1/lmr/m/n/10.95 !
  []
 
-
-
-[420]
-Overfull \hbox (0.5422pt too wide) in paragraph at lines 172--173
-\T1/lmr/m/n/10.95 text words (e.g., given \T1/lmtt/m/n/10.95 ["hydraulic", "flu
-id", "____", "drop"]\T1/lmr/m/n/10.95 , pre-dict \T1/lmtt/m/n/10.95 "pressure"\
-T1/lmr/m/n/10.95 ). 
- []
-
-
-Overfull \hbox (9.7829pt too wide) in paragraph at lines 236--238
+[416]
+Overfull \hbox (9.7829pt too wide) in paragraph at lines 236--239
  []\T1/lmr/bx/n/10.95 From Static to Con-tex-tual Em-bed-dings: The Trans-forme
 r Rev-o-lu-tion[] \T1/lmr/m/n/10.95 While Word2Vec
  []
 
+[417]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-[421]
-
-[422]
-
-[423]
-Overfull \hbox (5.14261pt too wide) in paragraph at lines 365--366
-[]\T1/lmr/bx/n/10.95 Line 12\T1/lmr/m/n/10.95 : \T1/lmtt/m/n/10.95 nn.Embedding
-Bag(vocab_size, embed_dim, mode='mean')\T1/lmr/m/n/10.95 . An \T1/lmtt/m/n/10.9
-5 EmbeddingBag
- []
-
-
-
-[424]
-
-[425]
-Overfull \hbox (1.70383pt too wide) in paragraph at lines 442--443
-[]\T1/lmr/m/n/10.95 Calculate the In-verse Doc-u-ment Fre-quency $[]\OT1/lmr/m/
-n/10.95 ([]\OML/lmm/m/it/10.95 ; \OMS/lmsy/m/n/10.95 D\OT1/lmr/m/n/10.95 )$ \T1
-/lmr/m/n/10.95 us-ing Equa-
- []
-
-
-
-[426]) (./chapters/ch06_s4_llms.tex
-
-[427]
-
-[428]
-
-[429]
-Overfull \hbox (20.95041pt too wide) in paragraph at lines 121--122
+[418] [419] [420] [421] [422]) (./chapters/ch06_s4_llms.tex [423] [424]
+Overfull \hbox (11.0954pt too wide) in paragraph at lines 121--122
 []\T1/lmr/m/n/10.95 Modern in-fer-ence frame-works (such as llama.cpp and Ope-n
 AI JSON mode) sup-port \T1/lmr/bx/n/10.95 Grammar-
  []
 
 
+Underfull \vbox (badness 1831) has occurred while \output is active []
 
-[430]
-Overfull \hbox (23.6706pt too wide) in paragraph at lines 202--203
+[425] [426]
+Overfull \hbox (7.2456pt too wide) in paragraph at lines 202--203
 []\T1/lmr/m/n/10.95 The LLM gen-er-ates: \T1/lmtt/m/n/10.95 "The maximum torque
  for bolt M12 is 85 Nm (Section 4.2)."\T1/lmr/m/n/10.95 . 
  []
 
-
-
-[431]
-
-[432]
-
-[433]
-
-[434]
-Overfull \hbox (6.62671pt too wide) in paragraph at lines 424--425
-[]\T1/lmr/bx/n/10.95 Air-Gapped Pri-vacy\T1/lmr/m/n/10.95 : In-dus-trial teleme
--try and pro-pri-etary as-sem-bly blueprints
+[427] [428] [429]
+Overfull \hbox (8.10156pt too wide) in paragraph at lines 411--412
+[]\T1/lmr/bx/n/10.95 Line 34\T1/lmr/m/n/10.95 : \T1/lmtt/m/n/10.95 similarity_s
+cores = torch.matmul(doc_embeddings, query_embedding)\T1/lmr/m/n/10.95 . Per-
  []
 
+[430] [431] [432] [433]) (./chapters/ch06_s5_generative_models.tex
+Underfull \vbox (badness 5893) has occurred while \output is active []
 
-Overfull \hbox (13.35983pt too wide) in paragraph at lines 426--427
-\T1/lmr/m/n/10.95 ered dur-ing a storm, the lo-cal edge safety sys-tem con-tin-
-ues op-er-at-ing au-tonomously. 
- []
-
-
-
-[435]
-
-[436]
-
-[437]
-
-[438]) (./chapters/ch06_s5_generative_models.tex
-
-[439]
-Underfull \vbox (badness 1629) has occurred while \output is active []
-
-
-
-[440]
-
-[441]
-
-[442]
-
-[443]
+[434] [435] [436] [437] [438]
 Overfull \hbox (4.86346pt too wide) in paragraph at lines 334--335
  [][] 
  []
 
-
-
-[444]
+[439]
 Underfull \hbox (badness 10000) in paragraph at lines 359--359
 []\T1/lmr/bx/n/10 Variational Au-toen-
  []
@@ -3257,31 +2296,16 @@ Underfull \hbox (badness 10000) in paragraph at lines 368--368
 \T1/lmr/m/n/10 ef-fi-ciently on edge
  []
 
+[440] [441]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
+[442] [443]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[445]
+[444]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[446]
-
-[447]
-
-[448]
-Overfull \hbox (4.12697pt too wide) in paragraph at lines 539--541
-\T1/lmr/m/n/10.95 robotics. If your ap-pli-ca-tion de-mands gen-er-at-ing a sam
--ple in un-der $\OT1/lmr/m/n/10.95 5 []$
- []
-
-
-
-[449]
-
-[450]) (./chapters/ch06_s6_rl_gnn.tex
-
-[451]
-
-[452]
-
-[453]
+[445] [446]) (./chapters/ch06_s6_rl_gnn.tex [447] [448] [449]
 Overfull \hbox (30.57973pt too wide) in paragraph at lines 123--125
  []\T1/lmr/bx/n/10.95 Formal MDP Def-i-ni-tion[] \T1/lmr/m/n/10.95 A Markov De-
 ci-sion Pro-cess is for-mally de-fined by a 5-tuple $\OT1/lmr/m/n/10.95 (\OMS/l
@@ -3290,95 +2314,38 @@ msy/m/n/10.95 S\OML/lmm/m/it/10.95 ; \OMS/lmsy/m/n/10.95 A\OML/lmm/m/it/10.95 ;
 10.95 ; ^^M\OT1/lmr/m/n/10.95 )$\T1/lmr/m/n/10.95 : 
  []
 
-
-
-[454]
-
-[455]
-
-[456]
-Overfull \hbox (63.13864pt too wide) in paragraph at lines 217--218
+[450] [451]
+Underfull \hbox (badness 3354) in paragraph at lines 217--218
 []\T1/lmr/m/n/10.95 States $\OMS/lmsy/m/n/10.95 S \OT1/lmr/m/n/10.95 = \OMS/lms
 y/m/n/10.95 f\OML/lmm/m/it/10.95 S[] \OT1/lmr/m/n/10.95 : []\OML/lmm/m/it/10.95
- ;  S[] \OT1/lmr/m/n/10.95 : []\OML/lmm/m/it/10.95 ;  S[] \OT1/lmr/m/n/10.95 : 
-[]\OMS/lmsy/m/n/10.95 g$ 
+ ;  S[] \OT1/lmr/m/n/10.95 : []\OML/lmm/m/it/10.95 ;  S[] \OT1/lmr/m/n/10.95 :
  []
 
 
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[457]
+[452] [453] [454] [455] [456] [457] [458]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[458]
-
-[459]
-
-[460]
-
-[461]
+[459] [460] [461]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [462]
+Underfull \vbox (badness 1466) has occurred while \output is active []
 
-[463]
-
-[464]
-
-[465]
-
-[466]
-Overfull \hbox (6.52022pt too wide) in paragraph at lines 702--703
-[]\T1/lmr/bx/n/10.95 Online RL Train-ing on MCUs\T1/lmr/m/n/10.95 : Stor-ing ne
-u-ral net-work re-play buffers ($\OT1/lmr/m/n/10.95 100[]000$
- []
-
-
-Overfull \hbox (1.03633pt too wide) in paragraph at lines 714--715
-\T1/lmr/m/n/10.95 **over-smoothing**: re-peat-edly av-er-ag-ing neigh-bor-hood 
-fea-tures causes all node
- []
-
-
-
-[467]
-
-[468]
-
-[469])
-
-[470]
-
-[471
+[463]) [464] [465
 
 ] (./chapters/ch07_s1_sensor_pipeline.tex
 Chapter 7.
+[466
 
+] [467]
+Underfull \vbox (badness 1292) has occurred while \output is active []
 
-[472
+[468] [469]
+Underfull \vbox (badness 5302) has occurred while \output is active []
 
-]
-
-[473]
-
-[474]
-
-[475]
-
-[476]
-
-[477]
-
-[478]
-
-[479]
-
-[480]) (./chapters/ch07_s2_edge_vs_cloud.tex
-
-[481]
-Overfull \hbox (0.25119pt too wide) in paragraph at lines 29--30
-\T1/lmr/m/n/10.95 try or audio-visual data to net-work in-ter-cep-tion and cen-
-tral-ized stor-age breaches. 
- []
-
-
+[470] [471] [472] [473] [474]) (./chapters/ch07_s2_edge_vs_cloud.tex [475]
 Overfull \hbox (30.52931pt too wide) in paragraph at lines 84--85
  [][] 
  []
@@ -3390,18 +2357,14 @@ Overfull \hbox (32.16495pt too wide) in paragraph at lines 94--96
 
  []
 
-
-
-[482]
-Overfull \hbox (25.32808pt too wide) in paragraph at lines 110--111
+[476]
+Overfull \hbox (15.47307pt too wide) in paragraph at lines 110--111
 []\T1/lmr/m/n/10.95 An in-dus-trial man-u-fac-tur-ing plant with 200 mon-i-tore
 d mo-tors would gen-er-ate over $\OT1/lmr/m/n/10.95 1\OML/lmm/m/it/10.95 :\OT1/
 lmr/m/n/10.95 03 []$
  []
 
-
-
-[483]
+[477]
 Underfull \hbox (badness 1281) in paragraph at lines 153--153
 []\T1/lmr/bx/n/10 Favor On-Device Edge In-fer-
  []
@@ -3452,93 +2415,32 @@ Underfull \hbox (badness 2894) in paragraph at lines 159--160
 []\T1/lmr/m/n/10 Non-sensitive en-vi-ron-men-tal data
  []
 
+[478]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-[484]
-Overfull \hbox (3.55992pt too wide) in paragraph at lines 183--184
-[]\T1/lmr/m/n/10.95 Power sup-ply: Single-cell Lithium-ion bat-tery ($\OT1/lmr/
-m/n/10.95 3\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 7 []$\T1/lmr/m/n/10.95 , $\O
-T1/lmr/m/n/10.95 2[]500 [] = 9[]250 [] =
- []
-
-
-Overfull \hbox (16.33705pt too wide) in paragraph at lines 191--192
-[]\T1/lmr/m/n/10.95 Data gen-er-ated per 1-second burst: $\OT1/lmr/m/n/10.95 3[
-] \OMS/lmsy/m/n/10.95 ^^B \OT1/lmr/m/n/10.95 1[]000[] \OMS/lmsy/m/n/10.95 ^^B \
-OT1/lmr/m/n/10.95 2[] = 6[]000 [] \OMS/lmsy/m/n/10.95 ^^Y
- []
-
-
-
-[485]
-Overfull \hbox (15.28072pt too wide) detected at line 210
-[]
- []
-
-
-
-[486]
-Overfull \hbox (148.1104pt too wide) in paragraph at lines 295--296
+[479] [480]
+Overfull \hbox (138.25539pt too wide) in paragraph at lines 295--296
 []\T1/lmr/bx/n/10.95 Mechanism\T1/lmr/m/n/10.95 : The edge de-vice ini-ti-ates 
 a con-nec-tion to a spe-cific URL (e.g., \T1/lmtt/m/n/10.95 POST https://api.pl
 ant.com/v1/predict\T1/lmr/m/n/10.95 ),
  []
 
+[481] [482] [483] [484]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-[487]
-Overfull \hbox (14.85pt too wide) in paragraph at lines 304--305
-\T1/lmr/m/n/10.95 sen-sor **pub-lishes** mes-sages to a hi-er-ar-chi-cal string
- topic (e.g., \T1/lmtt/m/n/10.95 site_a/pump_3/vibration\T1/lmr/m/n/10.95 ).
- []
-
-
-
-[488]
-
-[489]
-
-[490]
-
-[491]
-Overfull \hbox (6.86137pt too wide) in paragraph at lines 473--474
-\T1/lmr/m/n/10.95 mak-ing it suit-able for edge gate-ways and cloud REST APIs. 
-MQTT is lightweight,
- []
-
-
-
-[492]) (./chapters/ch07_s3_tinyml_toolchain.tex
-Overfull \hbox (0.2952pt too wide) in paragraph at lines 8--9
-\T1/lmr/m/n/10.95 garbage col-lec-tion), floating-point hard-ware ac-cel-er-a-t
-ors (GPUs), and un-con-strained power. 
- []
-
-
-
-[493]
-Overfull \hbox (12.1277pt too wide) in paragraph at lines 25--26
-\T1/lmr/m/n/10.95 com-put-ers** run-ning full op-er-at-ing sys-tems (An-droid, 
-iOS, Rasp-berry Pi, NVIDIA
- []
-
-
-
-[494]
+[485] [486]) (./chapters/ch07_s3_tinyml_toolchain.tex [487] [488]
 Overfull \hbox (8.458pt too wide) in paragraph at lines 135--136
  [][] 
  []
 
 
-Overfull \hbox (154.81035pt too wide) in paragraph at lines 148--149
-[]\T1/lmr/bx/n/10.95 From Ten-sor-Flow/K-eras\T1/lmr/m/n/10.95 : Keras mod-els 
-con-vert na-tively us-ing \T1/lmtt/m/n/10.95 tf.lite.TFLiteConverter.from_keras
-_model(model)\T1/lmr/m/n/10.95 . 
+Overfull \hbox (144.95534pt too wide) in paragraph at lines 148--149
+[]\T1/lmr/bx/n/10.95 From Ten-sor-Flow/Keras\T1/lmr/m/n/10.95 : Keras mod-els c
+on-vert na-tively us-ing \T1/lmtt/m/n/10.95 tf.lite.TFLiteConverter.from_keras_
+model(model)\T1/lmr/m/n/10.95 . 
  []
 
 
-
-[495]
 Overfull \hbox (1.85278pt too wide) in paragraph at lines 153--154
 \T1/lmr/m/n/10.95 Standard ma-chine learn-ing mod-els store weights and ac-ti-v
 a-tions as 32-bit single-precision floating-
@@ -3551,7 +2453,7 @@ tin-u-ous 32-bit floating-point num-bers $\OML/lmm/m/it/10.95 r \OMS/lmsy/m/n/1
 0.95 2 \OT1/lmr/m/n/10.95 [\OML/lmm/m/it/10.95 r[]; r[]\OT1/lmr/m/n/10.95 ]$
  []
 
-
+[489]
 Overfull \hbox (3.20876pt too wide) in paragraph at lines 177--178
  []\T1/lmr/bx/n/10.95 The Need for a Rep-re-sen-ta-tive Cal-i-bra-tion Dataset[
 ] \T1/lmr/m/n/10.95 Quan-tiz-ing model weights is straight-
@@ -3563,116 +2465,85 @@ Overfull \hbox (9.77036pt too wide) in paragraph at lines 182--183
 em path like \T1/lmtt/m/n/10.95 "/home/user/model.tflite"\T1/lmr/m/n/10.95 .
  []
 
-
-
-[496]
-
-[497]
-Overfull \hbox (38.49458pt too wide) in paragraph at lines 313--314
+[490] [491]
+Overfull \hbox (28.63957pt too wide) in paragraph at lines 313--314
 \T1/lmr/m/n/10.95 into the bi-nary. In TinyML, Flash stor-age is severely con-s
 trained. Us-ing \T1/lmtt/m/n/10.95 tflite::AllOpsResolver
  []
 
 
+Overfull \hbox (142.27832pt too wide) in paragraph at lines 313--314
+\T1/lmr/m/n/10.95 links hun-dreds of un-used op-er-a-tors, wast-ing up to $\OT1
+/lmr/m/n/10.95 200 []$ \T1/lmr/m/n/10.95 of Flash! In-stead, we use \T1/lmtt/m/
+n/10.95 tflite::MicroMutableOpResolver<N>\T1/lmr/m/n/10.95 ,
+ []
 
-[498]
-Overfull \hbox (70.59341pt too wide) in paragraph at lines 320--321
+
+Overfull \hbox (12.10689pt too wide) in paragraph at lines 313--314
+\T1/lmr/m/n/10.95 reg-is-ter-ing only the ex-act op-er-a-tors used by our model
+ (e.g., \T1/lmtt/m/n/10.95 AddFullyConnected()\T1/lmr/m/n/10.95 , \T1/lmtt/m/n/
+10.95 AddRelu()\T1/lmr/m/n/10.95 ,
+ []
+
+
+Overfull \hbox (60.7384pt too wide) in paragraph at lines 320--321
 \T1/lmr/m/n/10.95 copied into \T1/lmtt/m/n/10.95 interpreter->input(0)\T1/lmr/m
 /n/10.95 , and clas-si-fi-ca-tions are read di-rectly from \T1/lmtt/m/n/10.95 i
 nterpreter->output(0)\T1/lmr/m/n/10.95 . 
  []
 
+[492
 
-Overfull \hbox (24.8163pt too wide) in paragraph at lines 336--337
+]
+Overfull \hbox (14.96129pt too wide) in paragraph at lines 336--337
 \T1/lmr/m/n/10.95 (ESP32, Ar-duino, Rasp-berry Pi Pico) con-nected via USB Se-r
 ial us-ing the \T1/lmtt/m/n/10.95 edge-impulse-daemon
  []
 
 
+Overfull \hbox (19.96936pt too wide) in paragraph at lines 340--341
+[]\T1/lmr/bx/n/10.95 The Learn-ing Block\T1/lmr/m/n/10.95 : Cou-ples the DSP ou
+t-put to a neu-ral net-work clas-si-fier (Keras/TFLite)
+ []
 
-[499]
-
-[500]
-Overfull \hbox (28.89558pt too wide) in paragraph at lines 436--437
+[493] [494]
+Overfull \hbox (12.4706pt too wide) in paragraph at lines 436--437
 []\T1/lmtt/m/n/10.95 converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLI
 TE_BUILTINS_INT8]\T1/lmr/m/n/10.95 :
  []
 
-
-
-[501]
+[495]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-
-[502]
-Overfull \hbox (42.14482pt too wide) in paragraph at lines 560--561
+[496]
+Underfull \hbox (badness 2990) in paragraph at lines 560--561
 []\T1/lmr/bx/n/10.95 Measurement\T1/lmr/m/n/10.95 : In-spect-ing the com-piler 
 map file (\T1/lmtt/m/n/10.95 .map\T1/lmr/m/n/10.95 ) or run-ning \T1/lmtt/m/n/1
-0.95 size firmware.elf\T1/lmr/m/n/10.95 . 
+0.95 size
  []
 
-
-Overfull \hbox (1.97552pt too wide) in paragraph at lines 566--567
-[]\T1/lmr/m/n/10.95 The Ten-sor Arena must be sized ac-cu-rately. If set too sm
-all, \T1/lmtt/m/n/10.95 AllocateTensors()
- []
-
-
-
-[503]
-Overfull \hbox (6.35825pt too wide) in paragraph at lines 590--592
-\T1/lmr/m/n/10.95 copies raw float val-ues (such as $\OT1/lmr/m/n/10.95 24\OML/
-lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 5$\T1/lmr/m/n/10.95 ) di-rectly into \T1/lmt
-t/m/n/10.95 input_tensor->data.int8[0]\T1/lmr/m/n/10.95 ,
- []
-
-
-
-[504]
-Overfull \hbox (20.52151pt too wide) in paragraph at lines 604--605
-[]\T1/lmr/bx/n/10.95 Int8 Quan-ti-za-tion\T1/lmr/m/n/10.95 : Maps 32-bit floats
- to signed 8-bit in-te-gers via $\OML/lmm/m/it/10.95 q \OT1/lmr/m/n/10.95 = [](
-\OML/lmm/m/it/10.95 r=S\OT1/lmr/m/n/10.95 ) +
- []
-
-
-Overfull \hbox (65.40337pt too wide) in paragraph at lines 622--623
+[497]
+Underfull \hbox (badness 10000) in paragraph at lines 622--623
 []\T1/lmr/bx/n/10.95 Architectural Anal-y-sis\T1/lmr/m/n/10.95 : What is the pr
-i-mary dif-fer-ence be-tween \T1/lmtt/m/n/10.95 tflite::AllOpsResolver
+i-mary dif-fer-ence be-tween
  []
 
 
-
-[505]
-Overfull \hbox (6.827pt too wide) in paragraph at lines 663--665
-[]\T1/lmr/bx/n/10.95 AllOpsResolver vs. Mi-cro-MutableO-pRe-solver\T1/lmr/m/n/1
-0.95 : \T1/lmtt/m/n/10.95 AllOpsResolver \T1/lmr/m/n/10.95 reg-is-ters ev-ery m
-ath-
- []
-
-) (./chapters/ch07_s4_model_compression.tex
-
-[506]
-Overfull \hbox (3.05959pt too wide) in paragraph at lines 12--13
-[]\T1/lmr/bx/n/10.95 Clock fre-quency\T1/lmr/m/n/10.95 : $\OT1/lmr/m/n/10.95 64
- []$ \T1/lmr/m/n/10.95 to $\OT1/lmr/m/n/10.95 240 []$\T1/lmr/m/n/10.95 , of-ten
- lack-ing hard-ware floating-point units (FPUs). 
+Underfull \hbox (badness 2376) in paragraph at lines 622--623
+\T1/lmtt/m/n/10.95 tflite::AllOpsResolver \T1/lmr/m/n/10.95 and \T1/lmtt/m/n/10
+.95 tflite::MicroMutableOpResolver\T1/lmr/m/n/10.95 , and why is
  []
 
 
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[507]
-
-[508]
+[498] [499]) (./chapters/ch07_s4_model_compression.tex [500] [501]
 Overfull \hbox (13.23434pt too wide) in paragraph at lines 183--184
  []\T1/lmr/bx/n/10.95 Quantization-Aware Train-ing (QAT)[] \T1/lmr/m/n/10.95 To
  pre-vent ac-cu-racy col-lapse, we uti-lize \T1/lmr/bx/n/10.95 Quantization-
  []
 
-
-
-[509]
+[502]
 Underfull \hbox (badness 10000) in paragraph at lines 252--252
 []\T1/lmr/bx/n/10 Post-Training Quan-ti-za-tion
  []
@@ -3692,57 +2563,20 @@ Underfull \hbox (badness 1127) in paragraph at lines 255--255
 []\T1/lmr/bx/n/10 Training Code Ac-
  []
 
-
-
-[510]
-
-[511]
-Overfull \hbox (15.70822pt too wide) in paragraph at lines 319--320
-[]\T1/lmr/bx/n/10.95 Method B (Knowl-edge Dis-til-la-tion)\T1/lmr/m/n/10.95 : A
- vet-eran mas-ter en-gi-neer (the \T1/lmr/bx/n/10.95 Teacher\T1/lmr/m/n/10.95 )
-
- []
-
-
-
-[512]
-
-[513]
-
-[514]
-
-[515]
-Overfull \hbox (6.4783pt too wide) in paragraph at lines 527--528
-\T1/lmtt/m/n/10.95 F.log_softmax(student_logits / T) \T1/lmr/m/n/10.95 and Line
- 35 com-putes \T1/lmtt/m/n/10.95 F.softmax(teacher_logits
- []
-
-
-Overfull \hbox (24.63716pt too wide) in paragraph at lines 528--529
+[503] [504] [505] [506] [507] [508]
+Overfull \hbox (14.78215pt too wide) in paragraph at lines 528--529
 []\T1/lmr/bx/n/10.95 Lines 65--75\T1/lmr/m/n/10.95 : We ap-ply struc-tured prun
 -ing us-ing \T1/lmtt/m/n/10.95 prune.ln_structured\T1/lmr/m/n/10.95 . Set-ting 
 \T1/lmtt/m/n/10.95 amount=0.25
  []
 
 
-Overfull \hbox (12.02158pt too wide) in paragraph at lines 545--546
-\T1/lmr/m/n/10.95 Depth-wise Sep-a-ra-ble Con-vo-lu-tions, re-duc-ing base-line
- pa-ram-e-ters from $\OT1/lmr/m/n/10.95 950[]000$
- []
+Underfull \vbox (badness 2818) has occurred while \output is active []
 
+[509]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-[516]
-Overfull \hbox (5.93422pt too wide) in paragraph at lines 582--583
-[]\T1/lmr/bx/n/10.95 Quantization-Aware Train-ing (QAT)\T1/lmr/m/n/10.95 : Sim-
-u-lates in-te-ger clamp-ing and round-
- []
-
-
-
-[517]
-
-[518]) (./chapters/ch07_s5_hardware_deployment.tex
+[510] [511]) (./chapters/ch07_s5_hardware_deployment.tex
 Overfull \hbox (1.17677pt too wide) in paragraph at lines 22--23
 \T1/lmr/m/n/10.95 The Espres-sif ESP32 has emerged as the workhorse mi-cro-con-
 troller of the IoT in-dus-try. Equipped
@@ -3750,36 +2584,19 @@ troller of the IoT in-dus-try. Equipped
 
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <8> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 42.
-
-
-[519]
-Overfull \hbox (20.43279pt too wide) in paragraph at lines 62--63
+[512]
+Overfull \hbox (10.57777pt too wide) in paragraph at lines 62--63
 \T1/lmr/m/n/10.95 driven ADC sam-pling, dig-i-tal fil-ter-ing, fea-ture ex-trac
 -tion, and call-ing \T1/lmtt/m/n/10.95 interpreter->Invoke()\T1/lmr/m/n/10.95 .
  
  []
 
-
-
-[520]
-Overfull \hbox (0.17485pt too wide) in paragraph at lines 105--106
-[]\T1/lmr/bx/n/10.95 Non-Volatile Flash Mem-ory (Stor-age)\T1/lmr/m/n/10.95 : S
-tores com-piled ma-chine in-struc-tions (\T1/lmtt/m/n/10.95 .text\T1/lmr/m/n/10
-.95 ),
- []
-
-
-Overfull \hbox (58.00473pt too wide) in paragraph at lines 111--118
+[513]
+Overfull \hbox (48.14972pt too wide) in paragraph at lines 111--118
  [] 
  []
 
-
-
-[521]
-
-[522]
-
-[523]
+[514] [515] [516]
 Overfull \hbox (6.43033pt too wide) in paragraph at lines 304--305
  []\T1/lmr/bx/n/10.95 The Dual-Bank OTA Par-ti-tion Scheme[] \T1/lmr/m/n/10.95 
 In stan-dard mi-cro-con-trollers, flash-ing new firmware
@@ -3787,189 +2604,132 @@ In stan-dard mi-cro-con-trollers, flash-ing new firmware
 
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <6> not available
 (Font)              Font shape `T1/lmtt/b/n' tried instead on input line 345.
-
-
-[524]
-Overfull \hbox (14.2047pt too wide) in paragraph at lines 357--358
-[]\T1/lmr/m/n/10.95 If the self-test passes, the firmware calls \T1/lmtt/m/n/10
-.95 esp_ota_mark_app_valid_cancel_rollback()\T1/lmr/m/n/10.95 ,
- []
-
-
-
-[525]
-
-[526]
+[517] [518] [519]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-
-[527]
-
-[528]
-
-[529]
-
-[530]
-Overfull \hbox (2.29362pt too wide) in paragraph at lines 679--681
-[]\T1/lmr/bx/n/10.95 GPIO Os-cil-lo-scope Pro-fil-ing vs. Soft-ware Timers\T1/l
-mr/m/n/10.95 : Soft-ware timers (such as \T1/lmtt/m/n/10.95 micros()
+[520] [521] [522]
+Underfull \hbox (badness 2237) in paragraph at lines 635--636
+[]\T1/lmr/bx/n/10.95 Hardware Pro-fil-ing\T1/lmr/m/n/10.95 : Pro-file ex-e-cu-t
+ion la-tency us-ing both soft-ware timers
  []
 
-
-
-[531]) (./chapters/ch08_s1_experiment_management.tex
-
-[532]
+[523]) (./chapters/ch08_s1_experiment_management.tex [524]
 Chapter 8.
 
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[533
+[525
 
 ]
-Overfull \hbox (51.98288pt too wide) in paragraph at lines 57--58
+Overfull \hbox (35.55789pt too wide) in paragraph at lines 57--58
 []\T1/lmr/m/n/10.95 Examples: \T1/lmtt/m/n/10.95 learning_rate = 0.001\T1/lmr/m
 /n/10.95 , \T1/lmtt/m/n/10.95 batch_size = 32\T1/lmr/m/n/10.95 , \T1/lmtt/m/n/1
 0.95 window_size_ms = 500\T1/lmr/m/n/10.95 , \T1/lmtt/m/n/10.95 filter_type
  []
 
-
-
-[534]
-Overfull \hbox (6.58643pt too wide) in paragraph at lines 134--135
-[]\T1/lmr/m/n/10.95 Line 16: We bun-dle model hy-per-pa-ram-e-ters and phys-i-c
-al hard-ware con-straints (\T1/lmtt/m/n/10.95 target_mcu:
+[526]
+Overfull \hbox (7.20677pt too wide) in paragraph at lines 133--134
+[]\T1/lmr/m/n/10.95 Line 7: \T1/lmtt/m/n/10.95 mlflow.set_tracking_uri("sqlite:
+///mlflow_edge.db") \T1/lmr/m/n/10.95 ini-tial-izes a lo-cal, server-
  []
 
 
-Overfull \hbox (64.96472pt too wide) in paragraph at lines 136--137
+Overfull \hbox (55.10971pt too wide) in paragraph at lines 136--137
 []\T1/lmr/m/n/10.95 Lines 40--42: We record both clas-si-cal ac-cu-racy and \T1
 /lmr/bx/n/10.95 edge hard-ware met-rics \T1/lmr/m/n/10.95 (\T1/lmtt/m/n/10.95 f
 lash_footprint_bytes\T1/lmr/m/n/10.95 ,
  []
 
-
-
-[535]
-
-[536]
-
-[537]
-
-[538]
-
-[539]
-Overfull \hbox (5.18214pt too wide) in paragraph at lines 352--353
-[]\T1/lmr/bx/n/10.95 Dependency Pin-ning Risks\T1/lmr/m/n/10.95 : A team-mate l
-eaves an un-pinned re-quire-ment \T1/lmtt/m/n/10.95 scikit-learn
+[527] [528] [529] [530] [531]
+Overfull \hbox (1.05666pt too wide) in paragraph at lines 344--345
+[]\T1/lmr/bx/n/10.95 Tracking Met-rics on Mi-cro-con-trollers\T1/lmr/m/n/10.95 
+: In an ex-per-i-ment track-ing dash-board for TinyML
  []
 
 
+Overfull \hbox (4.35182pt too wide) in paragraph at lines 346--347
+[]\T1/lmr/bx/n/10.95 Pseudo-Random Num-ber Gen-er-a-tion\T1/lmr/m/n/10.95 : Us-
+ing the Lin-ear Con-gru-en-tial Gen-er-a-tor $\OML/lmm/m/it/10.95 X[] \OT1/lmr/
+m/n/10.95 =
+ []
 
-[540]) (./chapters/ch08_s2_serving.tex
+[532]) (./chapters/ch08_s2_serving.tex [533]
+Underfull \vbox (badness 6808) has occurred while \output is active []
 
-[541]
-
-[542]
-
-[543]
-
-[544]
-
-[545]
+[534] [535] [536] [537]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-
-[546]
-Overfull \hbox (33.58879pt too wide) in paragraph at lines 321--322
+[538]
+Overfull \hbox (23.73378pt too wide) in paragraph at lines 321--322
 []\T1/lmr/bx/n/10.95 Lines 9--19\T1/lmr/m/n/10.95 : De-fines the \T1/lmtt/m/n/1
 0.95 SensorTelemetryRequest \T1/lmr/m/n/10.95 schema us-ing Py-dan-tic. No-tice
  \T1/lmtt/m/n/10.95 min_items=4,
  []
 
+[539] [540] [541]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-[547]
-
-[548]
-
-[549]
-Overfull \hbox (8.25908pt too wide) in paragraph at lines 481--482
-[]\T1/lmr/bx/n/10.95 Conceptual\T1/lmr/m/n/10.95 : Why does load-ing ma-chine l
-earn-ing model weights in-side a FastAPI
- []
-
-
-
-[550]
-
-[551]) (./chapters/ch08_s3_operations.tex
-
-[552]
-
-[553]
+[542] [543]) (./chapters/ch08_s3_operations.tex [544] [545]
 Overfull \hbox (10.52104pt too wide) in paragraph at lines 110--111
  [][] 
  []
 
-
-
-[554]
-
-[555]
+[546] [547]
 Overfull \hbox (77.86992pt too wide) in paragraph at lines 197--207
  [][] 
  []
 
-
-
-[556]
-
-[557]
-
-[558]
-
-[559]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-
-[560]
-
-[561]
-
-[562]
-
-[563]
-
-[564]
-Overfull \hbox (5.77332pt too wide) in paragraph at lines 590--591
-[]\T1/lmr/bx/n/10.95 Deployment Strate-gies\T1/lmr/m/n/10.95 : Ex-plain the cor
-e op-er-a-tional mech-a-nism of a \T1/lmr/bx/n/10.95 Shadow
+[548]
+Overfull \hbox (4.76118pt too wide) in paragraph at lines 225--226
+[]$\OML/lmm/m/it/10.95 Q[]$ \T1/lmr/m/n/10.95 is the frac-tion of to-tal sam-pl
+es in bin $\OML/lmm/m/it/10.95 k$ \T1/lmr/m/n/10.95 from the \T1/lmr/bx/n/10.95
+ ref-er-ence (base-line) \T1/lmr/m/n/10.95 dataset ($[][] \OML/lmm/m/it/10.95 Q
+[] \OT1/lmr/m/n/10.95 =
  []
 
 
+Overfull \hbox (8.37216pt too wide) in paragraph at lines 226--227
+[]$\OML/lmm/m/it/10.95 P[]$ \T1/lmr/m/n/10.95 is the frac-tion of to-tal sam-pl
+es in bin $\OML/lmm/m/it/10.95 k$ \T1/lmr/m/n/10.95 from the \T1/lmr/bx/n/10.95
+ cur-rent (pro-duc-tion) \T1/lmr/m/n/10.95 dataset ($[][] \OML/lmm/m/it/10.95 P
+[] \OT1/lmr/m/n/10.95 =
+ []
 
-[565]
+[549]
 
-[566])
+Package tcolorbox Warning: Using nobreak failed. Try to enlarge `lines before b
+reak' or set page breaks manually on input line 335.
 
-[567]
 
-[568
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[550] [551] [552] [553] [554]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[555]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[556] [557]
+Overfull \hbox (12.57144pt too wide) in paragraph at lines 650--651
+[]\T1/lmr/bx/n/10.95 Compiled Bi-nary Size Quota\T1/lmr/m/n/10.95 : Ver-i-fy-in
+g that the post-quantization Flat-Buffer (\T1/lmtt/m/n/10.95 .tflite\T1/lmr/m/n
+/10.95 )
+ []
+
+
+Overfull \hbox (1.22824pt too wide) in paragraph at lines 652--653
+[]\T1/lmr/bx/n/10.95 Quantization Ac-cu-racy Degra-da-tion\T1/lmr/m/n/10.95 : V
+er-i-fy-ing that con-vert-ing weights from Float32
+ []
+
+) [558] [559
 
 ] (./chapters/ch09_s1_project1_classical.tex
 Chapter 9.
 
-Overfull \hbox (8.62971pt too wide) in paragraph at lines 17--18
-[]\T1/lmr/bx/n/10.95 Embedded TinyML De-ploy-ment\T1/lmr/m/n/10.95 : Con-vert-i
-ng the fi-nal model into pure, zero-dependency
- []
+Underfull \vbox (badness 1112) has occurred while \output is active []
 
-
-
-[569
+[560
 
 ]
 Overfull \hbox (0.20119pt too wide) in paragraph at lines 59--60
@@ -3977,238 +2737,98 @@ Overfull \hbox (0.20119pt too wide) in paragraph at lines 59--60
 95 The ma-jor-ity of failed ma-chine learn-ing projects
  []
 
-
-
-[570]
-
-[571]
-
-[572]
-
-[573]
-
-[574]
-
-[575]
+[561] [562] [563] [564] [565] [566]
 Overfull \hbox (57.2185pt too wide) in paragraph at lines 374--382
  [][] 
  []
 
-
-
-[576]
-
-[577]
-Overfull \hbox (19.25378pt too wide) in paragraph at lines 507--508
+[567] [568]
+Overfull \hbox (9.39877pt too wide) in paragraph at lines 507--508
 []\T1/lmr/bx/n/10.95 Random For-est\T1/lmr/m/n/10.95 : Achieves the best per-fo
 r-mance across all met-rics ($\OML/lmm/m/it/10.95 F[] \OT1/lmr/m/n/10.95 = 0\OM
 L/lmm/m/it/10.95 :\OT1/lmr/m/n/10.95 6912\OML/lmm/m/it/10.95 ; [] \OT1/lmr/m/n/
 10.95 =
  []
 
+[569] [570] [571]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
+[572] [573] [574] [575]) (./chapters/ch09_s2_project2_image.tex [576] [577] [57
+8] [579] [580] [581] [582] [583]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[578]
-
-[579]
-
-[580]
-
-[581]
-
-[582]
-
-[583]
-Overfull \hbox (1.57352pt too wide) in paragraph at lines 795--796
-[]\T1/lmr/bx/n/10.95 Data Leak-age\T1/lmr/m/n/10.95 : Ex-plain pre-cisely what 
-hap-pens if you ex-e-cute \T1/lmtt/m/n/10.95 scaler.fit_transform(X)
- []
-
-
-
-[584]) (./chapters/ch09_s2_project2_image.tex
+[584]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
 [585]
-
-[586]
-
-[587]
-
-[588]
-
-[589]
-
-[590]
-
-[591]
-
-[592]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-
-[593]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-
-[594]
 Overfull \hbox (12.30833pt too wide) in paragraph at lines 505--506
 []\T1/lmr/bx/n/10.95 The So-lu-tion\T1/lmr/m/n/10.95 : The ESP32-CAM in-cludes 
 $\OT1/lmr/m/n/10.95 4 []$ \T1/lmr/m/n/10.95 of ex-ter-nal \T1/lmr/bx/n/10.95 Ps
 eudo-Static RAM (PSRAM)
  []
 
+[586]
+Underfull \vbox (badness 3098) has occurred while \output is active []
 
+[587] [588]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[595]
-
-[596]
-
-[597]
-
-[598]
-
-[599]
-
-[600]) (./chapters/ch09_s3_project3_edge.tex
+[589] [590]) (./chapters/ch09_s3_project3_edge.tex [591]
 Overfull \hbox (17.12186pt too wide) in paragraph at lines 8--9
 []\T1/lmr/m/n/10.95 In in-dus-trial man-u-fac-tur-ing, min-ing, en-ergy pro-duc
 -tion, and wa-ter util-i-ties, ro-tat-ing machinery---
  []
 
-
-
-[601]
-Overfull \hbox (7.3812pt too wide) in paragraph at lines 50--51
-[]\T1/lmr/bx/n/10.95 Hardware Plat-form\T1/lmr/m/n/10.95 : Espres-sif ESP32-WRO
-OM-32 ($\OT1/lmr/m/n/10.95 240 []$ \T1/lmr/m/n/10.95 dual-core Xtensa
- []
-
-
-
-[602]
-
-[603]
-
-[604]
+[592] [593] [594]
 Overfull \hbox (98.61763pt too wide) in paragraph at lines 254--255
  [][] 
  []
 
+[595] [596] [597] [598]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
+[599]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[600] [601]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[602]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+[603] [604]
+Underfull \hbox (badness 1210) in paragraph at lines 798--800
+[]\T1/lmr/bx/n/10.95 Dynamic Mem-ory Heap Frag-men-ta-tion in Em-bed-ded Loops\
+T1/lmr/m/n/10.95 : Call-ing
+ []
 
 [605]
-
-[606]
-
-[607]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-
-[608]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-
-[609]
-
-[610]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-
-[611]
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-
-[612]
-
-[613]
-
-[614]
-
-[615]
-
-[616]
-
-[617]) (./chapters/ch09_s4_kaggle_portfolio.tex
-
-[618]
-
-[619]
-
-[620]
+[606] [607]) (./chapters/ch09_s4_kaggle_portfolio.tex [608] [609] [610] [611]
 Overfull \hbox (17.78674pt too wide) in paragraph at lines 152--153
 \T1/lmr/m/n/10.95 within thirty sec-onds. If your repos-i-tory con-sists of a s
 in-gle note-book named \T1/lmtt/m/n/10.95 model_final_v2.ipynb
  []
 
-
-
-[621]
-
-[622]
+[612] [613]
 Underfull \hbox (badness 4144) in paragraph at lines 279--279
 []\T1/lmr/bx/n/10 Constructed a stacked en-sem-ble re-gres-sion
  []
 
-
-Overfull \hbox (1.48691pt too wide) in paragraph at lines 292--293
-[]\T1/lmr/bx/n/10.95 Project 4: The Edge / TinyML Hard-ware As-set\T1/lmr/m/n/1
-0.95 : Demon-strates resource-constrained
- []
-
-
-
-[623]
-Overfull \hbox (5.77904pt too wide) in paragraph at lines 301--302
-[]\T1/lmr/m/n/10.95 Over $\OT1/lmr/m/n/10.95 95%$ \T1/lmr/m/n/10.95 of ap-pli-c
-ants sub-mit-ting ma-chine learn-ing re-sumes present iden-ti-cal projects:
- []
-
-
-Overfull \hbox (4.99455pt too wide) in paragraph at lines 318--320
-\T1/lmr/m/n/10.95 con-tain-ing generic tu-to-rial com-ments (\T1/lmtt/m/n/10.95
- ## Import libraries\T1/lmr/m/n/10.95 , \T1/lmtt/m/n/10.95 ## Train model\T1/lm
-r/m/n/10.95 ).
- []
-
-
-Overfull \hbox (3.01295pt too wide) in paragraph at lines 324--326
-[]\T1/lmr/bx/n/10.95 Unpinned De-pen-den-cies in \T1/lmtt/b/n/10.95 requirement
-s.txt\T1/lmr/m/n/10.95 : Writ-ing bare pack-age names
- []
-
-
-
-[624]
-
-[625]
-Overfull \hbox (20.05658pt too wide) in paragraph at lines 404--406
+[614] [615] [616]
+Overfull \hbox (3.63159pt too wide) in paragraph at lines 404--406
 []\T1/lmr/bx/n/10.95 Relative Er-ror Com-par-i-son\T1/lmr/m/n/10.95 : Prop-erty
  A was over-predicted by $\OT1/lmr/m/n/10.95 +10\OML/lmm/m/it/10.95 :\OT1/lmr/m
 /n/10.95 0%$ \T1/lmr/m/n/10.95 ($\OT1/lmr/m/n/10.95 $110[]\OML/lmm/m/it/10.95 =
 \OT1/lmr/m/n/10.95 $100[]$\T1/lmr/m/n/10.95 ).
  []
 
-
-
-[626]) (./chapters/ch10_s1_reading_reproducing.tex
-
-[627]
+) (./chapters/ch10_s1_reading_reproducing.tex [617]
 Chapter 10.
+[618
 
-
-[628
-
-]
-
-[629]
-
-[630]
+] [619] [620]
 Overfull \hbox (0.36421pt too wide) in paragraph at lines 123--123
 []\T1/lmr/bx/n/12 The Macro Map: Read-ing 5 Sur-vey Pa-pers on ML for IoT and T
 inyML 
@@ -4304,9 +2924,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 144--144
 \T1/lmr/m/n/10 ment, en-ergy pro-fil-ing
  []
 
-
-
-[631]
+[621]
 Underfull \hbox (badness 10000) in paragraph at lines 168--168
 []\T1/lmr/bx/n/8 Target Hard-
  []
@@ -4437,29 +3055,8 @@ Underfull \hbox (badness 10000) in paragraph at lines 179--180
 []\T1/lmr/m/n/8 High mem-ory
  []
 
-
-
-[632]
-
-[633]
-Overfull \hbox (2.1929pt too wide) in paragraph at lines 258--260
-\T1/lmr/m/n/10.95 Memory foot-print re-duc-tion: From $\OT1/lmr/m/n/10.95 3 \OM
-S/lmsy/m/n/10.95 ^^B \OT1/lmr/m/n/10.95 32[] = 96[]$ \T1/lmr/m/n/10.95 down to 
-$\OT1/lmr/m/n/10.95 3 \OMS/lmsy/m/n/10.95 ^^B \OT1/lmr/m/n/10.95 8[] + 32[] =
- []
-
-
-
-[634]
-
-[635]
-Overfull \hbox (3.42699pt too wide) in paragraph at lines 369--370
-[]\T1/lmr/m/n/10.95 A Com-par-a-tive Lit-er-a-ture Ma-trix sum-ma-rizes key fin
-d-ings, hard-ware con-straints,
- []
-
-
-Overfull \hbox (76.89pt too wide) in paragraph at lines 384--385
+[622] [623] [624] [625]
+Overfull \hbox (67.03499pt too wide) in paragraph at lines 384--385
 []\T1/lmr/bx/n/10.95 Quantization Math-e-mat-ics by Hand\T1/lmr/m/n/10.95 : Giv
 en a con-tin-u-ous weight vec-tor $\OT1/lmr/bx/n/10.95 w \OT1/lmr/m/n/10.95 = [
 \OMS/lmsy/m/n/10.95 ^^@\OT1/lmr/m/n/10.95 0\OML/lmm/m/it/10.95 :\OT1/lmr/m/n/10
@@ -4469,106 +3066,56 @@ OT1/lmr/m/n/10.95 016]$\T1/lmr/m/n/10.95 ,
  []
 
 
+Underfull \vbox (badness 2326) has occurred while \output is active []
 
-[636]) (./chapters/ch10_s2_writing.tex
+[626]) (./chapters/ch10_s2_writing.tex [627] [628] [629] [630] [631]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[637]
+[632]
+Underfull \vbox (badness 1102) has occurred while \output is active []
 
-[638]
-
-[639]
-
-[640]
-
-[641]
-
-[642]
-
-[643]
-
-[644]
-Overfull \hbox (110.27213pt too wide) in paragraph at lines 266--267
+[633]
+Overfull \hbox (100.41711pt too wide) in paragraph at lines 266--267
 \T1/lmr/m/n/10.95 from single-column to double-column for-mat, you sim-ply swap
  the class file (\T1/lmtt/m/n/10.95 \\documentclass\{neurips\_2024\}
  []
 
-
-
-[645]
-
-[646]
-Overfull \hbox (5.9325pt too wide) in paragraph at lines 393--394
-\T1/lmr/m/n/10.95 keys based on a stan-dard-ized for-mula, such as \T1/lmtt/m/n
-/10.95 [auth:lower]_[year]_[shorttitle:lower]
+[634] [635] [636] [637]
+Underfull \hbox (badness 1038) in paragraph at lines 478--480
+[]\T1/lmr/bx/n/10.95 The Un-cap-i-tal-ized BibT[]X Acronym Trap\T1/lmr/m/n/10.9
+5 : BibT[]X down-cases ti-tles by
  []
 
-
-
-[647]
-Overfull \hbox (2.953pt too wide) in paragraph at lines 441--442
-[]\T1/lmtt/m/n/10.95 \\citep\{warden_2019\}\T1/lmr/m/n/10.95 : Par-en-thet-i-ca
-l ci-ta-tion, ren-der-ing as \T1/lmr/m/it/10.95 ``...on mi-cro-con-trollers
+[638] [639]
+Underfull \hbox (badness 1337) in paragraph at lines 525--526
+[]\T1/lmr/bx/n/10.95 BibT[]X Cas-ing\T1/lmr/m/n/10.95 : Why does the BibT[]X en
+-try \T1/lmtt/m/n/10.95 title = \{A Survey of IoT
  []
 
-
-
-[648]
-Overfull \hbox (38.5383pt too wide) in paragraph at lines 460--462
-\T1/lmr/m/n/10.95 us-ing cycle-accurate mi-crosec-ond hard-ware timers (such as
- \T1/lmtt/m/n/10.95 esp\_timer\_get\_time()\T1/lmr/m/n/10.95 ),
- []
-
-
-
-[649]
-
-[650]
-
-[651]
-
-[652]) (./chapters/ch10_s3_direction.tex
-
-[653]
-
-[654]
+[640] [641]) (./chapters/ch10_s3_direction.tex [642] [643]
 Overfull \hbox (1.57721pt too wide) in paragraph at lines 110--110
 []\T1/lmr/bx/n/12 The Math-e-mat-ics of Di-rec-tion Se-lec-tion: Multi-Criteria
  De-ci-sion Anal-
  []
 
 
+Underfull \vbox (badness 1902) has occurred while \output is active []
 
-[655]
+[644] [645]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[656]
+[646] [647] [648] [649]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-[657]
-
-[658]
-
-[659]
-
-[660]
-Overfull \hbox (11.14587pt too wide) in paragraph at lines 335--336
-[]\T1/lmr/bx/n/10.95 TinyML Strate-gic Ad-van-tage\T1/lmr/m/n/10.95 : Em-bed-de
-d edge in-tel-li-gence pro-vides a uniquely
+[650] [651]) [652] (./chapters/appA_glossary.tex
+Overfull \hbox (14.98277pt too wide) in paragraph at lines 25--26
+[]\T1/lmr/m/n/10.95 : The pro-por-tion of to-tal pre-dic-tions that are cor-rec
+t: $\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 TP \OT1/lmr/m/n/10.95 + \OML/lmm/m/
+it/10.95 TN\OT1/lmr/m/n/10.95 )\OML/lmm/m/it/10.95 =\OT1/lmr/m/n/10.95 (\OML/lm
+m/m/it/10.95 TP \OT1/lmr/m/n/10.95 +
  []
 
-
-Overfull \hbox (8.78807pt too wide) in paragraph at lines 337--338
-[]\T1/lmr/bx/n/10.95 FINER Re-search Ques-tions\T1/lmr/m/n/10.95 : Con-vert vag
-ue cu-riosi-ties into fal-si-fi-able, testable
- []
-
-
-
-[661]
-
-[662])
-
-[663] (./chapters/appA_glossary.tex
-
-[664
+[653
 
 
 ]
@@ -4577,35 +3124,57 @@ Overfull \hbox (4.07935pt too wide) in paragraph at lines 33--34
  []
 
 
+Overfull \hbox (7.37721pt too wide) in paragraph at lines 41--42
+\T1/lmr/m/n/10.95 frequency sen-sor teleme-try sat-u-rates band-width, mo-ti-va
+t-ing on-device
+ []
+
+
 Overfull \hbox (3.10309pt too wide) in paragraph at lines 42--43
 []\T1/lmr/m/n/10.95 : A layer nor-mal-iz-ing hid-den ac-ti-va-tions across mini
 -batches
  []
 
-
-
-[665]
-
-[666]
+[654] [655]
 Overfull \hbox (12.18774pt too wide) in paragraph at lines 71--72
 []\T1/lmr/m/n/10.95 : Ar-ti-fi-cially in-flat-ing train-ing set di-ver-sity by 
 ap-ply-ing domain-
  []
 
 
-
-[667]
-Overfull \hbox (7.68565pt too wide) in paragraph at lines 95--96
-[]\T1/lmr/m/n/10.95 : A low-cost, dual-core 32-bit mi-cro-con-troller by Espres
--sif ($\OT1/lmr/m/n/10.95 240 []$\T1/lmr/m/n/10.95 , $\OT1/lmr/m/n/10.95 520 []
-$
+Overfull \hbox (1.19968pt too wide) in paragraph at lines 75--76
+[]\T1/lmr/m/n/10.95 : An ultra-low-power mi-cro-con-troller op-er-at-ing mode p
+ow-er-ing down
  []
 
 
+Overfull \hbox (12.90619pt too wide) in paragraph at lines 75--76
+\T1/lmr/m/n/10.95 CPU cores and ra-dios, leav-ing only a real-time clock draw-i
+ng microamp-
+ []
 
-[668]
+[656]
+Overfull \hbox (13.7017pt too wide) in paragraph at lines 79--80
+\T1/lmr/m/n/10.95 run-time de-pen-den-cies, and sys-tem li-braries into an im-m
+utable, portable
+ []
 
-[669]
+
+Overfull \hbox (9.82056pt too wide) in paragraph at lines 80--81
+\T1/lmr/m/n/10.95 two vec-tors and sum-ming the prod-ucts: $\OT1/lmr/bx/n/10.95
+ u \OMS/lmsy/m/n/10.95 ^^A \OT1/lmr/bx/n/10.95 v \OT1/lmr/m/n/10.95 = [] \OML/l
+mm/m/it/10.95 u[]v[] \OT1/lmr/m/n/10.95 = \OMS/lmsy/m/n/10.95 k\OT1/lmr/bx/n/10
+.95 u\OMS/lmsy/m/n/10.95 kk\OT1/lmr/bx/n/10.95 v\OMS/lmsy/m/n/10.95 k []\OT1/lm
+r/m/n/10.95 (\OML/lmm/m/it/10.95 ^^R\OT1/lmr/m/n/10.95 )$\T1/lmr/m/n/10.95 . 
+ []
+
+
+Overfull \hbox (1.83615pt too wide) in paragraph at lines 89--90
+\T1/lmr/m/n/10.95 data col-lec-tion, DSP fea-ture ex-trac-tion, model train-ing
+, in-te-ger quan-
+ []
+
+[657] [658]
 Overfull \hbox (4.05556pt too wide) in paragraph at lines 124--125
 []\T1/lmr/m/n/10.95 : A pool-ing layer com-put-ing the av-er-age ac-ti-va-tion 
 across
@@ -4617,60 +3186,63 @@ Overfull \hbox (6.96721pt too wide) in paragraph at lines 128--129
 -ram-e-ter weights
  []
 
-
-
-[670]
+[659]
 Overfull \hbox (3.54274pt too wide) in paragraph at lines 150--151
 []\T1/lmr/m/n/10.95 : The set of struc-tural as-sump-tions and math-e-mat-i-cal
  con-straints
  []
 
+[660] [661] [662]
+Overfull \hbox (15.30882pt too wide) in paragraph at lines 191--192
+[]\T1/lmr/m/n/10.95 : A fast, memory-efficient gra-di-ent boost-ing frame-work 
+us-ing histogram-
+ []
 
-
-[671]
-Overfull \hbox (4.25787pt too wide) in paragraph at lines 178--179
-\T1/lmr/m/n/10.95 ma-tion lost when prob-a-bil-ity dis-tri-bu-tion $\OML/lmm/m/
-it/10.95 Q$ \T1/lmr/m/n/10.95 is used to ap-prox-i-mate dis-tri-bu-tion $\OML/l
-mm/m/it/10.95 P$\T1/lmr/m/n/10.95 : $\OML/lmm/m/it/10.95 D[]\OT1/lmr/m/n/10.95 
-(\OML/lmm/m/it/10.95 P \OMS/lmsy/m/n/10.95 k
+[663]
+Overfull \hbox (3.5699pt too wide) in paragraph at lines 210--211
+\T1/lmr/m/n/10.95 av-er-age squared dif-fer-ence be-tween pre-dic-tions and tar
+-gets: $[] []\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 y[] \OMS/lmsy/m/n/10.95 ^^
+@
  []
 
 
-
-[672]
-
-[673]
 Overfull \hbox (9.55766pt too wide) in paragraph at lines 212--213
 []\T1/lmr/m/n/10.95 : Rescal-ing con-tin-u-ous nu-meric fea-tures into a bounde
 d
  []
 
 
+Overfull \hbox (7.43321pt too wide) in paragraph at lines 217--218
+[]\T1/lmr/m/n/10.95 : Mes-sage Queu-ing Teleme-try Trans-port: an ultra-lightwe
+ight publish-
+ []
+
+[664]
 Overfull \hbox (0.27446pt too wide) in paragraph at lines 230--231
 []\T1/lmr/m/n/10.95 : The de-fault base-line sta-tis-ti-cal hy-poth-e-sis posit
 -ing that there
  []
 
-
-
-[674]
-Overfull \hbox (2.10393pt too wide) in paragraph at lines 239--240
-\T1/lmr/m/n/10.95 mat-ing lin-ear re-gres-sion weights by min-i-miz-ing resid-u
-al sum of squares: $\OT1/lmr/bx/n/10.95 w \OT1/lmr/m/n/10.95 = (\OT1/lmr/bx/n/1
-0.95 X[]X\OT1/lmr/m/n/10.95 )[]\OT1/lmr/bx/n/10.95 X[]y$\T1/lmr/m/n/10.95 . 
+[665]
+Overfull \hbox (7.62453pt too wide) in paragraph at lines 248--249
+\T1/lmr/m/n/10.95 fore con-vo-lu-tion to pre-serve spa-tial out-put di-men-sion
+s (\T1/lmr/m/it/10.95 Same \T1/lmr/m/n/10.95 padding)
  []
 
-
-
-[675]
+[666]
 Overfull \hbox (3.94394pt too wide) in paragraph at lines 268--269
 []\T1/lmr/m/n/10.95 : A model-free, off-policy re-in-force-ment learn-ing al-go
 -rithm learn-
  []
 
 
+Overfull \hbox (0.1228pt too wide) in paragraph at lines 268--269
+\T1/lmr/m/n/10.95 ing op-ti-mal action-value func-tions $\OML/lmm/m/it/10.95 Q\
+OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 s; a\OT1/lmr/m/n/10.95 )$ \T1/lmr/m/n/10
+.95 via it-er-a-tive Bell-man equa-
+ []
 
-[676]
+[667]
 Overfull \hbox (0.53645pt too wide) in paragraph at lines 283--284
 []\T1/lmr/m/n/10.95 : A di-ag-nos-tic plot graph-ing True Pos-
  []
@@ -4682,24 +3254,35 @@ Overfull \hbox (17.8079pt too wide) in paragraph at lines 285--286
 /m/it/10.95 ; x\OT1/lmr/m/n/10.95 )$\T1/lmr/m/n/10.95 ,
  []
 
-
-Overfull \hbox (63.76138pt too wide) in paragraph at lines 294--295
-\T1/lmr/m/n/10.95 tive per-cent-age er-ror by com-put-ing RMSE on log-transform
-ed vari-ables: $[]$. 
- []
-
-
+[668]
 Overfull \hbox (8.69661pt too wide) in paragraph at lines 299--300
 []\T1/lmr/m/n/10.95 : The fre-quency at which dis-crete mea-sure-ment sam-ples 
 are recorded
  []
 
 
-
-[677]
 Overfull \hbox (44.31248pt too wide) in paragraph at lines 300--301
 []\T1/lmr/m/n/10.95 : The Trans-former at-ten-tion equa-tion: $[] [] \OT1/lmr/b
 x/n/10.95 V$\T1/lmr/m/n/10.95 ,
+ []
+
+
+Overfull \hbox (9.83905pt too wide) in paragraph at lines 307--308
+\T1/lmr/m/n/10.95 rail; mea-sur-ing volt-age drop across it ($\OML/lmm/m/it/10.
+95 V \OT1/lmr/m/n/10.95 = \OML/lmm/m/it/10.95 IR$\T1/lmr/m/n/10.95 ) en-ables h
+igh-resolution
+ []
+
+[669]
+Overfull \hbox (9.2229pt too wide) in paragraph at lines 315--316
+\T1/lmr/m/n/10.95 sion of data points around their arith-metic mean: $\OML/lmm/
+m/it/10.95 ^^[ \OT1/lmr/m/n/10.95 = []$\T1/lmr/m/n/10.95 . 
+ []
+
+
+Overfull \hbox (6.141pt too wide) in paragraph at lines 316--317
+\OML/lmm/m/it/10.95 s=[]$\T1/lmr/m/n/10.95 , quan-ti-fy-ing sam-pling un-cer-ta
+inty around the pop-u-la-tion mean. 
  []
 
 
@@ -4708,19 +3291,9 @@ Overfull \hbox (14.40387pt too wide) in paragraph at lines 318--319
  []
 
 
-
-[678]
 Overfull \hbox (6.79388pt too wide) in paragraph at lines 321--322
 []\T1/lmr/m/n/10.95 : The ma-chine learn-ing paradigm where mod-els are trained
 
- []
-
-
-Overfull \hbox (9.89778pt too wide) in paragraph at lines 323--324
-\T1/lmr/m/n/10.95 ($\OML/lmm/m/it/10.95 Z \OT1/lmr/m/n/10.95 = 0$\T1/lmr/m/n/10
-.95 ), map-ping float-ing ranges sym-met-ri-cally around zero to signed in-te-g
-ers ($\OT1/lmr/m/n/10.95 [\OMS/lmsy/m/n/10.95 ^^@\OT1/lmr/m/n/10.95 127\OML/lmm
-/m/it/10.95 ; \OT1/lmr/m/n/10.95 +127]$\T1/lmr/m/n/10.95 ). 
  []
 
 
@@ -4730,55 +3303,33 @@ ng log-its be-fore Soft-max: $[]\OT1/lmr/m/n/10.95 (\OML/lmm/m/it/10.95 z[]=T\O
 T1/lmr/m/n/10.95 )$\T1/lmr/m/n/10.95 .
  []
 
-
-Overfull \hbox (2.31741pt too wide) in paragraph at lines 330--331
-[]\T1/lmr/m/n/10.95 : A multi-dimensional ge-o-met-ric ar-ray of nu-mer-i-cal v
-al-ues gen-er-al-iz-ing scalars
- []
-
-
+[670]
 Overfull \hbox (1.0008pt too wide) in paragraph at lines 334--335
 []\T1/lmr/m/n/10.95 : The ma-chine learn-ing task of an-a-lyz-ing his-tor-i-cal
  chrono-
  []
 
-
-
-[679]
-
-[680]
+[671]
 Overfull \hbox (6.08705pt too wide) in paragraph at lines 362--363
 []\T1/lmr/m/n/10.95 : An iso-lated di-rec-tory tree con-tain-ing a spe-cific Py
 thon
  []
 
+[672]
+Overfull \hbox (1.65616pt too wide) in paragraph at lines 372--373
+[]\T1/lmr/m/n/10.95 : A dense, low-dimensional con-tin-u-ous vec-tor rep-re-sen
+-ta-tion of words
+ []
 
-
-[681]
+[673]
 Overfull \hbox (0.2481pt too wide) in paragraph at lines 393--394
 []\T1/lmr/m/n/10.95 : The ca-pa-bil-ity of a model to ac-cu-rately clas-sify no
 vel classes
  []
 
-) (./chapters/appB_courses_books.tex
+) (./chapters/appB_courses_books.tex [674] [675
 
-[682]
-
-[683
-
-]
-Overfull \hbox (0.51463pt too wide) in paragraph at lines 95--96
-[]\T1/lmr/bx/n/10.95 Format\T1/lmr/m/n/10.95 : Video lec-ture se-ries with be-s
-poke open-source math-e-mat-i-cal an-i-ma-tions (Manim). 
- []
-
-
-
-[684]
-
-[685]
-
-[686]
+] [676] [677] [678]
 Underfull \hbox (badness 3735) in paragraph at lines 180--180
 []\T1/lmr/m/n/10 Visual trans-for-ma-
  []
@@ -4795,7 +3346,12 @@ Underfull \hbox (badness 10000) in paragraph at lines 183--183
 
 
 Underfull \hbox (badness 10000) in paragraph at lines 184--184
-[]\T1/lmr/m/n/10 Fast Python/-Pan-
+[]\T1/lmr/m/n/10 Fast
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 184--184
+\T1/lmr/m/n/10 Python/Pandas
  []
 
 
@@ -4823,19 +3379,16 @@ Underfull \hbox (badness 10000) in paragraph at lines 188--188
 []\T1/lmr/m/n/10 Theoretical rep-re-
  []
 
+[679]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-[687]
-Overfull \hbox (5.15974pt too wide) in paragraph at lines 225--226
-[]\T1/lmr/bx/n/10.95 The Edge Ad-van-tage\T1/lmr/m/n/10.95 : Com-bine clas-si-c
-al deep learn-ing with Har-vard's TinyML
+[680]
+Overfull \hbox (21.38925pt too wide) in paragraph at lines 249--250
+\T1/lmr/m/n/10.95 data aug-men-ta-tion, and two-phase trans-fer learn-ing on Mo
+-bileNetV2 us-ing Keras/TensorFlow. 
  []
 
-
-
-[688]) (./chapters/appC_cheat_sheets.tex
-
-[689]
+) (./chapters/appC_cheat_sheets.tex [681]
 Overfull \hbox (244.2097pt too wide) in paragraph at lines 88--102
  [][] 
  []
@@ -4916,7 +3469,9 @@ Underfull \hbox (badness 10000) in paragraph at lines 149--149
 /8 ([]) + (1 \OMS/lmsy/m/n/8 ^^@
  []
 
+[682
 
+]
 Underfull \hbox (badness 2547) in paragraph at lines 163--163
 []\T1/lmr/bx/n/8 Core In-ter-pre-ta-
  []
@@ -5001,20 +3556,10 @@ Overfull \hbox (8.16626pt too wide) in paragraph at lines 161--194
  [][] 
  []
 
-
-
-[690
-
-]
-
-[691]
-
-[692]
+[683] [684]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
-
-
-[693]
+[685]
 Underfull \hbox (badness 10000) in paragraph at lines 302--302
 []\T1/lmtt/m/n/8 np.zeros((N, C),
  []
@@ -5094,37 +3639,32 @@ Overfull \hbox (3.7126pt too wide) in paragraph at lines 355--355
 []\T1/lmtt/m/n/8 pd.read_parquet("data.parquet")| 
  []
 
+[686]
+Underfull \hbox (badness 10000) in paragraph at lines 388--389
+[]\T1/lmr/bx/n/10.95 PyTorch Me-chan-ics\T1/lmr/m/n/10.95 : In the pro-duc-tion
+ train-ing loop in List-ing [][]5[][],
+ []
 
 
-[694]
+Underfull \hbox (badness 10000) in paragraph at lines 388--389
+\T1/lmr/m/n/10.95 why is \T1/lmtt/m/n/10.95 optimizer.zero_grad(set_to_none=Tru
+e) \T1/lmr/m/n/10.95 pre-ferred over stan-dard
+ []
 
 
 Overfull \hbox (12.75706pt too wide) has occurred while \output is active
 \T1/lmr/m/sl/10.95 .8.  CHEAT SHEET 5: THE TINYML MICROCONTROLLER DEPLOYMENT CH
-ECKLIST \T1/lmr/m/n/10.95 695
+ECKLIST \T1/lmr/m/n/10.95 687
  []
 
-[695]
-Overfull \hbox (75.74353pt too wide) in paragraph at lines 388--389
-\T1/lmtt/m/n/10.95 optimizer.zero_grad(set_to_none=True) \T1/lmr/m/n/10.95 pre-
-ferred over stan-dard \T1/lmtt/m/n/10.95 optimizer.zero_grad()\T1/lmr/m/n/10.95
- ? 
- []
+[687]) [688] [689
 
-)
-
-[696]
-
-[697
-
-]
-
-[698
+] [690
 
 ] (./main.aux)
  ***********
-LaTeX2e <2024-11-01> patch level 2
-L3 programming layer <2025-01-18>
+LaTeX2e <2025-11-01>
+L3 programming layer <2026-01-19>
  ***********
 
 LaTeX Warning: There were multiply-defined labels.
@@ -5134,65 +3674,62 @@ Package rerunfilecheck Info: File `main.out' has not changed.
 
  ) 
 Here is how much of TeX's memory you used:
- 52349 strings out of 474662
- 887102 string characters out of 5751108
- 1963823 words of memory out of 5000000
- 63309 multiletter control sequences out of 15000+600000
- 806259 words of font info for 189 fonts, out of 8000000 for 9000
- 319 hyphenation exceptions out of 8191
- 89i,22n,90p,1001b,2254s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/amsfonts/latxfont
-/lcircle1.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lm
-bx10.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmbx12.
-pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmbx6.pfb></
-usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmbx7.pfb></usr/lo
-cal/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmbx8.pfb></usr/local/te
-xlive/2025basic/texmf-dist/fonts/type1/public/lm/lmbx9.pfb></usr/local/texlive/
-2025basic/texmf-dist/fonts/type1/public/lm/lmbxi10.pfb></usr/local/texlive/2025
-basic/texmf-dist/fonts/type1/public/lm/lmex10.pfb></usr/local/texlive/2025basic
-/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></usr/local/texlive/2025basic/texm
-f-dist/fonts/type1/public/lm/lmmi12.pfb></usr/local/texlive/2025basic/texmf-dis
-t/fonts/type1/public/lm/lmmi5.pfb></usr/local/texlive/2025basic/texmf-dist/font
-s/type1/public/lm/lmmi6.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type
-1/public/lm/lmmi7.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/publ
-ic/lm/lmmi8.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/
-lmmi9.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmmib1
-0.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmmib7.pfb
-></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmr10.pfb></usr
-/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmr12.pfb></usr/local
-/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmr5.pfb></usr/local/texliv
-e/2025basic/texmf-dist/fonts/type1/public/lm/lmr6.pfb></usr/local/texlive/2025b
-asic/texmf-dist/fonts/type1/public/lm/lmr7.pfb></usr/local/texlive/2025basic/te
-xmf-dist/fonts/type1/public/lm/lmr8.pfb></usr/local/texlive/2025basic/texmf-dis
-t/fonts/type1/public/lm/lmr9.pfb></usr/local/texlive/2025basic/texmf-dist/fonts
-/type1/public/lm/lmri10.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type
-1/public/lm/lmri12.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/pub
-lic/lm/lmri7.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm
-/lmri8.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmri9
-.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmro10.pfb>
-</usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmss10.pfb></usr
-/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmss12.pfb></usr/loca
-l/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmss8.pfb></usr/local/texl
-ive/2025basic/texmf-dist/fonts/type1/public/lm/lmss9.pfb></usr/local/texlive/20
-25basic/texmf-dist/fonts/type1/public/lm/lmssbx10.pfb></usr/local/texlive/2025b
-asic/texmf-dist/fonts/type1/public/lm/lmsso8.pfb></usr/local/texlive/2025basic/
-texmf-dist/fonts/type1/public/lm/lmsso9.pfb></usr/local/texlive/2025basic/texmf
--dist/fonts/type1/public/lm/lmsy10.pfb></usr/local/texlive/2025basic/texmf-dist
-/fonts/type1/public/lm/lmsy5.pfb></usr/local/texlive/2025basic/texmf-dist/fonts
-/type1/public/lm/lmsy6.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1
-/public/lm/lmsy7.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/publi
-c/lm/lmsy8.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/l
-msy9.pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmtk10.
-pfb></usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmtt10.pfb><
-/usr/local/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmtt8.pfb></usr/l
-ocal/texlive/2025basic/texmf-dist/fonts/type1/public/lm/lmtt9.pfb></usr/local/t
-exlive/2025basic/texmf-dist/fonts/type1/public/lm/lmtti10.pfb></usr/local/texli
-ve/2025basic/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/lo
-cal/texlive/2025basic/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb>
-Output written on main.pdf (710 pages, 3952400 bytes).
+ 67986 strings out of 467525
+ 1373703 string characters out of 5418981
+ 2695562 words of memory out of 5000000
+ 84615 multiletter control sequences out of 15000+600000
+ 875143 words of font info for 193 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 91i,22n,99p,1001b,2358s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/local/texlive/2026/texmf-dist/fonts/type1/public/amsfonts/latxfont/lcir
+cle1.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmbx10.pfb><
+/usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/local
+/texlive/2026/texmf-dist/fonts/type1/public/lm/lmbx6.pfb></usr/local/texlive/20
+26/texmf-dist/fonts/type1/public/lm/lmbx7.pfb></usr/local/texlive/2026/texmf-di
+st/fonts/type1/public/lm/lmbx8.pfb></usr/local/texlive/2026/texmf-dist/fonts/ty
+pe1/public/lm/lmbx9.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/
+lm/lmbxi10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmex10
+.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></usr
+/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmmi12.pfb></usr/local/tex
+live/2026/texmf-dist/fonts/type1/public/lm/lmmi5.pfb></usr/local/texlive/2026/t
+exmf-dist/fonts/type1/public/lm/lmmi6.pfb></usr/local/texlive/2026/texmf-dist/f
+onts/type1/public/lm/lmmi7.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/
+public/lm/lmmi8.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/l
+mmi9.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmmib10.pfb>
+</usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmmib7.pfb></usr/loca
+l/texlive/2026/texmf-dist/fonts/type1/public/lm/lmr10.pfb></usr/local/texlive/2
+026/texmf-dist/fonts/type1/public/lm/lmr12.pfb></usr/local/texlive/2026/texmf-d
+ist/fonts/type1/public/lm/lmr5.pfb></usr/local/texlive/2026/texmf-dist/fonts/ty
+pe1/public/lm/lmr6.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/l
+m/lmr7.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmr8.pfb><
+/usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmr9.pfb></usr/local/t
+exlive/2026/texmf-dist/fonts/type1/public/lm/lmri10.pfb></usr/local/texlive/202
+6/texmf-dist/fonts/type1/public/lm/lmri12.pfb></usr/local/texlive/2026/texmf-di
+st/fonts/type1/public/lm/lmri7.pfb></usr/local/texlive/2026/texmf-dist/fonts/ty
+pe1/public/lm/lmri8.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/
+lm/lmri9.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmro10.p
+fb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmss10.pfb></usr/l
+ocal/texlive/2026/texmf-dist/fonts/type1/public/lm/lmss12.pfb></usr/local/texli
+ve/2026/texmf-dist/fonts/type1/public/lm/lmss8.pfb></usr/local/texlive/2026/tex
+mf-dist/fonts/type1/public/lm/lmss9.pfb></usr/local/texlive/2026/texmf-dist/fon
+ts/type1/public/lm/lmssbx10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1
+/public/lm/lmsso8.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm
+/lmsso9.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmsy10.pf
+b></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmsy5.pfb></usr/loc
+al/texlive/2026/texmf-dist/fonts/type1/public/lm/lmsy6.pfb></usr/local/texlive/
+2026/texmf-dist/fonts/type1/public/lm/lmsy7.pfb></usr/local/texlive/2026/texmf-
+dist/fonts/type1/public/lm/lmsy8.pfb></usr/local/texlive/2026/texmf-dist/fonts/
+type1/public/lm/lmsy9.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/publi
+c/lm/lmtk10.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmtt1
+0.pfb></usr/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmtt8.pfb></usr
+/local/texlive/2026/texmf-dist/fonts/type1/public/lm/lmtt9.pfb></usr/local/texl
+ive/2026/texmf-dist/fonts/type1/public/lm/lmtti10.pfb></usr/local/texlive/2026/
+texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2
+026/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm7.pfb>
+Output written on main.pdf (702 pages, 4138396 bytes).
 PDF statistics:
  18405 PDF objects out of 18468 (max. 8388607)
- 17403 compressed objects within 175 object streams
- 11400 named destinations out of 12825 (max. 500000)
- 49685 words of extra memory for PDF output out of 51595 (max. 10000000)
+ 17388 compressed objects within 174 object streams
+ 11392 named destinations out of 12825 (max. 500000)
+ 49829 words of extra memory for PDF output out of 51595 (max. 10000000)
 

@@ -7,7 +7,13 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{float}
-\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    pdftitle={OLS in Matrix Form: Study Notes},
+    pdfauthor={OLS in Matrix Form}
+}
 \setlist[itemize]{topsep=3pt,itemsep=2pt}
 \setlist[enumerate]{topsep=3pt,itemsep=2pt}
 \newcommand{\bhat}{\hat{\boldsymbol{\beta}}}
@@ -16,11 +22,22 @@
 \newcommand{\XX}{\mathbf{X}}
 \newcommand{\yy}{\mathbf{y}}
 \newcommand{\RSS}{\operatorname{RSS}}
-\title{\textbf{OLS in Matrix Form}\\[4pt]\large Study Notes: The True Model, OLS Derivation, and Basic Properties}
-\author{Prepared from the supplied ``OLS in Matrix Form'' notes}
-\date{}
+
 \begin{document}
-\maketitle
+
+\begin{titlepage}
+    \centering
+    \vspace*{\fill}
+    {\Huge\bfseries OLS in Matrix Form\par}
+    \vspace{1.5em}
+    {\Large Noted by Md. Inzamamul Lohani\\
+Software Engineering, IIT, DU\par}
+    \vspace{2em}
+    {\large 17 November 2026\par}
+    \vspace*{\fill}
+\end{titlepage}
+\setcounter{page}{2}
+
 \tableofcontents
 \newpage
 
@@ -341,6 +358,7 @@ With an intercept & $\sum_i e_i=0$ and $\bar e=0$\\
 \end{enumerate}
 
 \section*{Scope of These Notes}
+\addcontentsline{toc}{section}{Scope of These Notes}
 These notes cover the material discussed so far from the supplied document: the true model, estimates and residuals, the RSS criterion, its matrix expansion and differentiation, the normal equations, the OLS estimator, the minimum check, and the first residual properties. Later sections of the source document (Gauss--Markov assumptions and theorem, variance-covariance matrix, robust standard errors, partitioned regression, and the Frisch--Waugh--Lovell theorem) are not included in this installment.
 
 \end{document}
