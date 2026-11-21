@@ -1,0 +1,41 @@
+\contentsline {chapter}{\numberline {1}The Big Picture}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}What is Lasso Regression?}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Why do we need regularization?}{1}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Ridge versus Lasso}{1}{subsection.1.2.1}%
+\contentsline {section}{\numberline {1.3}What does the tuning parameter $\lambda $ do?}{2}{section.1.3}%
+\contentsline {chapter}{\numberline {2}The $L_1$ Penalty and Geometric Intuition}{3}{chapter.2}%
+\contentsline {section}{\numberline {2.1}The $L_1$ norm}{3}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Constraint form and geometry}{3}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Sparsity}{4}{section.2.3}%
+\contentsline {chapter}{\numberline {3}Optimization: From OLS to Lasso}{5}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Why OLS has a closed-form solution}{5}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Why Ridge also has a closed form}{5}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Why Lasso needs a different optimization method}{5}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Subgradients}{6}{section.3.4}%
+\contentsline {chapter}{\numberline {4}KKT Optimality Conditions}{7}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Coefficient-wise KKT conditions}{7}{section.4.1}%
+\contentsline {section}{\numberline {4.2}A small interpretation}{7}{section.4.2}%
+\contentsline {chapter}{\numberline {5}Soft Thresholding}{8}{chapter.5}%
+\contentsline {section}{\numberline {5.1}The idea}{8}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Deriving the threshold in an orthonormal case}{8}{section.5.2}%
+\contentsline {chapter}{\numberline {6}Coordinate Descent}{10}{chapter.6}%
+\contentsline {section}{\numberline {6.1}What is coordinate descent?}{10}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Deriving the coordinate update}{10}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Numerical coordinate update}{11}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Algorithm in pseudocode}{11}{section.6.4}%
+\contentsline {section}{\numberline {6.5}When does the algorithm stop?}{11}{section.6.5}%
+\contentsline {section}{\numberline {6.6}How coordinate descent and KKT connect}{11}{section.6.6}%
+\contentsline {chapter}{\numberline {7}Practical Modeling: Scaling and Choosing $\lambda $}{13}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Why standardize predictors?}{13}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Choosing lambda with cross-validation}{13}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Regularization paths}{14}{section.7.3}%
+\contentsline {section}{\numberline {7.4}The all-zero threshold}{14}{section.7.4}%
+\contentsline {chapter}{\numberline {8}Advanced Concepts: Strengths and Limitations}{16}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Sparsity and feature selection}{16}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Correlated predictors}{16}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Limitations of Lasso}{16}{section.8.3}%
+\contentsline {chapter}{\numberline {9}Revision Sheet and Self-Test}{18}{chapter.9}%
+\contentsline {section}{\numberline {9.1}The essential formulas}{18}{section.9.1}%
+\contentsline {section}{\numberline {9.2}Conceptual summary}{18}{section.9.2}%
+\contentsline {section}{\numberline {9.3}Self-test questions}{18}{section.9.3}%
+\contentsline {section}{\numberline {9.4}Short answers}{19}{section.9.4}%

@@ -1,6 +1,6 @@
 % Lasso Regression: A Beginner-Friendly Revision Guide
 % Compile with pdfLaTeX. Keep the figures/ directory beside this file.
-\documentclass[11pt,a4paper,oneside]{report}
+\documentclass[11pt,a4paper,oneside]{book}
 
 % ---------- Page, fonts, mathematics ----------
 \usepackage[T1]{fontenc}
@@ -77,36 +77,19 @@
 \newcommand{\sign}{\operatorname{sign}}
 \newcommand{\RSS}{\operatorname{RSS}}
 
+\title{\Huge\bfseries Lasso Regression\\[0.2em]}
+\author{Noted by Md. Inzamamul Lohani\\
+Software Engineering, IIT, DU}
+\date{\today}
+
 \begin{document}
+\hypersetup{pageanchor=false}
+\maketitle
+\hypersetup{pageanchor=true}
+\frontmatter
 
-% ==================== COVER ====================
-\begin{titlepage}
-  \centering
-  \vspace*{18mm}
-  {\Large\color{Teal}\bfseries STATISTICAL LEARNING NOTES\par}
-  \vspace{12mm}
-  {\Huge\bfseries\color{Navy} Lasso Regression\par}
-  \vspace{5mm}
-  {\Large\color{Blue} A beginner-friendly guide from intuition to optimization\par}
-  \vspace{12mm}
-  \includegraphics[width=.82\textwidth]{l1_l2_geometry.png}
-  \vspace{10mm}
-  \begin{tcolorbox}[width=.86\textwidth,colback=PaleBlue,colframe=Blue,arc=2mm,boxrule=.8pt]
-    \centering
-    \large\bfseries What you will learn\\[3pt]
-    \normalsize
-    Why Lasso is needed; how the $L_1$ penalty creates sparsity; the geometry and subgradient mathematics; KKT conditions; soft thresholding; coordinate descent; model tuning; correlated predictors; and practical limitations.
-  \end{tcolorbox}
-  \vfill
-  {\large Prepared as a personal revision resource\par}
-  \vspace{3mm}
-  {\color{Muted}\today\par}
-\end{titlepage}
-
-\pagenumbering{roman}
 \tableofcontents
-\clearpage
-\pagenumbering{arabic}
+\mainmatter
 
 % ==================== 1 INTRO ====================
 \chapter{The Big Picture}
