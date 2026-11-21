@@ -1,0 +1,363 @@
+% ==============================================================================
+% Machine Learning & Statistical Theory Notes — LaTeX Template
+% Author: Noted by Md. Inzamamul Lohani (Software Engineering, IIT, DU)
+% Based on: Lasso & Ridge Regression Revision Notes Architecture
+% Compile: pdflatex template.tex && pdflatex template.tex
+% ==============================================================================
+
+\documentclass[11pt,a4paper,oneside]{book}
+
+% ==================== Core Packages ====================
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=25mm,headheight=15pt]{geometry}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{graphicx}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage[section]{placeins}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{caption}
+
+% ==================== Color Palette ====================
+\definecolor{Navy}{HTML}{17324D}        % Primary headings, main emphasis
+\definecolor{Blue}{HTML}{2878B5}        % Secondary headings, key idea frame
+\definecolor{Teal}{HTML}{168477}        % Sub-headings, intuition frame
+\definecolor{Gold}{HTML}{D18B26}        % Warnings, alerts frame
+\definecolor{PaleBlue}{HTML}{EDF5FB}    % Key idea background
+\definecolor{PaleTeal}{HTML}{EAF6F3}    % Intuition background
+\definecolor{PaleGold}{HTML}{FFF6E6}    % Warning background
+\definecolor{Ink}{HTML}{263238}         % Body text
+\definecolor{Muted}{HTML}{61717D}       % Headers, footers, meta text
+\definecolor{CodeBg}{HTML}{F7F8FA}      % Code block background
+\definecolor{CodeGreen}{HTML}{236E41}   % Code comments
+\definecolor{CodePurple}{HTML}{73378C}  % Code strings
+
+% ==================== Hyperlink Setup ====================
+\hypersetup{
+  colorlinks=true,
+  linkcolor=Navy,
+  urlcolor=Blue,
+  citecolor=Teal,
+  pdftitle={Theory Notes Template},
+  pdfauthor={Md. Inzamamul Lohani}
+}
+
+% Graphics directory
+\graphicspath{{figures/}}
+
+% Paragraph & list spacing
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=1.5em,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=1.7em,itemsep=3pt,topsep=3pt}
+\captionsetup{font=small,labelfont=bf}
+
+% ==================== Styled Callout Boxes ====================
+% 1. Key Idea Box (Blue)
+\newtcolorbox{keyidea}[1][]{
+  enhanced,breakable,
+  colback=PaleBlue,colframe=Blue,
+  boxrule=.7pt,arc=2mm,
+  left=3.5mm,right=3.5mm,top=2.5mm,bottom=2.5mm,
+  title=Key idea,fonttitle=\bfseries\color{Navy},
+  #1
+}
+
+% 2. Intuition Box (Teal)
+\newtcolorbox{intuition}[1][]{
+  enhanced,breakable,
+  colback=PaleTeal,colframe=Teal,
+  boxrule=.7pt,arc=2mm,
+  left=3.5mm,right=3.5mm,top=2.5mm,bottom=2.5mm,
+  title=Intuition,fonttitle=\bfseries\color{Navy},
+  #1
+}
+
+% 3. Warning / Important Note Box (Gold)
+\newtcolorbox{warningbox}[1][]{
+  enhanced,breakable,
+  colback=PaleGold,colframe=Gold,
+  boxrule=.7pt,arc=2mm,
+  left=3.5mm,right=3.5mm,top=2.5mm,bottom=2.5mm,
+  title=Important note,fonttitle=\bfseries\color{Navy},
+  #1
+}
+
+% 4. Worked Example Box (Clean border)
+\newtcolorbox{worked}[1][]{
+  enhanced,breakable,
+  colback=white,colframe=Muted!65,
+  boxrule=.6pt,arc=2mm,
+  left=3.5mm,right=3.5mm,top=2.5mm,bottom=2.5mm,
+  title=Worked example,fonttitle=\bfseries\color{Navy},
+  #1
+}
+
+% ==================== Code Block Styling ====================
+\lstdefinestyle{pythonstyle}{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{Navy}\bfseries,
+  commentstyle=\color{CodeGreen}\itshape,
+  stringstyle=\color{CodePurple},
+  backgroundcolor=\color{CodeBg},
+  frame=single,
+  rulecolor=\color{black!15},
+  breaklines=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{Muted},
+  xleftmargin=1.5em,
+  framexleftmargin=1.2em
+}
+\lstset{style=pythonstyle}
+
+% ==================== Header & Footer Setup ====================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{Muted}\textsc{TOPIC TITLE}}   % Replace with your topic title
+\fancyhead[R]{\small\color{Muted}Revision Notes}
+\fancyfoot[C]{\small\color{Muted}\thepage}
+\renewcommand{\headrulewidth}{.4pt}
+
+% ==================== Section Headings Styling ====================
+\titleformat{\chapter}[display]
+  {\bfseries\color{Navy}}{\Large\chaptername\ \thechapter}{4pt}{\Huge}
+\titleformat{\section}
+  {\Large\bfseries\color{Navy}}{\thesection}{.7em}{}
+\titleformat{\subsection}
+  {\large\bfseries\color{Blue}}{\thesubsection}{.7em}{}
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{Teal}}{\thesubsubsection}{.7em}{}
+
+% ==================== Helpful Mathematical Notation ====================
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\E}{\operatorname{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\RSS}{\operatorname{RSS}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\sign}{\operatorname{sign}}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\abs}[1]{\left|#1\right|}
+
+% Vector & Matrix Bold Notation
+\newcommand{\X}{\mathbf{X}}
+\newcommand{\y}{\mathbf{y}}
+\newcommand{\I}{\mathbf{I}}
+\newcommand{\bta}{\boldsymbol{\beta}}
+\newcommand{\bhat}{\widehat{\boldsymbol{\beta}}}
+\newcommand{\eps}{\boldsymbol{\varepsilon}}
+
+% ==================== Document Title & Metadata ====================
+\title{\Huge\bfseries [Topic Name: e.g., Logistic Regression]\\[0.2em]}
+\author{Noted by Md. Inzamamul Lohani\\
+Software Engineering, IIT, DU}
+\date{\today}
+
+% ==============================================================================
+% DOCUMENT BODY
+% ==============================================================================
+\begin{document}
+
+% Title Page (matches Ridge & Lasso clean book format)
+\hypersetup{pageanchor=false}
+\maketitle
+\hypersetup{pageanchor=true}
+
+% Frontmatter: Roman page numbering for Table of Contents
+\frontmatter
+\tableofcontents
+
+% Mainmatter: Arabic page numbering starting at Page 1
+\mainmatter
+
+% ==============================================================================
+\chapter{The Big Picture \& Motivation}
+% ==============================================================================
+
+\section{Introduction and Problem Formulation}
+Begin with a clear, approachable overview of the topic. Connect it to concepts the reader already understands.
+
+In multiple linear modeling, we describe the target variable $y \in \RR^n$ via $p$ features $X \in \RR^{n \times p}$:
+\begin{equation}
+  y = X\beta + \varepsilon, \quad \varepsilon \sim \mathcal{N}(0, \sigma^2 I).
+\end{equation}
+
+\begin{keyidea}[title=Core concept]
+State the single most fundamental takeaway of this topic right here. Why does this technique exist, and what core problem does it solve?
+\end{keyidea}
+
+\section{Geometric and Intuitive Foundation}
+Provide the intuition before jumping deep into algebraic manipulations.
+
+\begin{intuition}[title=Visualizing the behavior]
+Use intuitive analogies or geometric interpretations. For example, explain why level curves touch constraints at corners or how gradient vectors interact with decision boundaries.
+\end{intuition}
+
+\subsection{Comparison Table}
+Summarize how this method compares with closely related methods:
+
+\begin{center}
+\begin{tabularx}{0.95\textwidth}{>{\bfseries}lXX}
+\toprule
+Feature / Property & Method A (e.g., Ridge) & Method B (e.g., Lasso) \\
+\midrule
+Penalty Type & $L_2$ squared norm & $L_1$ absolute norm \\
+Solution Type & Analytical closed-form & Iterative (e.g., coordinate descent) \\
+Sparsity & Shrinks smoothly towards zero & Exact zeros (feature selection) \\
+Behavior with Collinearity & Groups correlated predictors & Picks one arbitrarily \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+
+% ==============================================================================
+\chapter{Mathematical Foundations \& Derivation}
+% ==============================================================================
+
+\section{Objective Function Formulation}
+Write the complete optimization problem clearly:
+\begin{equation}
+  \boxed{J(\beta) = \norm{y - X\beta}_2^2 + \lambda \mathcal{R}(\beta).}
+  \label{eq:objective}
+\end{equation}
+Explain each term carefully:
+\begin{itemize}
+  \item $\norm{y - X\beta}_2^2$: The data-fidelity (Residual Sum of Squares) term.
+  \item $\mathcal{R}(\beta)$: The regularization penalty preventing overfitting.
+  \item $\lambda \geq 0$: The hyperparameter balancing fit vs complexity.
+\end{itemize}
+
+\section{Step-by-Step Derivation}
+Walk through the mathematical steps systematically:
+
+\begin{enumerate}
+  \item \textbf{Expand the quadratic loss:}
+  \begin{equation}
+    \RSS(\beta) = (y - X\beta)^T(y - X\beta) = y^Ty - 2y^TX\beta + \beta^TX^TX\beta.
+  \end{equation}
+
+  \item \textbf{Take the matrix gradient with respect to $\beta$:}
+  \begin{equation}
+    \nabla_\beta \RSS(\beta) = -2X^Ty + 2X^TX\beta.
+  \end{equation}
+
+  \item \textbf{Set the gradient to zero and solve:}
+  \begin{equation}
+    2X^TX\beta - 2X^Ty = 0 \implies \boxed{\bhat = (X^TX)^{-1}X^Ty.}
+  \end{equation}
+\end{enumerate}
+
+\begin{warningbox}[title=Watch out for singularities]
+Remember to mention edge cases, numerical instabilities, or rank deficiency (e.g., when $p > n$ or variables are collinear).
+\end{warningbox}
+
+
+% ==============================================================================
+\chapter{Algorithm \& Practical Implementation}
+% ==============================================================================
+
+\section{Algorithmic Optimization}
+Detail how the numerical optimization is implemented in practice.
+
+\begin{worked}[title=Step-by-step update rule]
+Demonstrate a concrete 1D or 2D derivation of the coordinate or gradient update:
+\begin{equation}
+  \beta_j^{(t+1)} \leftarrow \frac{\operatorname{soft}(x_j^Tr_j,\, \lambda/2)}{x_j^Tx_j}.
+\end{equation}
+\end{worked}
+
+\section{Python Implementation}
+Provide a clean, idiomatic Python code implementation:
+
+\begin{lstlisting}
+import numpy as np
+
+def soft_threshold(z: float, threshold: float) -> float:
+    """Applies soft thresholding S(z, threshold)."""
+    return np.sign(z) * max(abs(z) - threshold, 0.0)
+
+def coordinate_descent_step(X: np.ndarray, y: np.ndarray, beta: np.ndarray, lam: float):
+    """Performs one cycle of coordinate descent."""
+    n, p = X.shape
+    for j in range(p):
+        # Compute partial residual excluding feature j
+        r_j = y - (X @ beta - X[:, j] * beta[j])
+        rho_j = X[:, j] @ r_j
+        denom = np.sum(X[:, j]**2)
+        beta[j] = soft_threshold(rho_j, lam / 2.0) / denom
+    return beta
+\end{lstlisting}
+
+
+% ==============================================================================
+\chapter{Practical Considerations \& Tuning}
+% ==============================================================================
+
+\section{Feature Standardization}
+Explain why feature scaling matters and provide the rule of thumb:
+\begin{equation}
+  x_{ij}^{(\text{scaled})} = \frac{x_{ij} - \bar{x}_j}{s_j}.
+\end{equation}
+
+\section{Hyperparameter Selection via Cross-Validation}
+Explain the $K$-fold cross-validation scheme to find $\lambda^*$:
+\begin{itemize}
+  \item Split training data into $K$ disjoint folds.
+  \item Fit model on $K-1$ folds across candidate hyperparameter grid.
+  \item Select $\lambda$ minimizing mean validation loss or apply the 1-SE rule.
+\end{itemize}
+
+
+% ==============================================================================
+\chapter{Revision Sheet \& Self-Test}
+% ==============================================================================
+
+\section{The Essential Formulas}
+\begin{align*}
+  \text{Cost Function:}\quad& J(\beta) = \RSS(\beta) + \lambda \mathcal{R}(\beta) \\
+  \text{Matrix Form:}\quad& \RSS(\beta) = y^Ty - 2y^TX\beta + \beta^TX^TX\beta \\
+  \text{Normal Equation:}\quad& X^TX\beta = X^Ty \\
+  \text{Optimal Estimator:}\quad& \bhat = (X^TX + \lambda I)^{-1} X^Ty
+\end{align*}
+
+\section{Conceptual Summary}
+\begin{itemize}
+  \item Bullet 1: Core motivation and objective.
+  \item Bullet 2: Mechanism of regularization / shrinkage.
+  \item Bullet 3: Key trade-offs (e.g., Bias vs. Variance).
+  \item Bullet 4: Key operational assumptions and requirements (scaling, independence).
+\end{itemize}
+
+\section{Self-Test Questions}
+\begin{enumerate}
+  \item Why does ordinary least squares fail when predictors are collinear?
+  \item What is the geometric difference between $L_1$ and $L_2$ constraint regions?
+  \item Why must data be centered/scaled before applying regularization?
+  \item When is closed-form calculation preferred over iterative gradient descent?
+\end{enumerate}
+
+\section{Short Answers}
+\begin{enumerate}
+  \item $X^TX$ becomes near-singular, inflating $\Var(\bhat)$.
+  \item $L_1$ has sharp corners on axes; $L_2$ is a smooth hypersphere.
+  \item Penalties treat all $\beta_j$ equally; different scales would unfairly penalize smaller-unit features.
+  \item Closed form is fast for modest $p$; iterative methods scale better to massive datasets ($n, p \gg 10^4$).
+\end{enumerate}
+
+\begin{keyidea}[title=Final Mental Model]
+Summarize the grand intuition here in 2--3 sentences to cement the concept before moving to the next topic.
+\end{keyidea}
+
+\end{document}
